@@ -1,40 +1,39 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const OpenAI = require('openai');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const anthropic = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // POST /sessions/:id/chat
 app.post('/sessions/:id/chat', async (req, res) => {
   const { startTime, tags, intensity, lyric, history = [] } = req.body;
 
   const systemPrompt = buildSystemPrompt({ startTime, tags, intensity, lyric });
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...history,
+  const messages = history.length > 0 ? history : [
+    { role: 'user', content: '対話を開始してください' }
   ];
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 256,
+      system: systemPrompt,
       messages,
-      functions: [chatResponseFunction],
-      function_call: { name: 'chat_response' },
-      temperature: 0.8,
+      tools: [chatTool],
+      tool_choice: { type: 'tool', name: 'chat_response' },
     });
 
-    const args = JSON.parse(
-      completion.choices[0].message.function_call.arguments
-    );
+    const toolUse = response.content.find(b => b.type === 'tool_use');
+    if (!toolUse) throw new Error('tool_use block not found');
 
-    res.json({ question: args.question, choices: args.choices ?? [] });
+    res.json({ question: toolUse.input.question, choices: toolUse.input.choices ?? [] });
   } catch (err) {
-    console.error(err);
+    console.error(err?.message ?? err);
     res.status(500).json({ error: 'AI応答に失敗しました' });
   }
 });
@@ -42,11 +41,10 @@ app.post('/sessions/:id/chat', async (req, res) => {
 // ヘルスチェック
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
-// システムプロンプト生成
 function buildSystemPrompt({ startTime, tags, intensity, lyric }) {
   const time = formatTime(startTime);
   const tagStr = (tags ?? []).join(', ') || '不明';
-  const lyricStr = lyric ? `「${lyric}」` : '（歌詞情報なし）`;
+  const lyricStr = lyric ? `「${lyric}」` : '（歌詞情報なし）';
   return `あなたは音楽リスナーの身体反応を言語化する対話AIです。
 ユーザーは${time}あたりで身体が反応しました（強度${Math.round((intensity ?? 0) * 100)}%、タグ: ${tagStr}）。
 歌詞: ${lyricStr}
@@ -59,11 +57,10 @@ function buildSystemPrompt({ startTime, tags, intensity, lyric }) {
 - 日本語で返答する`;
 }
 
-// Function Calling スキーマ
-const chatResponseFunction = {
+const chatTool = {
   name: 'chat_response',
   description: 'ユーザーへの問いかけと選択肢を返す',
-  parameters: {
+  input_schema: {
     type: 'object',
     properties: {
       question: { type: 'string', description: '確認形の問いかけ文（1文）' },
