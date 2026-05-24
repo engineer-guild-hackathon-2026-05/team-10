@@ -4,6 +4,7 @@ struct HowChatView: View {
     @StateObject private var vm: HowChatViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var pulseScale: CGFloat = 1.0
+    @State private var navigateToHowCard = false
     @FocusState private var isInputFocused: Bool
 
     init(event: ReactionEvent) {
@@ -31,6 +32,9 @@ struct HowChatView: View {
                     Button("閉じる") { dismiss() }
                         .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
                 }
+            }
+            .navigationDestination(isPresented: $navigateToHowCard) {
+                HowCardCreationView(event: vm.event)
             }
         }
         .presentationDetents([.large])
@@ -278,16 +282,42 @@ struct HowChatView: View {
     }
 
     private var doneState: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.title2)
-                .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
-            Text("対話完了 — Howカードを生成できます")
-                .font(.caption)
-                .foregroundStyle(.gray)
+        VStack(spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Text("気持ちを言語化できました")
+                    .font(.caption)
+                    .foregroundStyle(.gray)
+            }
+
+            Button {
+                navigateToHowCard = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "music.note.list")
+                    Text("Howカードを作る")
+                        .font(.subheadline.bold())
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    LinearGradient(
+                        colors: [Color(red: 1.0, green: 0.45, blue: 0.45), Color(red: 0.85, green: 0.15, blue: 0.2)],
+                        startPoint: .leading, endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 14)
+                )
+                .shadow(color: .red.opacity(0.4), radius: 8, y: 4)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
+        .background(Color.black)
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
     // MARK: - Helpers
