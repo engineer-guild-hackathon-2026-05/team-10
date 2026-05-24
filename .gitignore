@@ -48,6 +48,9 @@ logs/
 coverage/
 .nyc_output/
 
+# iOS / macOS
+**GoogleService-Info.plist
+
 # 生成物（ソースから再生成可能: node docs/share/build.mjs / marp docs/slides/howtune.md）
 docs/share/index.html
 docs/slides/*.html
