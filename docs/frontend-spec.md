@@ -191,17 +191,28 @@
 
 ---
 
-## 9. Deferred Decisions
+## 9. Decisions（確定 / 未決）
+
+### 9.1 確定（grill 2026-05-24）
+
+> 設計審問（grill）で確定した決定。
+
+- **[DEC-A] 主シグナルは頭部モーション。** AirPods 頭部モーション（CMHeadphoneMotionManager）と iPhone 本体モーション（Core Motion）を主シグナルとする。リアルタイム・確実に取れる加速度系を中心に据える。
+- **[DEC-B] 心拍は補助。** AirPods Pro 3 は心拍数のみ（HRV 不可）で、第三者アプリからのリアルタイム取得に制約があるため、心拍は MVP 必須にしない。取得できればトレンドとして補助的に使う（FR-HR-02/03）。→ DECISION-06/07 に反映。
+- **[DEC-C] 推論はルールベース主体 + Core ML 並行。** MVP は閾値ルールで 6 軸スコアを確実に算出する。`ai-recognition/` で TensorFlow 学習を並行し、間に合えば同一インターフェースで Core ML に差し替える。→ DECISION-02 を解決。
+- **[DEC-D] MVP は1人分のコア体験を完結。** 「聴く → 頭部モーション → 6 軸スコア → AI 対話 → How カード」を確実に動かす。コミュニティはダミーデータで提示、歌詞・共有は P1。
+
+### 9.2 未決（Deferred）
 
 > SDD では未決事項を仕様段階で明示し、設計段階で解消する。
 
-- **[DECISION-01] 音源と再生位置の取得手段。** 候補: **MusicKit（Apple Music・位置取得容易・要サブスク）** / AVFoundation（端末ローカル音源） / セッションタイマー（音源なし）。**MVP の成否を最も左右する決定。MusicKit が有力。**
-- **[DECISION-02] 6 軸推論の実行位置。** **端末上（Core ML）** か、特徴量送信＋外部推論か。性能・プライバシー・運用コストのトレードオフ。端末上が有力。
+- **[DECISION-01] 音源と再生位置の取得手段。** ⏳ 保留中（**MusicKit を予定**。要 entitlement・再生位置取得の検証。デモ確実性の代替として AVFoundation + ローカル音源あり）。**MVP の成否を最も左右する決定。**
+- **[DECISION-02] 6 軸推論の実行位置。** ✅ **DEC-C で解決**: 端末上、ルールベース主体 + Core ML 並行。
 - **[DECISION-03] データ永続化先。** Firestore（iOS SDK）/ CloudKit / Supabase / その他。
-- **[DECISION-04] LLM 連携経路。** バックエンドプロキシ（GCP 等）経由を前提。既存プロキシ流用可否。
-- **[DECISION-05] 共有機能（FR-COMM-04）を MVP に含めるか。**
-- **[DECISION-06] 心拍のリアルタイム同期方式。** HealthKit のワークアウトセッション利用可否、サンプリング粒度・遅延の許容範囲。
-- **[DECISION-07] AirPods 心拍の取得 API と対応機種の確定。** どの機種が心拍を提供し、どの API（HealthKit 経路）で読むか。
+- **[DECISION-04] LLM 連携経路。** `backend/` プロキシ経由を前提。既存プロキシ流用可否。
+- **[DECISION-05] 共有機能（FR-COMM-04）を MVP に含めるか。** → DEC-D により **P1**（MVP 必須から除外）。
+- **[DECISION-06] 心拍のリアルタイム同期方式。** ✅ **DEC-B で方針決定**（補助扱い）。実機での取得粒度は [DECISION-07] で要検証。
+- **[DECISION-07] AirPods 心拍の取得 API と対応機種の確定。** ⏳ 要実機検証（AirPods Pro 3 = HR のみ／HRV 不可、第三者アプリのリアルタイム取得粒度を確認）。
 - **[DECISION-08] 歌詞ソースと時間同期方式。** 歌詞 API の選定、楽曲との時刻同期手段。
 
 ---
