@@ -1,0 +1,246 @@
+import SwiftUI
+
+struct ReactionTimelineView: View {
+    @StateObject private var viewModel: ReactionTimelineViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    init(trackTitle: String, trackArtist: String, duration: TimeInterval) {
+        _viewModel = StateObject(wrappedValue: ReactionTimelineViewModel(
+            trackTitle: trackTitle,
+            trackArtist: trackArtist,
+            duration: duration
+        ))
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        trackInfo
+                        timelineSection
+                        eventsSection
+                    }
+                }
+            }
+            .preferredColorScheme(.dark)
+            .navigationTitle("振り返り")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("閉じる") { dismiss() }
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                }
+            }
+        }
+        .sheet(isPresented: $viewModel.showDialogueSheet) {
+            dialogueSheet
+        }
+    }
+
+    // MARK: - トラック情報
+    private var trackInfo: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(red: 0.6, green: 0.05, blue: 0.1), Color.black],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 52, height: 52)
+                Image(systemName: "music.note")
+                    .font(.title3)
+                    .foregroundStyle(.white.opacity(0.4))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(viewModel.trackTitle)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(viewModel.trackArtist)
+                    .font(.subheadline)
+                    .foregroundStyle(.gray)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(viewModel.events.count)件の反応")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Text(formatTime(viewModel.duration))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.gray)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+    }
+
+    // MARK: - タイムラインバー
+    private var timelineSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("反応タイムライン")
+                    .font(.caption.bold())
+                    .foregroundStyle(.gray)
+                    .kerning(0.5)
+                Spacer()
+                // 凡例
+                HStack(spacing: 10) {
+                    ForEach([HowTag.groove, .hit, .chill], id: \.self) { tag in
+                        HStack(spacing: 4) {
+                            Circle().fill(tag.color).frame(width: 6, height: 6)
+                            Text(tag.label).font(.caption2).foregroundStyle(.gray)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+
+            TimelineBar(
+                events: viewModel.events,
+                duration: viewModel.duration,
+                selectedEventID: viewModel.selectedEvent?.id
+            )
+        }
+        .padding(.vertical, 16)
+        .background(Color.white.opacity(0.03))
+    }
+
+    // MARK: - 反応イベントリスト
+    private var eventsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("反応地点")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                    Text("タップで解説")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
+
+            Divider().overlay(Color.white.opacity(0.1))
+
+            if viewModel.events.isEmpty {
+                // 反応なしフォールバック
+                VStack(spacing: 12) {
+                    Image(systemName: "waveform.slash")
+                        .font(.largeTitle)
+                        .foregroundStyle(.gray.opacity(0.4))
+                    Text("反応区間が検出されませんでした")
+                        .font(.subheadline)
+                        .foregroundStyle(.gray)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 60)
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(viewModel.events) { event in
+                        ReactionEventRow(event: event) {
+                            viewModel.selectEvent(event)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - AI対話導線シート（プレースホルダー）
+    private var dialogueSheet: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                VStack(spacing: 24) {
+                    if let event = viewModel.selectedEvent {
+                        // 反応地点の概要
+                        VStack(spacing: 8) {
+                            Text(formatTime(event.startTime))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.gray)
+                            if let lyric = event.lyricLine {
+                                Text(lyric)
+                                    .font(.title3.bold())
+                                    .foregroundStyle(.white)
+                                    .multilineTextAlignment(.center)
+                            }
+                            HStack(spacing: 6) {
+                                ForEach(event.tags, id: \.self) { tag in
+                                    Text(tag.label)
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(tag.color, in: Capsule())
+                                }
+                            }
+                        }
+                        .padding(.top, 32)
+                    }
+
+                    Spacer()
+
+                    // AI対話プレースホルダー
+                    VStack(spacing: 12) {
+                        Image(systemName: "sparkles")
+                            .font(.largeTitle)
+                            .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                        Text("AI対話機能は近日実装予定")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text("この地点での反応について\nAIと対話しながら言語化できます")
+                            .font(.subheadline)
+                            .foregroundStyle(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(24)
+                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal, 20)
+
+                    Spacer()
+                }
+            }
+            .navigationTitle("この地点について")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("閉じる") { viewModel.showDialogueSheet = false }
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .preferredColorScheme(.dark)
+    }
+
+    private func formatTime(_ t: TimeInterval) -> String {
+        String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
+    }
+}
+
+#Preview {
+    ReactionTimelineView(
+        trackTitle: "夜行性のアパート",
+        trackArtist: "草野ノエル",
+        duration: 196
+    )
+}
