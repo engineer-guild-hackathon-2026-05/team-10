@@ -40,7 +40,14 @@ router.post('/:id/how-card', async (req, res) => {
   }
   try {
     const howCardData = await generateHowCard({ reactions, chatHistory, songTitle });
-    res.json({ howCard: { ...howCardData } });
+    const cardId = await saveHowCard({
+      uid: 'anonymous',
+      sessionId: req.params.id,
+      songTitle,
+      ...howCardData,
+    });
+    console.log('[how-card] Firestore saved:', cardId);
+    res.json({ howCard: { id: cardId, ...howCardData } });
   } catch (err) {
     console.error(err?.message ?? err);
     res.status(500).json({ error: 'Howカードの生成に失敗しました' });
