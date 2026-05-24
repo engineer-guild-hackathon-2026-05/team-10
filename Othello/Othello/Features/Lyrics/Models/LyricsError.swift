@@ -23,6 +23,15 @@ enum LyricsError: LocalizedError, Equatable {
         case .requestFailed(let message):
             return "歌詞APIへの通信に失敗しました: \(message)"
         case .apiStatus(let code, let message):
+            if code == 401 {
+                return "Musixmatch API キーが無効、または設定されていません。ENV.plist の MUSIXMATCH_API_KEY を確認してください。"
+            }
+            if code == 402 {
+                return "Musixmatch API の利用上限、または残高の制限に達しています。"
+            }
+            if code == 403 {
+                return "Musixmatch API のこの操作を実行する権限がありません。利用中のプラン/APIキーで使えるエンドポイントを確認してください。"
+            }
             return "歌詞APIがエラーを返しました: \(code)\(message.map { " \($0)" } ?? "")"
         case .trackNotFound:
             return "曲名とアーティスト名に一致する歌詞が見つかりませんでした。"

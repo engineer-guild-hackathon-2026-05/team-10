@@ -5,6 +5,21 @@ struct SynchronizedLyrics: Equatable {
     let providerTrackID: String?
     let query: LyricsTrackQuery
     let lines: [TimedLyricLine]
+    let isTimeSynced: Bool
+
+    init(
+        providerName: String,
+        providerTrackID: String?,
+        query: LyricsTrackQuery,
+        lines: [TimedLyricLine],
+        isTimeSynced: Bool = true
+    ) {
+        self.providerName = providerName
+        self.providerTrackID = providerTrackID
+        self.query = query
+        self.lines = lines
+        self.isTimeSynced = isTimeSynced
+    }
 
     var isEmpty: Bool {
         lines.isEmpty

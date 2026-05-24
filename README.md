@@ -100,7 +100,7 @@
 
 - MusicKit の `Song` から曲名・アーティスト名・アルバム名・ISRC・曲長を取り出し、Musixmatch の照合に使う。
 - Musixmatch から LRC 形式の時間同期歌詞を取得し、反応地点の曲中時刻に最も近い歌詞行を表示する。同期歌詞は曲・国・契約プランによって返らない場合があるため、実機検証では Xcode コンソールの `[MusixmatchLyricsProvider]` ログで `status` / `hint` / 試行した ID を確認する。
-- 時間同期歌詞が取得できない曲では、歌詞なしで反応地点の時刻のみを表示する。
+- 時間同期歌詞が取得できない曲では、`track.lyrics.get` の静的歌詞へフォールバックする。Basic プランは Static lyrics 対象のため、subtitle / richsync が `403 Forbidden` でも静的歌詞は取得できる場合がある。
 - Spotify Web API は MVP では使用しない。
 
 ## リポジトリ構成
