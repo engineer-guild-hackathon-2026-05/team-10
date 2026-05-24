@@ -1,7 +1,10 @@
 import SwiftUI
+import MusicKit
 
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
+    @StateObject private var playback = PlaybackViewModel()
+    @State private var showSearchSheet = false
 
     init(useManualMode: Bool, permissionState: PermissionState) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(
@@ -26,37 +29,72 @@ struct HomeView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .task { await playback.onAppear() }
+        .sheet(isPresented: $showSearchSheet) { searchSheet }
+        .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Apple Music の認証が必要です。このセッションでは反応の同期が無効になります。")
+        }
     }
 
     // MARK: - アルバムアート + 曲名
     private var trackHeader: some View {
         HStack(alignment: .top, spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(red: 0.6, green: 0.05, blue: 0.1), Color.black],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+            Button { showSearchSheet = true } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.6, green: 0.05, blue: 0.1), Color.black],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 110, height: 110)
-                Image(systemName: "music.note")
-                    .font(.system(size: 36))
-                    .foregroundStyle(.white.opacity(0.4))
+                        .frame(width: 110, height: 110)
+                    if let artworkURL = playback.currentTrack?.artworkURL {
+                        AsyncImage(url: artworkURL) { img in
+                            img.resizable().scaledToFill()
+                        } placeholder: {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.white.opacity(0.4))
+                        }
+                        .frame(width: 110, height: 110)
+                        .clipped()
+                        .cornerRadius(8)
+                    } else {
+                        VStack(spacing: 6) {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.white.opacity(0.4))
+                            Text("タップで選曲")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.3))
+                        }
+                    }
+                }
             }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("微熱 EP・2025")
+                Text(playback.currentTrack?.albumTitle ?? "— アルバム —")
                     .font(.caption)
                     .foregroundStyle(.gray)
-                Text(viewModel.mockTrackTitle)
+                Text(playback.currentTrack?.title ?? "曲を選んでください")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
                     .lineLimit(2)
-                Text(viewModel.mockTrackArtist)
+                Text(playback.currentTrack?.artistName ?? "アーティスト")
                     .font(.subheadline)
                     .foregroundStyle(.gray)
+
+                if !playback.isPositionAvailable {
+                    Label("同期無効", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .padding(.top, 4)
+                }
             }
             Spacer()
         }
@@ -85,8 +123,7 @@ struct HomeView: View {
                     .foregroundStyle(.gray)
             }
             Spacer()
-            Button {
-            } label: {
+            Button {} label: {
                 Image(systemName: "square.and.arrow.up")
                     .font(.subheadline)
                     .foregroundStyle(.gray)
@@ -98,23 +135,19 @@ struct HomeView: View {
 
     // MARK: - シークバー
     private var seekBar: some View {
-        VStack(spacing: 4) {
-            Slider(
-                value: .constant(
-                    viewModel.mockTrackDuration > 0
-                        ? viewModel.playbackTime / viewModel.mockTrackDuration
-                        : 0
-                )
-            )
-            .tint(Color(red: 1.0, green: 0.3, blue: 0.3))
-            .disabled(true)
+        let duration = playback.currentTrack?.duration ?? viewModel.mockTrackDuration
+        let time = playback.currentTrack != nil ? playback.playbackTime : viewModel.playbackTime
+        return VStack(spacing: 4) {
+            Slider(value: .constant(duration > 0 ? time / duration : 0))
+                .tint(Color(red: 1.0, green: 0.3, blue: 0.3))
+                .disabled(true)
 
             HStack {
-                Text(formatTime(viewModel.playbackTime))
+                Text(formatTime(time))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.gray)
                 Spacer()
-                Text("−\(formatTime(viewModel.mockTrackDuration - viewModel.playbackTime))")
+                Text("−\(formatTime(max(0, duration - time)))")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.gray)
             }
@@ -125,24 +158,28 @@ struct HomeView: View {
 
     // MARK: - 再生コントロール
     private var playbackControls: some View {
-        HStack(spacing: 0) {
+        let playing = playback.currentTrack != nil ? playback.isPlaying : viewModel.isPlaying
+        return HStack(spacing: 0) {
             Spacer()
-            // シャッフル
             Button {} label: {
                 Image(systemName: "shuffle")
                     .font(.title3)
                     .foregroundStyle(.gray)
             }
             Spacer()
-            // 前の曲
             Button {} label: {
                 Image(systemName: "backward.end.fill")
                     .font(.title2)
                     .foregroundStyle(.white)
             }
             Spacer()
-            // 再生/一時停止
-            Button { viewModel.togglePlayback() } label: {
+            Button {
+                if playback.currentTrack != nil {
+                    Task { await playback.togglePlayback() }
+                } else {
+                    viewModel.togglePlayback()
+                }
+            } label: {
                 ZStack {
                     Circle()
                         .fill(
@@ -154,22 +191,20 @@ struct HomeView: View {
                         )
                         .frame(width: 72, height: 72)
                         .shadow(color: .red.opacity(0.5), radius: 12, y: 4)
-                    Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
+                    Image(systemName: playing ? "pause.fill" : "play.fill")
                         .font(.title)
                         .foregroundStyle(.white)
-                        .offset(x: viewModel.isPlaying ? 0 : 3)
+                        .offset(x: playing ? 0 : 3)
                 }
             }
             .buttonStyle(.plain)
             Spacer()
-            // 次の曲
             Button {} label: {
                 Image(systemName: "forward.end.fill")
                     .font(.title2)
                     .foregroundStyle(.white)
             }
             Spacer()
-            // リピート
             Button {} label: {
                 Image(systemName: "repeat")
                     .font(.title3)
@@ -183,21 +218,9 @@ struct HomeView: View {
     // MARK: - センサー状態バー（コンパクト）
     private var sensorStatusBar: some View {
         HStack(spacing: 12) {
-            sensorDot(
-                icon: "airpods",
-                label: viewModel.sensorStatus.headMotion.label,
-                color: viewModel.sensorStatus.headMotion.color
-            )
-            sensorDot(
-                icon: "iphone",
-                label: viewModel.sensorStatus.bodyMotion.label,
-                color: viewModel.sensorStatus.bodyMotion.color
-            )
-            sensorDot(
-                icon: "heart.fill",
-                label: viewModel.sensorStatus.heartRate.label,
-                color: viewModel.sensorStatus.heartRate.color
-            )
+            sensorDot(icon: "airpods", label: viewModel.sensorStatus.headMotion.label, color: viewModel.sensorStatus.headMotion.color)
+            sensorDot(icon: "iphone", label: viewModel.sensorStatus.bodyMotion.label, color: viewModel.sensorStatus.bodyMotion.color)
+            sensorDot(icon: "heart.fill", label: viewModel.sensorStatus.heartRate.label, color: viewModel.sensorStatus.heartRate.color)
             Spacer()
 
             if !viewModel.isSessionActive {
@@ -241,7 +264,6 @@ struct HomeView: View {
     // MARK: - 歌詞 × Howカード
     private var lyricsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // ヘッダー
             HStack {
                 Text("歌詞 × Howカード")
                     .font(.headline)
@@ -262,7 +284,6 @@ struct HomeView: View {
 
             Divider().overlay(Color.gray.opacity(0.3))
 
-            // 歌詞行リスト
             VStack(spacing: 0) {
                 lyricsSectionHeader("VERSE 1")
                 LyricRow(lyric: "深夜二時の改札を抜けて", translation: "Through the late-night turnstile", howCount: 4, likeCount: 82, isHighlighted: false)
@@ -303,6 +324,78 @@ struct HomeView: View {
     private func formatTime(_ time: TimeInterval) -> String {
         let t = max(0, time)
         return String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
+    }
+
+    // MARK: - 検索シート
+    private var searchSheet: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.gray)
+                    TextField("曲名・アーティスト名で検索", text: $playback.searchQuery)
+                        .foregroundStyle(.white)
+                        .submitLabel(.search)
+                        .onSubmit { Task { await playback.search() } }
+                    if !playback.searchQuery.isEmpty {
+                        Button { playback.searchQuery = "" } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.gray)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+                if playback.authorizationStatus != .authorized {
+                    ContentUnavailableView(
+                        "Apple Music の認証が必要です",
+                        systemImage: "music.note.list",
+                        description: Text("設定 → プライバシー → メディアと Apple Music で許可してください")
+                    )
+                    .foregroundStyle(.white)
+                } else if playback.searchResults.isEmpty && !playback.searchQuery.isEmpty {
+                    ContentUnavailableView.search(text: playback.searchQuery)
+                        .foregroundStyle(.white)
+                } else {
+                    List(playback.searchResults) { track in
+                        Button {
+                            Task {
+                                await playback.select(track: track)
+                                showSearchSheet = false
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(track.title)
+                                    .font(.body)
+                                    .foregroundStyle(.white)
+                                Text(track.artistName)
+                                    .font(.caption)
+                                    .foregroundStyle(.gray)
+                            }
+                        }
+                        .listRowBackground(Color.clear)
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                }
+
+                Spacer()
+            }
+            .background(Color.black.ignoresSafeArea())
+            .navigationTitle("曲を選ぶ")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("閉じる") { showSearchSheet = false }
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .preferredColorScheme(.dark)
     }
 }
 
