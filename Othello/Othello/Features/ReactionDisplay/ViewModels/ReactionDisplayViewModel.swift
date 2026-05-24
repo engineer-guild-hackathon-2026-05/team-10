@@ -23,7 +23,7 @@ final class ReactionDisplayViewModel: ObservableObject {
         isSessionActive = true
         isSensorAvailable = sensorAvailable
         startDisplayUpdateTimer()
-        if sensorAvailable { startMockSensorSimulation() }
+        startMockSensorSimulation()
     }
 
     func stopSession() {
