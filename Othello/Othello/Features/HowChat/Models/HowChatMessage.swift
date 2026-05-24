@@ -5,7 +5,7 @@ enum HowChatSender { case ai, user }
 struct HowChatMessage: Identifiable {
     let id = UUID()
     let sender: HowChatSender
-    let text: String
+    var text: String
     var isStreaming: Bool = false
 }
 
