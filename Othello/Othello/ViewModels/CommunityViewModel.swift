@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 // FR-COMM-01〜04: コミュニティ画面のViewModel（モックデータ）
 @MainActor
