@@ -4,6 +4,7 @@ import MusicKit
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var playback = PlaybackViewModel()
+    @StateObject private var lyrics = LyricsViewModel()
     @State private var showSearchSheet = false
 
     init(useManualMode: Bool, permissionState: PermissionState) {
@@ -34,7 +35,7 @@ struct HomeView: View {
         .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Apple Music の認証が必要です。このセッションでは反応の同期が無効になります。")
+            Text(playback.positionUnavailableMessage)
         }
     }
 
@@ -135,8 +136,8 @@ struct HomeView: View {
 
     // MARK: - シークバー
     private var seekBar: some View {
-        let duration = playback.currentTrack?.duration ?? viewModel.mockTrackDuration
-        let time = playback.currentTrack != nil ? playback.playbackTime : viewModel.playbackTime
+        let duration = playback.currentTrack?.duration ?? 0
+        let time = playback.playbackTime
         return VStack(spacing: 4) {
             Slider(value: .constant(duration > 0 ? time / duration : 0))
                 .tint(Color(red: 1.0, green: 0.3, blue: 0.3))
@@ -158,7 +159,7 @@ struct HomeView: View {
 
     // MARK: - 再生コントロール
     private var playbackControls: some View {
-        let playing = playback.currentTrack != nil ? playback.isPlaying : viewModel.isPlaying
+        let playing = playback.isPlaying
         return HStack(spacing: 0) {
             Spacer()
             Button {} label: {
@@ -177,7 +178,7 @@ struct HomeView: View {
                 if playback.currentTrack != nil {
                     Task { await playback.togglePlayback() }
                 } else {
-                    viewModel.togglePlayback()
+                    showSearchSheet = true
                 }
             } label: {
                 ZStack {
@@ -234,7 +235,10 @@ struct HomeView: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                Button { viewModel.endSession() } label: {
+                Button {
+                    playback.stop()
+                    viewModel.endSession()
+                } label: {
                     Text("終了")
                         .font(.caption.bold())
                         .foregroundStyle(.white)
@@ -285,27 +289,26 @@ struct HomeView: View {
             Divider().overlay(Color.gray.opacity(0.3))
 
             VStack(spacing: 0) {
-                lyricsSectionHeader("VERSE 1")
-                LyricRow(lyric: "深夜二時の改札を抜けて", translation: "Through the late-night turnstile", howCount: 4, likeCount: 82, isHighlighted: false)
-                LyricRow(lyric: "コンビニの灯りに泳いだ", translation: "Swimming in the convenience-store glow", howCount: 12, likeCount: 341, isHighlighted: true)
-                LyricRow(lyric: "君のメッセージは未読のまま", translation: "Your message still unread", howCount: 3, likeCount: 118, isHighlighted: false)
-                LyricRow(lyric: "壊れた傘を畳んでいる", translation: "Folding a broken umbrella", howCount: 1, likeCount: 47, isHighlighted: false)
-
-                HStack(spacing: 8) {
-                    ForEach(0..<3) { _ in
-                        Circle().fill(Color.gray.opacity(0.4)).frame(width: 5, height: 5)
+                if playback.currentTrack == nil {
+                    emptyLyricsRow("曲を選ぶと、反応地点に対応する歌詞を表示できます。")
+                } else if lyrics.state == .loading {
+                    emptyLyricsRow("歌詞を取得中です。")
+                } else if let message = lyrics.state.message {
+                    emptyLyricsRow(message)
+                } else if let loadedLyrics = lyrics.lyrics, !loadedLyrics.lines.isEmpty {
+                    lyricsSectionHeader(loadedLyrics.providerName)
+                    ForEach(visibleLyricLines(from: loadedLyrics.lines)) { line in
+                        LyricRow(
+                            lyric: line.text.isEmpty ? "♪" : line.text,
+                            translation: formatTime(line.startTime),
+                            howCount: 0,
+                            likeCount: 0,
+                            isHighlighted: line.contains(playback.playbackTime)
+                        )
                     }
-                    Text("INSTRUMENTAL")
-                        .font(.caption2)
-                        .foregroundStyle(.gray.opacity(0.6))
-                        .kerning(1.5)
+                } else {
+                    emptyLyricsRow("この曲の時間同期歌詞はまだ取得されていません。")
                 }
-                .padding(.vertical, 20)
-                .padding(.horizontal, 20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                lyricsSectionHeader("PRE")
-                LyricRow(lyric: "夜行性のアパートで", translation: "In this nocturnal apartment", howCount: 2, likeCount: 29, isHighlighted: false)
             }
         }
     }
@@ -324,6 +327,26 @@ struct HomeView: View {
     private func formatTime(_ time: TimeInterval) -> String {
         let t = max(0, time)
         return String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
+    }
+
+    private func visibleLyricLines(from lines: [TimedLyricLine]) -> [TimedLyricLine] {
+        guard !lines.isEmpty else {
+            return []
+        }
+
+        let currentIndex = lines.lastIndex(where: { $0.startTime <= playback.playbackTime }) ?? 0
+        let lowerBound = max(0, currentIndex - 3)
+        let upperBound = min(lines.count, currentIndex + 7)
+        return Array(lines[lowerBound..<upperBound])
+    }
+
+    private func emptyLyricsRow(_ message: String) -> some View {
+        Text(message)
+            .font(.subheadline)
+            .foregroundStyle(.gray)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - 検索シート
@@ -363,6 +386,7 @@ struct HomeView: View {
                         Button {
                             Task {
                                 await playback.select(track: track)
+                                await lyrics.loadLyrics(for: LyricsTrackQuery(playbackTrack: track))
                                 showSearchSheet = false
                             }
                         } label: {

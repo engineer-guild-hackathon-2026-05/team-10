@@ -457,8 +457,8 @@ pnpm workspace + Turborepo
 ### 🚫 作らない
 - DM・フォロー
 - 完全SNSタイムライン
-- Spotify/Apple Music連携
-- 歌詞API
+- Spotify連携
+- 独自歌詞DB
 - 本格的な音源解析
 
 </div>

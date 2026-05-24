@@ -63,5 +63,6 @@ docs/slides/*.pdf
 docs/slides/*.pptx
 
 **/GoogleInfo.plist
+**/GoogleService-Info.plist
 
 **/ENV.plist

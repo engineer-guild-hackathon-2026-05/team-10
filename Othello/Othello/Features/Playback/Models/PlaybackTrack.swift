@@ -6,6 +6,8 @@ struct PlaybackTrack: Identifiable, Equatable {
     let title: String
     let artistName: String
     let albumTitle: String?
+    let isrc: String?
+    let hasLyrics: Bool
     let duration: TimeInterval?
     let artworkURL: URL?
 
@@ -20,6 +22,8 @@ extension PlaybackTrack {
         self.title = song.title
         self.artistName = song.artistName
         self.albumTitle = song.albumTitle
+        self.isrc = song.isrc
+        self.hasLyrics = song.hasLyrics
         self.duration = song.duration
         self.artworkURL = song.artwork?.url(width: 500, height: 500)
     }
