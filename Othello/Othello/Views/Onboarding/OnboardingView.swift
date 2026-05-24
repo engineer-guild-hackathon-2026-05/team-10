@@ -5,9 +5,7 @@ struct OnboardingView: View {
 
     var body: some View {
         if viewModel.isOnboardingComplete {
-            Text("メイン画面（実装予定）")
-                .font(.title2)
-                .foregroundStyle(.secondary)
+            HomeView()
         } else {
             TabView(selection: $viewModel.currentPage) {
                 OnboardingWelcomePage(currentPage: $viewModel.currentPage)
