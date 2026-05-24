@@ -4,6 +4,7 @@ struct HowChatView: View {
     @StateObject private var vm: HowChatViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var pulseScale: CGFloat = 1.0
+    @FocusState private var isInputFocused: Bool
 
     init(event: ReactionEvent) {
         _vm = StateObject(wrappedValue: HowChatViewModel(event: event))
@@ -34,7 +35,9 @@ struct HowChatView: View {
         }
         .presentationDetents([.large])
         .preferredColorScheme(.dark)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear { vm.start() }
+        .onTapGesture { isInputFocused = false }
     }
 
     // MARK: - 反応地点ヘッダー（可視化）
@@ -252,10 +255,14 @@ struct HowChatView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 22))
+                .focused($isInputFocused)
+                .submitLabel(.send)
+                .onSubmit { vm.submitFreeInput() }
                 .disabled(vm.state == .loading)
 
             Button {
                 vm.submitFreeInput()
+                isInputFocused = false
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
@@ -267,6 +274,7 @@ struct HowChatView: View {
             }
             .disabled(vm.freeInputText.isEmpty || vm.state == .loading)
         }
+        .padding(.bottom, isInputFocused ? 0 : 0)
     }
 
     private var doneState: some View {
