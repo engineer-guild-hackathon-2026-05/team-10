@@ -5,6 +5,7 @@ struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var playback = PlaybackViewModel()
     @State private var showSearchSheet = false
+    @State private var showReactionDisplay = false
 
     init(useManualMode: Bool, permissionState: PermissionState) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(
@@ -31,6 +32,9 @@ struct HomeView: View {
         .preferredColorScheme(.dark)
         .task { await playback.onAppear() }
         .sheet(isPresented: $showSearchSheet) { searchSheet }
+        .fullScreenCover(isPresented: $showReactionDisplay) {
+            ReactionDisplayView(isSensorAvailable: !viewModel.useManualMode)
+        }
         .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -223,27 +227,15 @@ struct HomeView: View {
             sensorDot(icon: "heart.fill", label: viewModel.sensorStatus.heartRate.label, color: viewModel.sensorStatus.heartRate.color)
             Spacer()
 
-            if !viewModel.isSessionActive {
-                Button { viewModel.startSession() } label: {
-                    Text("リスニング開始")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color(red: 0.85, green: 0.15, blue: 0.2), in: Capsule())
-                }
-                .buttonStyle(.plain)
-            } else {
-                Button { viewModel.endSession() } label: {
-                    Text("終了")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.gray.opacity(0.4), in: Capsule())
-                }
-                .buttonStyle(.plain)
+            Button { showReactionDisplay = true } label: {
+                Text("リスニング開始")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color(red: 0.85, green: 0.15, blue: 0.2), in: Capsule())
             }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)

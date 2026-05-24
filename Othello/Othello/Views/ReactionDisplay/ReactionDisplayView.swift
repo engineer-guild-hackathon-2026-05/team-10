@@ -3,39 +3,47 @@ import SwiftUI
 struct ReactionDisplayView: View {
     @StateObject private var viewModel = ReactionDisplayViewModel()
     let isSensorAvailable: Bool
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 20) {
-                    dominantStateCard
-                    axesPanelCard
-                    if !isSensorAvailable {
-                        sensorUnavailableNote
+                ScrollView {
+                    VStack(spacing: 20) {
+                        dominantStateCard
+                        axesPanelCard
+                        if !isSensorAvailable {
+                            sensorUnavailableNote
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 40)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 40)
             }
-        }
-        .preferredColorScheme(.dark)
-        .navigationTitle("リアルタイム反応")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                sessionToggleButton
+            .preferredColorScheme(.dark)
+            .navigationTitle("リアルタイム反応")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("閉じる") { dismiss() }
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    sessionToggleButton
+                }
             }
-        }
-        .onDisappear { viewModel.stopSession() }
-        .fullScreenCover(isPresented: $viewModel.showTimeline) {
-            ReactionTimelineView(
-                trackTitle: "— 曲タイトル —",
-                trackArtist: "— アーティスト —",
-                duration: 268
-            )
+            .onDisappear { viewModel.stopSession() }
+            .fullScreenCover(isPresented: $viewModel.showTimeline) {
+                ReactionTimelineView(
+                    trackTitle: "— 曲タイトル —",
+                    trackArtist: "— アーティスト —",
+                    duration: 268
+                )
+            }
         }
     }
 
