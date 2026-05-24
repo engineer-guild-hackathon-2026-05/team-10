@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LyricRow: View {
     let lyric: String
-    let translation: String
+    let translation: String?
     let howCount: Int
     let likeCount: Int
     let isHighlighted: Bool
@@ -14,9 +14,11 @@ struct LyricRow: View {
                     .font(.body)
                     .foregroundStyle(isHighlighted ? .white : Color.white.opacity(0.85))
                     .fontWeight(isHighlighted ? .semibold : .regular)
-                Text(translation)
-                    .font(.caption)
-                    .foregroundStyle(.gray)
+                if let translation {
+                    Text(translation)
+                        .font(.caption)
+                        .foregroundStyle(.gray)
+                }
             }
 
             Spacer()

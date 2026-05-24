@@ -29,7 +29,7 @@ final class MusixmatchLyricsProvider: LyricsProviding {
         self.decoder = JSONDecoder()
     }
 
-    func fetchSynchronizedLyrics(for query: LyricsTrackQuery) async throws -> SynchronizedLyrics {
+    func fetchLyrics(for query: LyricsTrackQuery) async throws -> SynchronizedLyrics {
         guard let apiKey, !apiKey.isEmpty else {
             throw LyricsError.missingAPIKey
         }
@@ -37,14 +37,6 @@ final class MusixmatchLyricsProvider: LyricsProviding {
         debugLog("start lookup title=\(query.title) artist=\(query.artistName) musicKitID=\(query.musicKitID ?? "nil") isrc=\(query.isrc ?? "nil") duration=\(query.duration.map { String(Int($0.rounded())) } ?? "nil")")
 
         var failures: [String] = []
-
-        if let lyrics = try await lyricsFromKnownIDs(for: query, apiKey: apiKey, failures: &failures) {
-            return lyrics
-        }
-
-        if let lyrics = try await lyricsFromMatcherSubtitle(for: query, apiKey: apiKey, failures: &failures) {
-            return lyrics
-        }
 
         let track: MusixmatchTrack
         do {
@@ -54,220 +46,33 @@ final class MusixmatchLyricsProvider: LyricsProviding {
             throw LyricsError.lookupFailed(failures)
         }
 
-        if track.hasSubtitles, track.restricted != 1 {
-            if let lyrics = try await lyricsFromMatchedTrack(track, query: query, apiKey: apiKey, failures: &failures) {
-                return lyrics
-            }
-        } else if !track.hasSubtitles {
-            failures.append("matcher.track.get: matched track has_subtitles=0")
-        } else {
+        if track.restricted == 1 {
             failures.append("matcher.track.get: matched track is restricted")
+            throw LyricsError.lookupFailed(failures)
         }
 
-        if let lyrics = try await staticLyricsFromMatchedTrack(track, query: query, apiKey: apiKey, failures: &failures) {
-            return lyrics
+        guard track.hasLyrics else {
+            failures.append("matcher.track.get: matched track has_lyrics=0")
+            throw LyricsError.lookupFailed(failures)
         }
 
-        throw LyricsError.lookupFailed(failures)
-    }
-
-    private func lyricsFromKnownIDs(
-        for query: LyricsTrackQuery,
-        apiKey: String,
-        failures: inout [String]
-    ) async throws -> SynchronizedLyrics? {
-        var attempts: [(label: String, providerTrackID: String, queryItems: [URLQueryItem])] = []
-
-        if let musicKitID = query.musicKitID, !musicKitID.isEmpty {
-            attempts.append((
-                label: "track.subtitle.get track_itunes_id duration",
-                providerTrackID: musicKitID,
-                queryItems: subtitleQueryItems(
-                    apiKey: apiKey,
-                    query: query,
-                    idItem: URLQueryItem(name: "track_itunes_id", value: musicKitID),
-                    includeDuration: true
-                )
-            ))
-            attempts.append((
-                label: "track.subtitle.get track_itunes_id",
-                providerTrackID: musicKitID,
-                queryItems: subtitleQueryItems(
-                    apiKey: apiKey,
-                    query: query,
-                    idItem: URLQueryItem(name: "track_itunes_id", value: musicKitID),
-                    includeDuration: false
-                )
-            ))
-        }
-
-        if let isrc = query.isrc, !isrc.isEmpty {
-            attempts.append((
-                label: "track.subtitle.get track_isrc duration",
-                providerTrackID: isrc,
-                queryItems: subtitleQueryItems(
-                    apiKey: apiKey,
-                    query: query,
-                    idItem: URLQueryItem(name: "track_isrc", value: isrc),
-                    includeDuration: true
-                )
-            ))
-            attempts.append((
-                label: "track.subtitle.get track_isrc",
-                providerTrackID: isrc,
-                queryItems: subtitleQueryItems(
-                    apiKey: apiKey,
-                    query: query,
-                    idItem: URLQueryItem(name: "track_isrc", value: isrc),
-                    includeDuration: false
-                )
-            ))
-        }
-
-        for attempt in attempts {
-            if let lyrics = try await lyricsFromAttempt(
-                label: attempt.label,
-                providerTrackID: attempt.providerTrackID,
-                query: query,
-                failures: &failures,
-                fetchSubtitle: {
-                    try await self.subtitle(queryItems: attempt.queryItems)
-                }
-            ) {
-                return lyrics
-            }
-        }
-
-        return nil
-    }
-
-    private func lyricsFromMatcherSubtitle(
-        for query: LyricsTrackQuery,
-        apiKey: String,
-        failures: inout [String]
-    ) async throws -> SynchronizedLyrics? {
-        for includeDuration in [true, false] {
-            if let lyrics = try await lyricsFromAttempt(
-                label: includeDuration ? "matcher.subtitle.get duration" : "matcher.subtitle.get",
-                providerTrackID: query.musicKitID ?? query.isrc,
-                query: query,
-                failures: &failures,
-                fetchSubtitle: {
-                    try await self.matcherSubtitle(
-                        for: query,
-                        apiKey: apiKey,
-                        includeDuration: includeDuration
-                    )
-                }
-            ) {
-                return lyrics
-            }
-        }
-
-        return nil
-    }
-
-    private func lyricsFromMatchedTrack(
-        _ track: MusixmatchTrack,
-        query: LyricsTrackQuery,
-        apiKey: String,
-        failures: inout [String]
-    ) async throws -> SynchronizedLyrics? {
-        let idItems = [
-            URLQueryItem(name: "track_id", value: String(track.trackID)),
-            track.commonTrackID.map { URLQueryItem(name: "commontrack_id", value: String($0)) },
-            track.trackISRC.map { URLQueryItem(name: "track_isrc", value: $0) }
-        ].compactMap { $0 }
-
-        for idItem in idItems {
-            if let lyrics = try await lyricsFromAttempt(
-                label: "track.subtitle.get \(idItem.name) duration",
-                providerTrackID: idItem.value ?? String(track.trackID),
-                query: query,
-                failures: &failures,
-                fetchSubtitle: {
-                    try await self.subtitle(queryItems: self.subtitleQueryItems(
-                        apiKey: apiKey,
-                        query: query,
-                        idItem: idItem,
-                        includeDuration: true
-                    ))
-                }
-            ) {
-                return lyrics
-            }
-
-            if let lyrics = try await lyricsFromAttempt(
-                label: "track.subtitle.get \(idItem.name)",
-                providerTrackID: idItem.value ?? String(track.trackID),
-                query: query,
-                failures: &failures,
-                fetchSubtitle: {
-                    try await self.subtitle(queryItems: self.subtitleQueryItems(
-                        apiKey: apiKey,
-                        query: query,
-                        idItem: idItem,
-                        includeDuration: false
-                    ))
-                }
-            ) {
-                return lyrics
-            }
-        }
-
-        return nil
+        return try await staticLyricsFromMatchedTrack(track, query: query, apiKey: apiKey)
     }
 
     private func staticLyricsFromMatchedTrack(
         _ track: MusixmatchTrack,
         query: LyricsTrackQuery,
-        apiKey: String,
-        failures: inout [String]
-    ) async throws -> SynchronizedLyrics? {
-        let idItems = [
-            URLQueryItem(name: "track_id", value: String(track.trackID)),
-            track.commonTrackID.map { URLQueryItem(name: "commontrack_id", value: String($0)) },
-            track.trackISRC.map { URLQueryItem(name: "track_isrc", value: $0) }
-        ].compactMap { $0 }
-
-        for idItem in idItems {
-            do {
-                let lyrics = try await trackLyrics(queryItems: lyricsQueryItems(apiKey: apiKey, idItem: idItem))
-                let parsedLyrics = try staticLyrics(
-                    from: lyrics,
-                    providerTrackID: idItem.value ?? String(track.trackID),
-                    query: query
-                )
-                debugLog("track.lyrics.get \(idItem.name): success lines=\(parsedLyrics.lines.count)")
-                return parsedLyrics
-            } catch let error as LyricsError where isRecoverableLookupFailure(error) {
-                let message = "track.lyrics.get \(idItem.name): \(error.localizedDescription)"
-                debugLog(message)
-                failures.append(message)
-            }
-        }
-
-        return nil
-    }
-
-    private func lyricsFromAttempt(
-        label: String,
-        providerTrackID: String?,
-        query: LyricsTrackQuery,
-        failures: inout [String],
-        fetchSubtitle: () async throws -> MusixmatchSubtitle
-    ) async throws -> SynchronizedLyrics? {
-        do {
-            let subtitle = try await fetchSubtitle()
-            let lyrics = try lyrics(from: subtitle, providerTrackID: providerTrackID, query: query)
-            debugLog("\(label): success lines=\(lyrics.lines.count)")
-            return lyrics
-        } catch let error as LyricsError where isRecoverableLookupFailure(error) {
-            let message = "\(label): \(error.localizedDescription)"
-            debugLog(message)
-            failures.append(message)
-            return nil
-        }
+        apiKey: String
+    ) async throws -> SynchronizedLyrics {
+        let idItem = URLQueryItem(name: "track_id", value: String(track.trackID))
+        let lyrics = try await trackLyrics(queryItems: lyricsQueryItems(apiKey: apiKey, idItem: idItem))
+        let parsedLyrics = try staticLyrics(
+            from: lyrics,
+            providerTrackID: String(track.trackID),
+            query: query
+        )
+        debugLog("track.lyrics.get track_id: success lines=\(parsedLyrics.lines.count)")
+        return parsedLyrics
     }
 
     private func matchedTrack(
@@ -279,7 +84,7 @@ final class MusixmatchLyricsProvider: LyricsProviding {
             URLQueryItem(name: "apikey", value: apiKey),
             URLQueryItem(name: "q_track", value: query.title),
             URLQueryItem(name: "q_artist", value: query.artistName),
-            URLQueryItem(name: "f_has_subtitle", value: "1")
+            URLQueryItem(name: "f_has_lyrics", value: "1")
         ]
 
         if let countryCode {
@@ -306,16 +111,6 @@ final class MusixmatchLyricsProvider: LyricsProviding {
         return track
     }
 
-    private func subtitle(queryItems: [URLQueryItem]) async throws -> MusixmatchSubtitle {
-        let body: SubtitleBody = try await request(endpoint: "track.subtitle.get", queryItems: queryItems)
-
-        guard let subtitle = body.subtitle else {
-            throw LyricsError.synchronizedLyricsUnavailable
-        }
-
-        return subtitle
-    }
-
     private func trackLyrics(queryItems: [URLQueryItem]) async throws -> MusixmatchLyrics {
         let body: LyricsBody = try await request(endpoint: "track.lyrics.get", queryItems: queryItems)
 
@@ -326,106 +121,12 @@ final class MusixmatchLyricsProvider: LyricsProviding {
         return lyrics
     }
 
-    private func matcherSubtitle(
-        for query: LyricsTrackQuery,
-        apiKey: String,
-        includeDuration: Bool
-    ) async throws -> MusixmatchSubtitle {
-        var queryItems = [
-            URLQueryItem(name: "format", value: "json"),
-            URLQueryItem(name: "apikey", value: apiKey),
-            URLQueryItem(name: "q_track", value: query.title),
-            URLQueryItem(name: "q_artist", value: query.artistName),
-            URLQueryItem(name: "subtitle_format", value: "lrc")
-        ]
-
-        queryItems.append(contentsOf: durationQueryItems(for: query, includeDuration: includeDuration))
-
-        if let isrc = query.isrc {
-            queryItems.append(URLQueryItem(name: "track_isrc", value: isrc))
-        }
-
-        if let countryCode {
-            queryItems.append(URLQueryItem(name: "country", value: countryCode))
-        }
-
-        let body: SubtitleBody = try await request(endpoint: "matcher.subtitle.get", queryItems: queryItems)
-
-        guard let subtitle = body.subtitle else {
-            throw LyricsError.synchronizedLyricsUnavailable
-        }
-
-        return subtitle
-    }
-
-    private func subtitleQueryItems(
-        apiKey: String,
-        query: LyricsTrackQuery,
-        idItem: URLQueryItem,
-        includeDuration: Bool
-    ) -> [URLQueryItem] {
-        var queryItems = [
-            URLQueryItem(name: "format", value: "json"),
-            URLQueryItem(name: "apikey", value: apiKey),
-            idItem,
-            URLQueryItem(name: "subtitle_format", value: "lrc")
-        ]
-
-        queryItems.append(contentsOf: durationQueryItems(for: query, includeDuration: includeDuration))
-
-        if let countryCode {
-            queryItems.append(URLQueryItem(name: "country", value: countryCode))
-        }
-
-        return queryItems
-    }
-
     private func lyricsQueryItems(apiKey: String, idItem: URLQueryItem) -> [URLQueryItem] {
         [
             URLQueryItem(name: "format", value: "json"),
             URLQueryItem(name: "apikey", value: apiKey),
             idItem
         ]
-    }
-
-    private func durationQueryItems(
-        for query: LyricsTrackQuery,
-        includeDuration: Bool
-    ) -> [URLQueryItem] {
-        guard includeDuration, let duration = query.duration else {
-            return []
-        }
-
-        return [
-            URLQueryItem(name: "f_subtitle_length", value: String(Int(duration.rounded()))),
-            URLQueryItem(name: "f_subtitle_length_max_deviation", value: "2")
-        ]
-    }
-
-    private func lyrics(
-        from subtitle: MusixmatchSubtitle,
-        providerTrackID: String?,
-        query: LyricsTrackQuery
-    ) throws -> SynchronizedLyrics {
-        guard subtitle.restricted != 1 else {
-            throw LyricsError.restrictedLyrics
-        }
-
-        let subtitleBody = subtitle.subtitleBody ?? ""
-        let lines = LRCParser.parse(subtitleBody)
-
-        guard !lines.isEmpty else {
-            throw subtitleBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? LyricsError.emptySubtitleBody
-                : LyricsError.synchronizedLyricsUnavailable
-        }
-
-        return SynchronizedLyrics(
-            providerName: "Musixmatch",
-            providerTrackID: providerTrackID,
-            query: query,
-            lines: lines
-        )
     }
 
     private func staticLyrics(
@@ -442,7 +143,7 @@ final class MusixmatchLyricsProvider: LyricsProviding {
 
         guard !lines.isEmpty else {
             throw lyricsBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? LyricsError.emptySubtitleBody
+                ? LyricsError.emptyLyricsBody
                 : LyricsError.synchronizedLyricsUnavailable
         }
 
@@ -518,7 +219,7 @@ final class MusixmatchLyricsProvider: LyricsProviding {
 
     private func isRecoverableLookupFailure(_ error: LyricsError) -> Bool {
         switch error {
-        case .trackNotFound, .restrictedLyrics, .emptySubtitleBody, .synchronizedLyricsUnavailable, .lookupFailed:
+        case .trackNotFound, .restrictedLyrics, .emptyLyricsBody, .synchronizedLyricsUnavailable, .lookupFailed:
             return true
         case .apiStatus(let code, _):
             return code == 400 || code == 403 || code == 404
@@ -577,55 +278,29 @@ private struct TrackMatchBody: Decodable {
     let track: MusixmatchTrack?
 }
 
-private struct SubtitleBody: Decodable {
-    let subtitle: MusixmatchSubtitle?
-}
-
 private struct LyricsBody: Decodable {
     let lyrics: MusixmatchLyrics?
 }
 
 private struct MusixmatchTrack: Decodable {
     let trackID: Int
-    let commonTrackID: Int?
-    let trackName: String
-    let artistName: String
-    let trackISRC: String?
-    let hasSubtitles: Bool
+    let hasLyrics: Bool
     let restricted: Int?
 
-    private let hasSubtitlesRaw: Int?
+    private let hasLyricsRaw: Int?
 
     enum CodingKeys: String, CodingKey {
         case trackID = "track_id"
-        case commonTrackID = "commontrack_id"
-        case trackName = "track_name"
-        case artistName = "artist_name"
-        case trackISRC = "track_isrc"
-        case hasSubtitlesRaw = "has_subtitles"
+        case hasLyricsRaw = "has_lyrics"
         case restricted
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         trackID = try container.decode(Int.self, forKey: .trackID)
-        commonTrackID = try container.decodeIfPresent(Int.self, forKey: .commonTrackID)
-        trackName = try container.decode(String.self, forKey: .trackName)
-        artistName = try container.decode(String.self, forKey: .artistName)
-        trackISRC = try container.decodeIfPresent(String.self, forKey: .trackISRC)
-        hasSubtitlesRaw = try container.decodeIfPresent(Int.self, forKey: .hasSubtitlesRaw)
-        hasSubtitles = hasSubtitlesRaw == 1
+        hasLyricsRaw = try container.decodeIfPresent(Int.self, forKey: .hasLyricsRaw)
+        hasLyrics = hasLyricsRaw == 1
         restricted = try container.decodeIfPresent(Int.self, forKey: .restricted)
-    }
-}
-
-private struct MusixmatchSubtitle: Decodable {
-    let subtitleBody: String?
-    let restricted: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case subtitleBody = "subtitle_body"
-        case restricted
     }
 }
 

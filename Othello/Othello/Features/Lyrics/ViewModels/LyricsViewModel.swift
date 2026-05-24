@@ -18,7 +18,7 @@ final class LyricsViewModel: ObservableObject {
         selectedReactionLine = nil
 
         do {
-            let lyrics = try await provider.fetchSynchronizedLyrics(for: query)
+            let lyrics = try await provider.fetchLyrics(for: query)
             self.lyrics = lyrics
             state = .loaded
         } catch let error as LyricsError {
@@ -47,7 +47,7 @@ final class LyricsViewModel: ObservableObject {
 
     private func unavailableState(for error: LyricsError) -> LyricsLoadingState {
         switch error {
-        case .trackNotFound, .restrictedLyrics, .emptySubtitleBody, .synchronizedLyricsUnavailable, .lookupFailed:
+        case .trackNotFound, .restrictedLyrics, .emptyLyricsBody, .synchronizedLyricsUnavailable, .lookupFailed:
             return .unavailable(error.localizedDescription)
         case .missingAPIKey, .invalidRequest, .invalidResponse, .requestFailed, .apiStatus:
             return .failed(error.localizedDescription)

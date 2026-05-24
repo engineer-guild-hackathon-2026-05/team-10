@@ -8,7 +8,7 @@ enum LyricsError: LocalizedError, Equatable {
     case apiStatus(code: Int, message: String?)
     case trackNotFound
     case restrictedLyrics
-    case emptySubtitleBody
+    case emptyLyricsBody
     case synchronizedLyricsUnavailable
     case lookupFailed([String])
 
@@ -37,15 +37,15 @@ enum LyricsError: LocalizedError, Equatable {
             return "曲名とアーティスト名に一致する歌詞が見つかりませんでした。"
         case .restrictedLyrics:
             return "この曲の歌詞は権利制限により表示できません。"
-        case .emptySubtitleBody:
-            return "同期歌詞の本文が空でした。"
+        case .emptyLyricsBody:
+            return "歌詞の本文が空でした。"
         case .synchronizedLyricsUnavailable:
-            return "この曲の時間同期歌詞は取得できませんでした。"
+            return "この曲の歌詞は取得できませんでした。"
         case .lookupFailed(let failures):
             let details = failures.prefix(3).joined(separator: " / ")
             return details.isEmpty
-                ? "この曲の時間同期歌詞は取得できませんでした。"
-                : "この曲の時間同期歌詞は取得できませんでした。詳細: \(details)"
+                ? "この曲の歌詞は取得できませんでした。"
+                : "この曲の歌詞は取得できませんでした。詳細: \(details)"
         }
     }
 }

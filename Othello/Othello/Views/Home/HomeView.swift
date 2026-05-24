@@ -269,11 +269,10 @@ struct HomeView: View {
                 } else if let message = lyrics.state.message {
                     emptyLyricsRow(message)
                 } else if let loadedLyrics = lyrics.lyrics, !loadedLyrics.lines.isEmpty {
-                    lyricsSectionHeader(loadedLyrics.providerName)
                     ForEach(visibleLyricLines(from: loadedLyrics)) { line in
                         LyricRow(
                             lyric: line.text.isEmpty ? "♪" : line.text,
-                            translation: loadedLyrics.isTimeSynced ? formatTime(line.startTime) : "静的歌詞",
+                            translation: loadedLyrics.isTimeSynced ? formatTime(line.startTime) : nil,
                             howCount: 0,
                             likeCount: 0,
                             isHighlighted: loadedLyrics.isTimeSynced && line.contains(playback.playbackTime)
@@ -284,17 +283,6 @@ struct HomeView: View {
                 }
             }
         }
-    }
-
-    private func lyricsSectionHeader(_ text: String) -> some View {
-        Text(text)
-            .font(.caption.bold())
-            .foregroundStyle(.gray.opacity(0.6))
-            .kerning(1.5)
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func formatTime(_ time: TimeInterval) -> String {
@@ -310,7 +298,7 @@ struct HomeView: View {
         }
 
         guard lyrics.isTimeSynced else {
-            return Array(lines.prefix(10))
+            return lines
         }
 
         let currentIndex = lines.lastIndex(where: { $0.startTime <= playback.playbackTime }) ?? 0

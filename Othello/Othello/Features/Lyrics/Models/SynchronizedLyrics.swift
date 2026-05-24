@@ -12,7 +12,7 @@ struct SynchronizedLyrics: Equatable {
         providerTrackID: String?,
         query: LyricsTrackQuery,
         lines: [TimedLyricLine],
-        isTimeSynced: Bool = true
+        isTimeSynced: Bool = false
     ) {
         self.providerName = providerName
         self.providerTrackID = providerTrackID

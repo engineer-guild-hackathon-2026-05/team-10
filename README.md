@@ -92,15 +92,15 @@
 |---|---|---|---|
 | Anthropic Claude API | 問いかけ生成・Howカード生成 | Pay-as-you-go | バックエンド経由 |
 | Apple MusicKit | 楽曲情報・再生位置取得 | — | MVP は MusicKit 前提。Spotify は使用しない |
-| Musixmatch | 時間同期歌詞取得・反応地点の歌詞表示 | 要 API key | `ENV.plist` の `MUSIXMATCH_API_KEY` に設定 |
+| Musixmatch | 静的歌詞取得・反応地点の歌詞表示 | 要 API key | `ENV.plist` の `MUSIXMATCH_API_KEY` に設定 |
 
 → API キー・秘匿情報は `.env`（`.gitignore` 対象）で管理。クライアントには置かない。
 
 ### MusicKit / Musixmatch 連携メモ
 
 - MusicKit の `Song` から曲名・アーティスト名・アルバム名・ISRC・曲長を取り出し、Musixmatch の照合に使う。
-- Musixmatch から LRC 形式の時間同期歌詞を取得し、反応地点の曲中時刻に最も近い歌詞行を表示する。同期歌詞は曲・国・契約プランによって返らない場合があるため、実機検証では Xcode コンソールの `[MusixmatchLyricsProvider]` ログで `status` / `hint` / 試行した ID を確認する。
-- 時間同期歌詞が取得できない曲では、`track.lyrics.get` の静的歌詞へフォールバックする。Basic プランは Static lyrics 対象のため、subtitle / richsync が `403 Forbidden` でも静的歌詞は取得できる場合がある。
+- Musixmatch の `matcher.track.get` で `track_id` を解決し、`track.lyrics.get` で静的歌詞を取得する。
+- Basic プランは Static lyrics 対象のため、MVP では subtitle / richsync は使用しない。実機検証では Xcode コンソールの `[MusixmatchLyricsProvider]` ログで `status` / `hint` / 試行した ID を確認する。
 - Spotify Web API は MVP では使用しない。
 
 ## リポジトリ構成
@@ -129,7 +129,7 @@ open Othello/Othello.xcodeproj
 - **実機必須**：AirPods の頭部モーション・心拍はシミュレータで取得できません（iPhone + 対応 AirPods が必要）
 - **権限**：`Info.plist` に `NSMotionUsageDescription` / `NSHealthShareUsageDescription` が必要
 - **MusicKit**：Apple Developer の App ID で MusicKit App Service を有効化し、プロビジョニングプロファイルを更新してから実機ビルドする
-- **Musixmatch**：`Othello/Othello/ENV.example.plist` を `ENV.plist` にコピーし、`MUSIXMATCH_API_KEY` を設定する。`track.subtitle.get` / `matcher.subtitle.get` が 401/402/403 を返す場合は API key・利用上限・契約プランを確認する
+- **Musixmatch**：`Othello/Othello/ENV.example.plist` を `ENV.plist` にコピーし、`MUSIXMATCH_API_KEY` を設定する。`matcher.track.get` と `track.lyrics.get` が 401/402/403 を返す場合は API key・利用上限・契約プランを確認する
 
 ## ドキュメント
 
