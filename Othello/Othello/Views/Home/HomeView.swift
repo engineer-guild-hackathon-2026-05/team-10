@@ -4,6 +4,7 @@ import MusicKit
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var playback = PlaybackViewModel()
+    @StateObject private var lyrics = LyricsViewModel()
     @State private var showSearchSheet = false
 
     init(useManualMode: Bool, permissionState: PermissionState) {
@@ -34,7 +35,7 @@ struct HomeView: View {
         .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Apple Music の認証が必要です。このセッションでは反応の同期が無効になります。")
+            Text(playback.positionUnavailableMessage)
         }
     }
 
@@ -42,38 +43,11 @@ struct HomeView: View {
     private var trackHeader: some View {
         HStack(alignment: .top, spacing: 16) {
             Button { showSearchSheet = true } label: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.6, green: 0.05, blue: 0.1), Color.black],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 110, height: 110)
-                    if let artworkURL = playback.currentTrack?.artworkURL {
-                        AsyncImage(url: artworkURL) { img in
-                            img.resizable().scaledToFill()
-                        } placeholder: {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 36))
-                                .foregroundStyle(.white.opacity(0.4))
-                        }
-                        .frame(width: 110, height: 110)
-                        .clipped()
-                        .cornerRadius(8)
-                    } else {
-                        VStack(spacing: 6) {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 36))
-                                .foregroundStyle(.white.opacity(0.4))
-                            Text("タップで選曲")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.3))
-                        }
-                    }
-                }
+                artworkView(
+                    url: playback.currentTrack?.artworkURL,
+                    size: 110,
+                    placeholderText: "タップで選曲"
+                )
             }
             .buttonStyle(.plain)
 
@@ -135,8 +109,8 @@ struct HomeView: View {
 
     // MARK: - シークバー
     private var seekBar: some View {
-        let duration = playback.currentTrack?.duration ?? viewModel.mockTrackDuration
-        let time = playback.currentTrack != nil ? playback.playbackTime : viewModel.playbackTime
+        let duration = playback.currentTrack?.duration ?? 0
+        let time = playback.playbackTime
         return VStack(spacing: 4) {
             Slider(value: .constant(duration > 0 ? time / duration : 0))
                 .tint(Color(red: 1.0, green: 0.3, blue: 0.3))
@@ -158,7 +132,7 @@ struct HomeView: View {
 
     // MARK: - 再生コントロール
     private var playbackControls: some View {
-        let playing = playback.currentTrack != nil ? playback.isPlaying : viewModel.isPlaying
+        let playing = playback.isPlaying
         return HStack(spacing: 0) {
             Spacer()
             Button {} label: {
@@ -177,7 +151,7 @@ struct HomeView: View {
                 if playback.currentTrack != nil {
                     Task { await playback.togglePlayback() }
                 } else {
-                    viewModel.togglePlayback()
+                    showSearchSheet = true
                 }
             } label: {
                 ZStack {
@@ -234,7 +208,10 @@ struct HomeView: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                Button { viewModel.endSession() } label: {
+                Button {
+                    playback.stop()
+                    viewModel.endSession()
+                } label: {
                     Text("終了")
                         .font(.caption.bold())
                         .foregroundStyle(.white)
@@ -285,27 +262,26 @@ struct HomeView: View {
             Divider().overlay(Color.gray.opacity(0.3))
 
             VStack(spacing: 0) {
-                lyricsSectionHeader("VERSE 1")
-                LyricRow(lyric: "深夜二時の改札を抜けて", translation: "Through the late-night turnstile", howCount: 4, likeCount: 82, isHighlighted: false)
-                LyricRow(lyric: "コンビニの灯りに泳いだ", translation: "Swimming in the convenience-store glow", howCount: 12, likeCount: 341, isHighlighted: true)
-                LyricRow(lyric: "君のメッセージは未読のまま", translation: "Your message still unread", howCount: 3, likeCount: 118, isHighlighted: false)
-                LyricRow(lyric: "壊れた傘を畳んでいる", translation: "Folding a broken umbrella", howCount: 1, likeCount: 47, isHighlighted: false)
-
-                HStack(spacing: 8) {
-                    ForEach(0..<3) { _ in
-                        Circle().fill(Color.gray.opacity(0.4)).frame(width: 5, height: 5)
+                if playback.currentTrack == nil {
+                    emptyLyricsRow("曲を選ぶと、反応地点に対応する歌詞を表示できます。")
+                } else if lyrics.state == .loading {
+                    emptyLyricsRow("歌詞を取得中です。")
+                } else if let message = lyrics.state.message {
+                    emptyLyricsRow(message)
+                } else if let loadedLyrics = lyrics.lyrics, !loadedLyrics.lines.isEmpty {
+                    lyricsSectionHeader(loadedLyrics.providerName)
+                    ForEach(visibleLyricLines(from: loadedLyrics.lines)) { line in
+                        LyricRow(
+                            lyric: line.text.isEmpty ? "♪" : line.text,
+                            translation: formatTime(line.startTime),
+                            howCount: 0,
+                            likeCount: 0,
+                            isHighlighted: line.contains(playback.playbackTime)
+                        )
                     }
-                    Text("INSTRUMENTAL")
-                        .font(.caption2)
-                        .foregroundStyle(.gray.opacity(0.6))
-                        .kerning(1.5)
+                } else {
+                    emptyLyricsRow("この曲の時間同期歌詞はまだ取得されていません。")
                 }
-                .padding(.vertical, 20)
-                .padding(.horizontal, 20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                lyricsSectionHeader("PRE")
-                LyricRow(lyric: "夜行性のアパートで", translation: "In this nocturnal apartment", howCount: 2, likeCount: 29, isHighlighted: false)
             }
         }
     }
@@ -324,6 +300,92 @@ struct HomeView: View {
     private func formatTime(_ time: TimeInterval) -> String {
         let t = max(0, time)
         return String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
+    }
+
+    private func visibleLyricLines(from lines: [TimedLyricLine]) -> [TimedLyricLine] {
+        guard !lines.isEmpty else {
+            return []
+        }
+
+        let currentIndex = lines.lastIndex(where: { $0.startTime <= playback.playbackTime }) ?? 0
+        let lowerBound = max(0, currentIndex - 3)
+        let upperBound = min(lines.count, currentIndex + 7)
+        return Array(lines[lowerBound..<upperBound])
+    }
+
+    private func emptyLyricsRow(_ message: String) -> some View {
+        Text(message)
+            .font(.subheadline)
+            .foregroundStyle(.gray)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func artworkView(url: URL?, size: CGFloat, placeholderText: String? = nil) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.6, green: 0.05, blue: 0.1), Color.black],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            if let url {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        artworkPlaceholder(text: placeholderText, size: size, failed: true)
+                    case .empty:
+                        ProgressView()
+                            .tint(.white.opacity(0.7))
+                    @unknown default:
+                        artworkPlaceholder(text: placeholderText, size: size, failed: false)
+                    }
+                }
+            } else {
+                artworkPlaceholder(text: placeholderText, size: size, failed: false)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func artworkPlaceholder(text: String?, size: CGFloat, failed: Bool) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: failed ? "photo.badge.exclamationmark" : "music.note")
+                .font(.system(size: size >= 80 ? 36 : 18))
+                .foregroundStyle(.white.opacity(0.4))
+            if let text {
+                Text(text)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+        }
+    }
+
+    private func searchEmptyState(title: String, systemImage: String, description: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 36, weight: .semibold))
+                .foregroundStyle(.gray)
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text(description)
+                .font(.subheadline)
+                .foregroundStyle(.gray)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 40)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - 検索シート
@@ -349,30 +411,38 @@ struct HomeView: View {
                 .padding(.vertical, 12)
 
                 if playback.authorizationStatus != .authorized {
-                    ContentUnavailableView(
-                        "Apple Music の認証が必要です",
+                    searchEmptyState(
+                        title: "Apple Music の認証が必要です",
                         systemImage: "music.note.list",
-                        description: Text("設定 → プライバシー → メディアと Apple Music で許可してください")
+                        description: "設定 → プライバシー → メディアと Apple Music で許可してください"
                     )
-                    .foregroundStyle(.white)
                 } else if playback.searchResults.isEmpty && !playback.searchQuery.isEmpty {
-                    ContentUnavailableView.search(text: playback.searchQuery)
-                        .foregroundStyle(.white)
+                    searchEmptyState(
+                        title: "検索結果がありません",
+                        systemImage: "magnifyingglass",
+                        description: "\(playback.searchQuery) に一致する曲が見つかりませんでした"
+                    )
                 } else {
                     List(playback.searchResults) { track in
                         Button {
                             Task {
-                                await playback.select(track: track)
+                                let selectedTrack = await playback.select(track: track) ?? track
+                                await lyrics.loadLyrics(for: LyricsTrackQuery(playbackTrack: selectedTrack))
                                 showSearchSheet = false
                             }
                         } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(track.title)
-                                    .font(.body)
-                                    .foregroundStyle(.white)
-                                Text(track.artistName)
-                                    .font(.caption)
-                                    .foregroundStyle(.gray)
+                            HStack(spacing: 12) {
+                                artworkView(url: track.artworkURL, size: 48)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(track.title)
+                                        .font(.body)
+                                        .foregroundStyle(.white)
+                                        .lineLimit(1)
+                                    Text(track.artistName)
+                                        .font(.caption)
+                                        .foregroundStyle(.gray)
+                                        .lineLimit(1)
+                                }
                             }
                         }
                         .listRowBackground(Color.clear)
