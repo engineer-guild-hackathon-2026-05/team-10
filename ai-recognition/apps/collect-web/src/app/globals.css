@@ -301,7 +301,7 @@ a {
 
 .labelGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -335,24 +335,12 @@ a {
   background: var(--teal);
 }
 
-.labelHype {
-  background: var(--coral);
-}
-
 .labelChill {
   background: var(--green);
 }
 
-.labelImmersion {
-  background: var(--blue);
-}
-
-.labelHit {
-  background: var(--yellow);
-}
-
-.labelAfterglow {
-  background: #6f6b3f;
+.labelNeutral {
+  background: #5f6b67;
 }
 
 .metricGrid {
@@ -479,4 +467,3 @@ th {
     font-size: 24px;
   }
 }
-

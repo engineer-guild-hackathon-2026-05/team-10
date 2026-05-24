@@ -1,6 +1,6 @@
 # HowTune AI Recognition
 
-`spec.md` に沿った MotionReactionClassifier と、学習データを集める Web クライアントです。
+`spec.md` に沿った MotionReactionClassifier と、学習データを集める Web / iOS クライアントです。
 
 ## 構成
 
@@ -8,7 +8,7 @@
 packages/ml/
   src/features.ts      # 加速度サンプルから10次元特徴量を抽出
   src/model.ts         # TensorFlow.js LayersModel
-  src/train.ts         # JSONLから学習してモデル保存
+  src/train.ts         # seed学習データから学習してモデル保存
   src/evaluate.ts      # label別precision/recall/F1とTop-2 accuracy
   src/predict.ts       # /api/motion/predict と同じ推論レスポンス生成
   data/examples.jsonl  # seed学習データ
@@ -48,7 +48,7 @@ AirPods頭部モーションを収集する場合はこちらを使います。A
 open apps/collect-ios/HowTuneCollector.xcodeproj
 ```
 
-XcodeでSigning Teamを設定して、iPhone実機と対応AirPodsを接続してRunしてください。セッション終了時に `Raw JSON`、`training_examples.jsonl`、Create ML向けの `recording.csv` / `annotations.csv`、GUI用の `CreateMLActivityData/<label>/*.csv` をiPhone内のDocumentsへ保存し、レビュー画面の共有ボタンからAirDropやFilesへ渡せます。
+XcodeでSigning Teamを設定して、iPhone実機と対応AirPodsを接続してRunしてください。MVPでは検出対象を `ノってる` / `チルい` / `neutral` の3状態に絞り、曲パターンも `Groove Track` / `Neutral Track` / `Chill Track` の3種類だけにしています。セッション終了時はCreate ML GUI用の `CreateMLActivityData/<label>/*.csv` だけをiPhone内のDocumentsへ保存し、レビュー画面の共有ボタンからAirDropやFilesへ渡せます。
 
 ### Web / Next.js
 

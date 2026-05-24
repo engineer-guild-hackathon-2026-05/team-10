@@ -115,8 +115,8 @@
 
 ### 6.6 DETECT — 反応検出 / スコアリング
 
-- **FR-DETECT-01** システムは 1〜3 秒の時間窓ごとに特徴量（meanMagnitude / stdMagnitude / maxDelta / energy / peakCount / rhythmRegularity / stillness、および**心拍数・心拍変動**等）を抽出 *shall*。
-- **FR-DETECT-02** システムは 6 軸聴取状態スコア（groove / hype / chill / immersion / hit / afterglow）を取得 *shall*（マルチラベル＝同時複数可）。
+- **FR-DETECT-01** システムは 5 秒の時間窓ごとに特徴量（meanMagnitude / stdMagnitude / maxDelta / energy / peakCount / rhythmRegularity / stillness、および**心拍数・心拍変動**等）を抽出 *shall*。
+- **FR-DETECT-02** システムは 3 状態スコア（groove / chill / neutral）を取得 *shall*。
 - **FR-DETECT-03** *While* リスニング中, システムは反応の出方をリアルタイムに表示 *shall*。
 - **FR-DETECT-04** システムは検出された反応区間を曲中タイムライン上に提示 *shall*。
   > 注: 推論を端末上（Core ML）で行うか、特徴量を送信して外部で行うかは plan.md の決定事項。端末上（Core ML）が有力（DECISION-02）。
@@ -221,7 +221,7 @@
 
 - **How**: 「どう聴いているか」という聴き方の価値観。曲・ジャンル等の「What」と対比。
 - **How カード**: 対話で言語化された聴き方を、共有可能な形にまとめたカード（タイトル・説明・How タグ）。
-- **How タグ**: groove / hype / chill / immersion / hit / afterglow を中心とする聴取状態の分類。
+- **How タグ**: groove / chill / neutral を起点とする聴取状態の分類。
 - **反応区間**: モーション・心拍から検出された、身体・生理反応が起きていた曲中の時間帯。
 - **頭部モーション**: AirPods 内蔵センサーで取得する頭部の加速度・回転速度・姿勢。`CMHeadphoneMotionManager` で取得。
 - **心拍変動 (HRV)**: 心拍間隔のゆらぎ。緊張・リラックスなどの生理状態の指標。

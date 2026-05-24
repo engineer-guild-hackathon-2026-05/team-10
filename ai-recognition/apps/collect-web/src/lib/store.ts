@@ -159,7 +159,7 @@ export async function getDatasetSummary(): Promise<{
     sessions: number;
     samples: number;
     labels: number;
-    noiseRate: number;
+    neutralRate: number;
   };
   labelCounts: Record<string, number>;
 }> {
@@ -181,9 +181,7 @@ export async function getDatasetSummary(): Promise<{
     };
   });
   const totalLabels = store.labels.length;
-  const noiseLabels = store.labels.filter(
-    (label) => label.label === "noise" || label.label === "phone_on_table"
-  ).length;
+  const neutralLabels = store.labels.filter((label) => label.label === "neutral").length;
 
   return {
     sessions,
@@ -191,7 +189,7 @@ export async function getDatasetSummary(): Promise<{
       sessions: store.sessions.length,
       samples: store.motionBatches.reduce((sum, batch) => sum + batch.samples.length, 0),
       labels: totalLabels,
-      noiseRate: totalLabels === 0 ? 0 : noiseLabels / totalLabels
+      neutralRate: totalLabels === 0 ? 0 : neutralLabels / totalLabels
     },
     labelCounts
   };

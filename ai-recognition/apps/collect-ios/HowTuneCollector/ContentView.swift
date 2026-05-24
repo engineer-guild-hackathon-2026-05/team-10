@@ -137,23 +137,13 @@ private struct RecordingScreen: View {
                     }
                 }
 
-                HStack(spacing: 12) {
-                    Button {
-                        model.addLabel(.noise)
-                    } label: {
-                        Label("ノイズ", systemImage: "exclamationmark.triangle")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button(role: .destructive) {
-                        model.finishSession()
-                    } label: {
-                        Label("終了", systemImage: "stop.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
+                Button(role: .destructive) {
+                    model.finishSession()
+                } label: {
+                    Label("終了", systemImage: "stop.fill")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
 
                 Text("迷ったら押さなくてOK。押したラベルは終了後に消せます。")
                     .font(.footnote)
@@ -178,46 +168,15 @@ private struct ReviewScreen: View {
             VStack(alignment: .leading, spacing: 18) {
                 HeaderBlock(
                     title: "保存完了",
-                    bodyText: "Raw JSON、JSONL、Create ML向けCSVをアプリのDocumentsに保存しました。Filesアプリや共有からMacへ移せます。"
+                    bodyText: "Create ML GUI用フォルダをアプリのDocumentsに保存しました。Filesアプリや共有からMacへ移せます。"
                 )
 
                 if let result = model.exportResult {
                     SectionCard(title: "書き出し") {
                         VStack(alignment: .leading, spacing: 12) {
-                            ExportRow(title: "Raw JSON", url: result.rawJSONURL)
-                            ExportRow(title: "Training JSONL", url: result.trainingJSONLURL)
-                            ExportRow(title: "Create ML Recording CSV", url: result.recordingCSVURL)
-                            ExportRow(title: "Create ML Annotations CSV", url: result.annotationsCSVURL)
                             ExportRow(title: "Create ML GUI Folder", url: result.createMLActivityDataURL)
 
-                            HStack(spacing: 10) {
-                                MetricPill(title: "examples", value: "\(result.examplesCount)")
-                                MetricPill(title: "activity csv", value: "\(result.activityCSVCount)")
-                            }
-
-                            HStack {
-                                ShareLink(item: result.rawJSONURL) {
-                                    Label("Raw共有", systemImage: "square.and.arrow.up")
-                                }
-                                .buttonStyle(.bordered)
-
-                                ShareLink(item: result.trainingJSONLURL) {
-                                    Label("JSONL共有", systemImage: "square.and.arrow.up")
-                                }
-                                .buttonStyle(.borderedProminent)
-                            }
-
-                            HStack {
-                                ShareLink(item: result.recordingCSVURL) {
-                                    Label("記録CSV共有", systemImage: "waveform.path.ecg")
-                                }
-                                .buttonStyle(.bordered)
-
-                                ShareLink(item: result.annotationsCSVURL) {
-                                    Label("注釈CSV共有", systemImage: "tablecells")
-                                }
-                                .buttonStyle(.bordered)
-                            }
+                            MetricPill(title: "activity csv", value: "\(result.activityCSVCount)")
 
                             ShareLink(item: result.createMLActivityDataURL) {
                                 Label("GUI用フォルダ共有", systemImage: "folder")
@@ -466,13 +425,8 @@ private extension ListeningLabel {
     var symbolName: String {
         switch self {
         case .groove: "waveform"
-        case .hype: "flame.fill"
         case .chill: "moon.fill"
-        case .immersion: "scope"
-        case .hit: "sparkles"
-        case .afterglow: "hand.raised.fill"
-        case .unknown: "questionmark.circle"
-        case .noise: "exclamationmark.triangle"
+        case .neutral: "circle"
         }
     }
 }

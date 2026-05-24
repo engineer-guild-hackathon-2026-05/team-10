@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Download, Music2, RefreshCcw } from "lucide-react";
+import { Music2, RefreshCcw } from "lucide-react";
 
 type DatasetSummary = {
   sessions: Array<{
@@ -21,7 +21,7 @@ type DatasetSummary = {
     sessions: number;
     samples: number;
     labels: number;
-    noiseRate: number;
+    neutralRate: number;
   };
   labelCounts: Record<string, number>;
 };
@@ -54,14 +54,14 @@ export default function DatasetsPage() {
 
       <section className="screenHeader">
         <h1>Datasets</h1>
-        <p>収集済みセッションの件数、ラベル偏り、JSONL export を確認します。</p>
+        <p>収集済みセッションの件数とラベル偏りを確認します。</p>
       </section>
 
       <section className="metricGrid">
         <Metric label="sessions" value={summary?.totals.sessions ?? 0} />
         <Metric label="samples" value={summary?.totals.samples ?? 0} />
         <Metric label="labels" value={summary?.totals.labels ?? 0} />
-        <Metric label="noise rate" value={`${Math.round((summary?.totals.noiseRate ?? 0) * 100)}%`} />
+        <Metric label="neutral rate" value={`${Math.round((summary?.totals.neutralRate ?? 0) * 100)}%`} />
       </section>
 
       <section className="section">
@@ -73,10 +73,6 @@ export default function DatasetsPage() {
                 <RefreshCcw size={18} />
                 更新
               </button>
-              <a className="primaryButton" href="/api/admin/export?format=jsonl">
-                <Download size={18} />
-                JSONL
-              </a>
             </div>
           </div>
           <div className="panelBody">
@@ -141,4 +137,3 @@ function Metric({ label, value }: { label: string; value: number | string }) {
     </div>
   );
 }
-

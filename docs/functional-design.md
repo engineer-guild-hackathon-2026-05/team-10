@@ -9,7 +9,7 @@ graph TB
     AirPods[AirPods<br/>頭部モーション・心拍]
     iPhone[iPhone 本体モーション]
     App[Othello iOSアプリ<br/>SwiftUI]
-    CoreML[Core ML<br/>6軸スコア推論]
+    CoreML[Core ML<br/>3状態スコア推論]
     BE[backend<br/>LLMプロキシ]
     LLM[Claude API]
     DB[(Firestore / CloudKit)]
@@ -36,7 +36,7 @@ graph TB
 | 頭部モーション | CMHeadphoneMotionManager | AirPods の姿勢・加速度を取得 |
 | 心拍 | HealthKit | 対応 AirPods の心拍を取得 |
 | 再生 | MusicKit / AVFoundation | 再生位置の正確な取得 |
-| 推論 | Core ML | 端末上で6軸スコア推論 |
+| 推論 | Core ML | 端末上で3状態スコア推論 |
 | LLM | Claude API（backend 経由） | 問いかけ型の対話生成 |
 | DB | Firestore / CloudKit | iOS SDK あり |
 | 学習 | TensorFlow（`ai-recognition/`） | モデル学習 → Core ML 変換 |
@@ -101,7 +101,7 @@ struct ReactionSpan: Codable {
 }
 
 struct ListeningStateScores: Codable {
-    let groove, hype, chill, immersion, hit, afterglow: Double  // 各 0〜1
+    let groove, chill, neutral: Double  // 各 0〜1
 }
 ```
 
@@ -181,7 +181,7 @@ protocol HeartRateService {
 **責務**: MusicKit / AVFoundation で再生し、再生位置を供給
 
 ### ReactionClassifier
-**責務**: 特徴量を Core ML モデルに入力し6軸スコアを推論
+**責務**: 特徴量を Core ML モデルに入力し3状態スコアを推論
 
 ```swift
 struct ReactionClassifier {
@@ -211,7 +211,7 @@ sequenceDiagram
     U->>App: 曲を選んで再生
     App->>App: AirPods頭部モーション + 心拍 + 本体モーション記録
     U->>App: 再生停止
-    App->>ML: 特徴量抽出 → 6軸スコア推論
+    App->>ML: 特徴量抽出 → 3状態スコア推論
     ML-->>App: ReactionSpan[]
     App->>App: タイムライン表示 + 最初の問いかけ
     loop 対話（3ターン程度）
@@ -275,7 +275,7 @@ stateDiagram-v2
   "durationSec": 200,
   "reactions": [
     { "startSec": 78, "endSec": 84,
-      "scores": { "groove": 0.82, "hype": 0.31, "chill": 0.05, "immersion": 0.12, "hit": 0.44, "afterglow": 0.08 } }
+      "scores": { "groove": 0.82, "chill": 0.05, "neutral": 0.13 } }
   ]
 }
 ```
@@ -304,10 +304,10 @@ stateDiagram-v2
 
 ---
 
-## アルゴリズム設計: 6軸聴取状態スコア
+## アルゴリズム設計: 3状態スコア
 
 ### 目的
-1〜3秒窓のモーション+心拍特徴量から6軸スコアを推定する。
+5秒窓のモーション+心拍特徴量から groove / chill / neutral を推定する。
 
 ### 特徴量
 

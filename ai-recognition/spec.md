@@ -73,20 +73,17 @@ type MotionFeatures = {
 
 ### 出力
 
-6軸のマルチラベルスコア。
+MVPではCreate MLのActivity Classificationに合わせ、3状態のスコアに絞る。
 
 ```ts
 type ListeningStateScores = {
   groove: number;      // ノリ。リズムに身体が同期している
-  hype: number;        // 高揚。サビや展開でテンションが上がっている
   chill: number;       // チル。小さく心地よく揺れている
-  immersion: number;   // 没入。動きは少ないが集中して聴いている可能性
-  hit: number;         // 刺さり。一瞬の音・歌詞・展開に反応
-  afterglow: number;   // 余韻。動いた後に静かになる
+  neutral: number;     // 大きな反応がない
 };
 ```
 
-出力はsoftmaxの単一分類ではなく、sigmoidのマルチラベルにしてください。理由は、`groove` と `hype` のように同時成立する状態があるためです。
+収集アプリでは1つの時間帯に1ラベルだけを付ける。将来的に複合状態を扱う場合は、別バージョンのデータセットでマルチラベル化する。
 
 ---
 
@@ -103,18 +100,7 @@ type ListeningStateScores = {
 - peakCountが一定
 - maxDeltaは極端に高くない
 
-### 2. hype / 高揚
-
-サビ、ドロップ、展開変化などでテンションが上がっている状態。
-
-センサー特徴の例:
-
-- energyが高い
-- maxDeltaが高い
-- stdMagnitudeが高い
-- 短時間でpreviousEnergyDiffが大きい
-
-### 3. chill / チル
+### 2. chill / チル
 
 大きくは動かないが、小さく心地よい揺れが続いている状態。
 
@@ -125,39 +111,16 @@ type ListeningStateScores = {
 - maxDeltaは低い
 - stillnessは高すぎない
 
-### 4. immersion / 没入
+### 3. neutral / ニュートラル
 
-身体はあまり動いていないが、静かに聴き入っている可能性がある状態。
+大きな身体反応がない状態。退屈や無関心と断定せず、学習上は「反応なし」の基準クラスとして扱う。
 
 センサー特徴の例:
 
 - energyが低い
 - peakCountが少ない
 - stillnessが高い
-
-注意: センサーだけでは「退屈」と区別できないため、これは断定せずLLM質問の起点として扱う。
-
-### 5. hit / 刺さり
-
-一瞬の音、歌詞、押韻、展開、ブレイクなどに短く反応した状態。
-
-センサー特徴の例:
-
-- maxDeltaが高い
-- peakCountは少ない
-- durationが短い
-- previousEnergyDiffが大きい
-
-### 6. afterglow / 余韻
-
-直前まで動きがあった後、曲終盤や展開後に静かになる状態。
-
-センサー特徴の例:
-
-- 直前windowのenergyが高い
-- 現windowのenergyが低い
-- stillnessが高い
-- 曲のsectionがoutroやpost-chorusなら補助情報として有効
+- maxDeltaは低い
 
 ---
 
@@ -238,11 +201,8 @@ type TrainingExample = {
   features: number[];
   labels: {
     groove: 0 | 1;
-    hype: 0 | 1;
     chill: 0 | 1;
-    immersion: 0 | 1;
-    hit: 0 | 1;
-    afterglow: 0 | 1;
+    neutral: 0 | 1;
   };
   meta: {
     device?: string;
@@ -294,16 +254,16 @@ const model = tf.sequential();
 model.add(tf.layers.dense({ inputShape: [10], units: 32, activation: 'relu' }));
 model.add(tf.layers.dropout({ rate: 0.2 }));
 model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
-model.add(tf.layers.dense({ units: 6, activation: 'sigmoid' }));
+model.add(tf.layers.dense({ units: 3, activation: 'softmax' }));
 ```
 
 ### loss
 
-`binaryCrossentropy`
+`categoricalCrossentropy`
 
 ### metrics
 
-- binaryAccuracy
+- categoricalAccuracy
 - labelごとのprecision / recall / F1をevaluate.tsで算出
 
 ---
@@ -338,13 +298,10 @@ model.add(tf.layers.dense({ units: 6, activation: 'sigmoid' }));
       "end": 75,
       "scores": {
         "groove": 0.82,
-        "hype": 0.61,
         "chill": 0.08,
-        "immersion": 0.14,
-        "hit": 0.44,
-        "afterglow": 0.02
+        "neutral": 0.10
       },
-      "topLabels": ["groove", "hype"]
+      "topLabels": ["groove"]
     }
   ],
   "reactionCandidates": [
@@ -355,7 +312,8 @@ model.add(tf.layers.dense({ units: 6, activation: 'sigmoid' }));
       "primaryState": "groove",
       "scores": {
         "groove": 0.86,
-        "hype": 0.72
+        "chill": 0.09,
+        "neutral": 0.05
       }
     }
   ]
@@ -391,18 +349,18 @@ model.add(tf.layers.dense({ units: 6, activation: 'sigmoid' }));
 
 ### 定量評価
 
-- Multi-label F1
+- クラス別Precision / Recall / F1
 - label別Precision / Recall
-- Top-2 accuracy
+- Validation accuracy
 - 人手ラベルとの時間窓IoU
 
 ### 目標値
 
 ハッカソンMVPでは以下を目安にする。
 
-- Top-2 accuracy: 0.65以上
-- groove / hype / hit のF1: 0.60以上
-- immersion / afterglow は参考値でOK
+- Validation accuracy: 0.70以上
+- groove / chill / neutral のF1: 0.60以上
+- 各クラスのサンプル数をできるだけ揃える
 
 ---
 
@@ -480,22 +438,17 @@ model.add(tf.layers.dense({ units: 6, activation: 'sigmoid' }));
 
 ## 4. 収集するラベル
 
-MVPでは以下の6ラベルを収集する。
+MVPでは以下の3ラベルだけを収集する。ラベル数を減らし、Create MLの学習データをまず安定させる。
 
 | ラベル | 表示名 | 説明 |
 |---|---|---|
 | groove | ノってる | リズムに身体が合っている |
-| hype | 上がった | テンションが上がった |
 | chill | チルい | ゆるく心地よく聴いている |
-| immersion | 聴き入ってる | 静かに集中している |
-| hit | 刺さった | 一瞬の音・歌詞・展開に反応した |
-| afterglow | 余韻 | 反応後に味わっている |
+| neutral | neutral | 大きな反応がない |
 
 ### 補助ラベル
 
-- unknown / わからない
-- noise / 操作ミス・ノイズ
-- phone_on_table / スマホを置いていた
+MVPのcollectorでは補助ラベルは収集しない。操作ミスや曖昧な区間はレビュー時に除外し、Create ML用フォルダへ入れない。
 
 ---
 
@@ -538,22 +491,16 @@ MVPでは著作権リスクを避けるため、以下のどちらかにする�
 ボタン例:
 
 - ノってる
-- 上がった
 - チルい
-- 聴き入ってる
-- 刺さった
-- 余韻
+- neutral
 
 ボタンを押した時刻の前後を教師データ化する。
 
 推奨window:
 
-- `hit`: タップ前後1.5秒
-- `hype`: タップ前2秒〜後5秒
 - `groove`: 押している間、またはタップ前後5秒
 - `chill`: 押している間、またはタップ前後5秒
-- `immersion`: 押している間
-- `afterglow`: タップ前2秒〜後6秒
+- `neutral`: 押している間、またはタップ前後5秒
 
 ### 5.5 セッション後確認
 
@@ -683,7 +630,7 @@ type MotionSample = {
 type LabelEvent = {
   id: string;
   sessionId: string;
-  label: 'groove' | 'hype' | 'chill' | 'immersion' | 'hit' | 'afterglow' | 'noise' | 'unknown';
+  label: 'groove' | 'chill' | 'neutral';
   startedAtSec: number;
   endedAtSec: number;
   source: 'realtime_button' | 'review_edit';
@@ -691,10 +638,16 @@ type LabelEvent = {
 };
 ```
 
-### Export形式: `training_examples.jsonl`
+### Export形式: `CreateMLActivityData`
 
-```json
-{"id":"ex_001","sessionId":"s_001","songId":"song_001","windowStart":72,"windowEnd":75,"features":[0.1,0.2,0.3],"labels":{"groove":1,"hype":0,"chill":0,"immersion":0,"hit":1,"afterglow":0},"meta":{"phonePosition":"hand","songSection":"chorus"}}
+```txt
+CreateMLActivityData/
+  groove/
+    session_..._groove_start12300_001.csv
+  chill/
+    session_..._chill_start22000_001.csv
+  neutral/
+    session_..._neutral_start30000_001.csv
 ```
 
 ---
@@ -759,9 +712,9 @@ Request:
 
 レビュー後の修正済みラベルを保存する。
 
-### `GET /api/admin/export?format=jsonl`
+### `GET /api/admin/export?format=createml`
 
-特徴量抽出済みの学習データをJSONLで返す。
+Create ML GUI用の `CreateMLActivityData/<label>/*.csv` を返す。
 
 ---
 
@@ -771,10 +724,10 @@ Request:
 
 1. sessionのmotion samplesを取得
 2. label eventsを取得
-3. 1〜3秒windowを作る
+3. 5秒windowを作る
 4. windowごとに特徴量を抽出
-5. label overlapに基づいてmulti-hot labelを付与
-6. JSONLでexport
+5. label overlapに基づいて groove / chill / neutral のいずれかを付与
+6. Create ML GUI用フォルダでexport
 
 ### ラベル付与ルール
 
@@ -784,7 +737,7 @@ windowとlabel eventの重なりが50%以上なら1。
 overlap(window, labelEvent) / windowDuration >= 0.5
 ```
 
-`hit` は短いラベルなので、重なりが30%以上でも1にしてよい。
+5秒未満の短いラベル区間は、学習ノイズになりやすいためexportしない。
 
 ---
 
@@ -800,26 +753,26 @@ overlap(window, labelEvent) / windowDuration >= 0.5
 
 ### 期待データ量
 
-3秒window / stride 1秒の場合:
+5秒window / stride 2.5秒の場合:
 
 ```txt
-30 sessions × 70 windows = 2,100 examples
+30 sessions × 25 windows = 750 examples
 ```
 
 ハッカソンMVPとしては十分。
 
 ### ラベル偏り対策
 
-- hype / grooveに偏りやすい
-- immersion / afterglowは少なくなりやすい
-- チル系の曲を必ず1曲入れる
-- 曲終盤で余韻ラベルを押してもらう説明を入れる
+- grooveに偏りやすい
+- neutralは意識しないと不足しやすい
+- groove / neutral / chill の曲パターンを1曲ずつ用意する
+- 1セッション内で細かくラベルを切り替えず、1つの状態を5秒以上続けてもらう
 
 ---
 
 ## 11. サンプル曲設計
 
-MVPでは3タイプの曲を用意する。
+MVPでは曲パターンも3タイプに減らす。ラベルと曲の狙いを1対1に近づけ、初期データセットの分離を優先する。
 
 ### Track A: Groove track
 
@@ -831,25 +784,25 @@ MVPでは3タイプの曲を用意する。
 - ベースとドラムがわかりやすい
 - 継続的なリズム
 
-### Track B: Hype / Drop track
+### Track B: Neutral track
 
-目的: hypeとhitを集める。
+目的: neutralを集める。
 
 特徴:
 
-- サビ前の溜め
-- ドロップ
-- 急な展開変化
+- 大きな展開変化が少ない
+- 身体を動かさず聴きやすい
+- groove / chill のどちらにも寄りすぎない
 
-### Track C: Chill / Afterglow track
+### Track C: Chill track
 
-目的: chill, immersion, afterglowを集める。
+目的: chillを集める。
 
 特徴:
 
 - ゆっくり
 - 音数少なめ
-- 余韻がある
+- 小さく心地よい揺れが出やすい
 
 ---
 
@@ -884,7 +837,7 @@ MVPでは3タイプの曲を用意する。
 - 曲再生とセンサー時刻が同期する
 - ラベルボタンを押すと時刻付きで保存される
 - セッション後に修正できる
-- JSONLでexportできる
+- Create ML GUI用フォルダでexportできる
 
 ### データ面
 
@@ -895,7 +848,7 @@ MVPでは3タイプの曲を用意する。
 ### モデル接続面
 
 - exportデータを`train.ts`に食わせられる
-- 学習後、`predict.ts`で6軸スコアが出る
+- 学習後、`predict.ts`で groove / chill / neutral の3状態スコアが出る
 
 ---
 
@@ -971,4 +924,3 @@ MVPでは3タイプの曲を用意する。
 - 保存は1秒ごとではなく数秒ごとにchunk化する
 - Firestoreに生データを細かく書き込みすぎない
 ```
-
