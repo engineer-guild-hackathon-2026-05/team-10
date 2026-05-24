@@ -39,6 +39,10 @@ export type MotionSample = {
   gx?: number;
   gy?: number;
   gz?: number;
+  source?: "headphone_motion" | "device_motion" | "accelerometer";
+  pitch?: number;
+  roll?: number;
+  yaw?: number;
 };
 
 export type MotionFeatures = Record<FeatureKey, number>;
@@ -63,6 +67,7 @@ export type TrainingExample = {
     phonePosition?: "hand" | "table" | "pocket";
     dominantHand?: "right" | "left" | "unknown";
     usualMovement?: "active" | "still" | "depends";
+    motionSource?: "headphone_motion" | "device_motion" | "accelerometer";
   };
 };
 

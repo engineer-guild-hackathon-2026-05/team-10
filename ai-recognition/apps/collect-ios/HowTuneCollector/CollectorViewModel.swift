@@ -14,9 +14,6 @@ final class CollectorViewModel: ObservableObject {
 
     @Published var phase: Phase = .start
     @Published var selectedSong: DemoSong = DemoSong.catalog[0]
-    @Published var phonePosition: PhonePosition = .hand
-    @Published var dominantHand: DominantHand = .right
-    @Published var usualMovement: UsualMovement = .depends
     @Published var elapsed: TimeInterval = 0
     @Published var labels: [LabelEvent] = []
     @Published var collectedSession: CollectedSession?
@@ -51,12 +48,7 @@ final class CollectorViewModel: ObservableObject {
             songId: selectedSong.id,
             startedAt: startedAt,
             endedAt: nil,
-            device: deviceInfo,
-            listeningContext: ListeningContext(
-                phonePosition: phonePosition,
-                dominantHand: dominantHand,
-                usualMovement: usualMovement
-            )
+            device: deviceInfo
         )
 
         phase = .recording
@@ -88,15 +80,19 @@ final class CollectorViewModel: ObservableObject {
 
     func updateLabel(_ label: LabelEvent, start: TimeInterval? = nil, end: TimeInterval? = nil) {
         guard let index = labels.firstIndex(where: { $0.id == label.id }) else { return }
+        var updatedLabel = labels[index]
         if let start {
-            labels[index].startedAtSec = rounded(max(0, min(start, selectedSong.durationSec)))
+            updatedLabel.startedAtSec = rounded(max(0, min(start, selectedSong.durationSec)))
         }
         if let end {
-            labels[index].endedAtSec = rounded(max(0, min(end, selectedSong.durationSec)))
+            updatedLabel.endedAtSec = rounded(max(0, min(end, selectedSong.durationSec)))
         }
-        if labels[index].endedAtSec < labels[index].startedAtSec {
-            swap(&labels[index].startedAtSec, &labels[index].endedAtSec)
+        if updatedLabel.endedAtSec < updatedLabel.startedAtSec {
+            let originalStart = updatedLabel.startedAtSec
+            updatedLabel.startedAtSec = updatedLabel.endedAtSec
+            updatedLabel.endedAtSec = originalStart
         }
+        labels[index] = updatedLabel
     }
 
     func finishSession() {

@@ -31,7 +31,7 @@ private struct StartScreen: View {
             VStack(alignment: .leading, spacing: 22) {
                 HeaderBlock(
                     title: "学習データ収集",
-                    bodyText: "iPhone上で加速度データとラベルを保存します。音声、位置情報、連絡先、マイクは使いません。"
+                    bodyText: "AirPodsの頭部モーションとラベルを保存します。未接続時はiPhoneモーションへフォールバックします。音声、位置情報、連絡先、マイクは使いません。"
                 )
 
                 SectionCard(title: "曲") {
@@ -60,31 +60,6 @@ private struct StartScreen: View {
                             }
                             .buttonStyle(.plain)
                         }
-                    }
-                }
-
-                SectionCard(title: "収集条件") {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Picker("スマホの持ち方", selection: $model.phonePosition) {
-                            ForEach(PhonePosition.allCases) { value in
-                                Text(value.displayName).tag(value)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-
-                        Picker("利き手", selection: $model.dominantHand) {
-                            ForEach(DominantHand.allCases) { value in
-                                Text(value.displayName).tag(value)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-
-                        Picker("普段の聴き方", selection: $model.usualMovement) {
-                            ForEach(UsualMovement.allCases) { value in
-                                Text(value.displayName).tag(value)
-                            }
-                        }
-                        .pickerStyle(.menu)
                     }
                 }
 
@@ -473,7 +448,6 @@ private extension ListeningLabel {
         case .afterglow: "hand.raised.fill"
         case .unknown: "questionmark.circle"
         case .noise: "exclamationmark.triangle"
-        case .phoneOnTable: "iphone.gen3"
         }
     }
 }

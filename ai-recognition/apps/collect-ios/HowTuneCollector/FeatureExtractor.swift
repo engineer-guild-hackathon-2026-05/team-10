@@ -39,10 +39,8 @@ struct TrainingExample: Codable {
     }
 
     struct Meta: Codable {
-        var phonePosition: String
-        var dominantHand: String
-        var usualMovement: String
         var device: String
+        var motionSource: String
     }
 
     var id: String
@@ -85,10 +83,8 @@ enum FeatureExtractor {
                     features: window.features,
                     labels: labels,
                     meta: TrainingExample.Meta(
-                        phonePosition: collected.session.listeningContext.phonePosition.rawValue,
-                        dominantHand: collected.session.listeningContext.dominantHand.rawValue,
-                        usualMovement: collected.session.listeningContext.usualMovement.rawValue,
-                        device: collected.session.device.model
+                        device: collected.session.device.model,
+                        motionSource: window.motionSource.rawValue
                     )
                 )
             }
@@ -99,6 +95,7 @@ enum FeatureExtractor {
         var end: Double
         var rawFeatures: MotionFeatures
         var features: [Double]
+        var motionSource: MotionSensorSource
     }
 
     private static func extractWindows(
@@ -132,7 +129,8 @@ enum FeatureExtractor {
                         start: rounded(start),
                         end: rounded(end),
                         rawFeatures: raw,
-                        features: raw.vector
+                        features: raw.vector,
+                        motionSource: dominantMotionSource(windowSamples)
                     )
                 )
             }
@@ -212,7 +210,8 @@ enum FeatureExtractor {
                 start: window.start,
                 end: window.end,
                 rawFeatures: window.rawFeatures,
-                features: normalized
+                features: normalized,
+                motionSource: window.motionSource
             )
         }
     }
@@ -253,10 +252,15 @@ enum FeatureExtractor {
 
     private static func isNoiseWindow(_ window: FeatureWindow, labels: [LabelEvent]) -> Bool {
         labels.contains { event in
-            guard event.label == .noise || event.label == .phoneOnTable else { return false }
+            guard event.label == .noise else { return false }
             let ratio = overlap(window.start, window.end, event.startedAtSec, event.endedAtSec) / max(window.end - window.start, 0.0001)
             return ratio >= 0.5
         }
+    }
+
+    private static func dominantMotionSource(_ samples: [MotionSample]) -> MotionSensorSource {
+        let counts = Dictionary(grouping: samples.compactMap { $0.source }, by: { $0 }).mapValues { $0.count }
+        return counts.max { $0.value < $1.value }?.key ?? .headphoneMotion
     }
 
     private static func peakIndexes(_ values: [Double]) -> [Int] {
@@ -308,4 +312,3 @@ enum FeatureExtractor {
         String(format: "%.2f", value)
     }
 }
-

@@ -10,7 +10,6 @@ enum ListeningLabel: String, CaseIterable, Codable, Identifiable {
     case afterglow
     case unknown
     case noise
-    case phoneOnTable = "phone_on_table"
 
     var id: String { rawValue }
 
@@ -24,7 +23,6 @@ enum ListeningLabel: String, CaseIterable, Codable, Identifiable {
         case .afterglow: "余韻"
         case .unknown: "わからない"
         case .noise: "ノイズ"
-        case .phoneOnTable: "置いていた"
         }
     }
 
@@ -38,14 +36,13 @@ enum ListeningLabel: String, CaseIterable, Codable, Identifiable {
         case .afterglow: "反応後に味わっている"
         case .unknown: "判断できない"
         case .noise: "操作ミスや揺れノイズ"
-        case .phoneOnTable: "スマホを置いていた"
         }
     }
 
     var trainingLabel: Bool {
         switch self {
         case .groove, .hype, .chill, .immersion, .hit, .afterglow: true
-        case .unknown, .noise, .phoneOnTable: false
+        case .unknown, .noise: false
         }
     }
 
@@ -59,7 +56,6 @@ enum ListeningLabel: String, CaseIterable, Codable, Identifiable {
         case .afterglow: Color(red: 0.44, green: 0.42, blue: 0.25)
         case .unknown: .gray
         case .noise: .red.opacity(0.75)
-        case .phoneOnTable: .brown
         }
     }
 
@@ -83,54 +79,6 @@ enum ListeningLabel: String, CaseIterable, Codable, Identifiable {
     }
 
     static let primaryCases: [ListeningLabel] = [.groove, .hype, .chill, .immersion, .hit, .afterglow]
-}
-
-enum PhonePosition: String, CaseIterable, Codable, Identifiable {
-    case hand
-    case table
-    case pocket
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .hand: "手に持つ"
-        case .table: "机に置く"
-        case .pocket: "ポケット"
-        }
-    }
-}
-
-enum DominantHand: String, CaseIterable, Codable, Identifiable {
-    case right
-    case left
-    case unknown
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .right: "右"
-        case .left: "左"
-        case .unknown: "わからない"
-        }
-    }
-}
-
-enum UsualMovement: String, CaseIterable, Codable, Identifiable {
-    case active
-    case still
-    case depends
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .active: "普段から動く"
-        case .still: "あまり動かない"
-        case .depends: "曲による"
-        }
-    }
 }
 
 struct DemoSong: Identifiable, Codable, Equatable {
@@ -184,10 +132,20 @@ struct MotionSample: Codable, Identifiable {
     var gx: Double?
     var gy: Double?
     var gz: Double?
+    var source: MotionSensorSource?
+    var pitch: Double?
+    var roll: Double?
+    var yaw: Double?
 
     enum CodingKeys: String, CodingKey {
-        case t, ax, ay, az, gx, gy, gz
+        case t, ax, ay, az, gx, gy, gz, source, pitch, roll, yaw
     }
+}
+
+enum MotionSensorSource: String, Codable {
+    case headphoneMotion = "headphone_motion"
+    case deviceMotion = "device_motion"
+    case accelerometer = "accelerometer"
 }
 
 struct LabelEvent: Codable, Identifiable {
@@ -207,7 +165,6 @@ struct SessionRecord: Codable, Identifiable {
     var startedAt: Date
     var endedAt: Date?
     var device: DeviceInfo
-    var listeningContext: ListeningContext
 }
 
 struct DeviceInfo: Codable {
@@ -217,15 +174,8 @@ struct DeviceInfo: Codable {
     var model: String
 }
 
-struct ListeningContext: Codable {
-    var phonePosition: PhonePosition
-    var dominantHand: DominantHand
-    var usualMovement: UsualMovement
-}
-
 struct CollectedSession: Codable {
     var session: SessionRecord
     var samples: [MotionSample]
     var labels: [LabelEvent]
 }
-

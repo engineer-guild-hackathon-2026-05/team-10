@@ -1,6 +1,6 @@
 # HowTune Collector iOS
 
-SwiftUI版の学習データ収集アプリです。iPhone上でCoreMotionを直接読み、セッション終了時に以下をアプリのDocumentsへ保存します。
+SwiftUI版の学習データ収集アプリです。AirPodsの頭部モーションを `CMHeadphoneMotionManager` で直接読み、セッション終了時に以下をアプリのDocumentsへ保存します。AirPodsが未接続または非対応の場合はiPhone本体モーションへフォールバックします。
 
 - `<sessionId>_raw.json`
 - `<sessionId>_training_examples.jsonl`
@@ -16,7 +16,7 @@ SwiftUI版の学習データ収集アプリです。iPhone上でCoreMotionを直
 
 ## 使い方
 
-1. 曲とスマホの持ち方を選ぶ
+1. AirPodsを接続し、曲を選ぶ
 2. セッション開始
 3. 音を聴きながら `ノってる` / `上がった` / `刺さった` などを押す
 4. 終了
@@ -27,10 +27,11 @@ SwiftUI版の学習データ収集アプリです。iPhone上でCoreMotionを直
 
 ## 収集データ
 
-- 加速度・重力込みの `ax/ay/az`
-- DeviceMotionの回転速度 `gx/gy/gz`
+- AirPods頭部モーションの加速度・重力込みの `ax/ay/az`
+- AirPods頭部モーションの回転速度 `gx/gy/gz`
+- AirPods頭部姿勢の `pitch/roll/yaw`
+- 取得元 `source`（`headphone_motion` / `device_motion` / `accelerometer`）
 - 曲中時刻 `t`
 - 押したラベルと前後window
 
 マイク音声、位置情報、連絡先、写真、実名は取得しません。
-

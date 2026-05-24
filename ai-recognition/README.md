@@ -40,15 +40,15 @@ npm run ml:evaluate
 
 ## データ収集アプリ
 
-### SwiftUI / iPhone実機
+### SwiftUI / iPhone実機 + AirPods
 
-ローカルネットワークやHTTPSの都合でWeb版が使いにくい場合は、こちらを使います。
+AirPods頭部モーションを収集する場合はこちらを使います。AirPodsが未接続または非対応の場合はiPhone本体モーションへフォールバックします。
 
 ```bash
 open apps/collect-ios/HowTuneCollector.xcodeproj
 ```
 
-XcodeでSigning Teamを設定してiPhone実機にRunしてください。セッション終了時に `Raw JSON` と `training_examples.jsonl` をiPhone内のDocumentsへ保存し、レビュー画面の共有ボタンからAirDropやFilesへ渡せます。
+XcodeでSigning Teamを設定して、iPhone実機と対応AirPodsを接続してRunしてください。セッション終了時に `Raw JSON` と `training_examples.jsonl` をiPhone内のDocumentsへ保存し、レビュー画面の共有ボタンからAirDropやFilesへ渡せます。
 
 ### Web / Next.js
 
