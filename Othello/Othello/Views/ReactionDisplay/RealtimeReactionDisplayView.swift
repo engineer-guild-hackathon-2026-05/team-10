@@ -10,17 +10,16 @@ struct RealtimeReactionDisplayView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        dominantStateCard
-                        axesPanelCard
-                        if !isSensorAvailable {
-                            sensorUnavailableNote
-                        }
+                VStack(spacing: 0) {
+                    morphSection
+                    if !isSensorAvailable {
+                        sensorUnavailableNote
+                            .padding(.horizontal, 20)
+                            .padding(.top, 12)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 40)
+                    axisLegend
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 32)
                 }
             }
             .preferredColorScheme(.dark)
@@ -45,6 +44,68 @@ struct RealtimeReactionDisplayView: View {
                 )
             }
         }
+    }
+
+    // MARK: - モーフ可視化セクション
+
+    private var morphSection: some View {
+        ZStack {
+            ReactionMorphView(score: viewModel.score, isActive: viewModel.isSessionActive)
+                .frame(height: 340)
+
+            // 中央オーバーレイ：ドミナントステート
+            VStack(spacing: 6) {
+                if viewModel.isSessionActive, let dominant = viewModel.score.dominant {
+                    Text(dominant.emoji)
+                        .font(.system(size: 44))
+                        .transition(.scale.combined(with: .opacity))
+                    Text(dominant.label)
+                        .font(.title3.bold())
+                        .foregroundStyle(dominant.color)
+                        .transition(.opacity)
+                } else if viewModel.isSessionActive {
+                    ProgressView().tint(.gray)
+                    Text("検出中…")
+                        .font(.caption)
+                        .foregroundStyle(.gray)
+                        .padding(.top, 4)
+                } else {
+                    Text("🎧")
+                        .font(.system(size: 36))
+                        .opacity(0.5)
+                    Text("開始で可視化")
+                        .font(.caption)
+                        .foregroundStyle(.gray)
+                }
+            }
+            .animation(.spring(duration: 0.4), value: viewModel.score.dominant?.id)
+            .animation(.easeInOut(duration: 0.3), value: viewModel.isSessionActive)
+        }
+    }
+
+    // MARK: - 6軸凡例（コンパクト）
+
+    private var axisLegend: some View {
+        let axes: [(String, String, Color)] = [
+            ("🎵", "groove",    Color(red: 1.0, green: 0.3,  blue: 0.3)),
+            ("🔥", "hype",      Color(red: 1.0, green: 0.55, blue: 0.1)),
+            ("❄️", "chill",     Color(red: 0.2, green: 0.7,  blue: 1.0)),
+            ("🎧", "immersion", Color(red: 0.6, green: 0.3,  blue: 1.0)),
+            ("💫", "hit",       Color(red: 1.0, green: 0.2,  blue: 0.5)),
+            ("✨", "afterglow", Color(red: 0.9, green: 0.75, blue: 0.3)),
+        ]
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+            ForEach(Array(axes.enumerated()), id: \.offset) { _, axis in
+                HStack(spacing: 5) {
+                    Text(axis.0).font(.caption)
+                    Text(axis.1)
+                        .font(.caption2.bold())
+                        .foregroundStyle(axis.2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.top, 8)
     }
 
     private var dominantStateCard: some View {
