@@ -1,0 +1,218 @@
+import SwiftUI
+
+struct HowCardCreationView: View {
+    let event: ReactionEvent
+
+    @State private var selectedTags: Set<HowTag>
+    @State private var posted = false
+    @Environment(\.dismiss) private var dismiss
+
+    init(event: ReactionEvent) {
+        self.event = event
+        _selectedTags = State(initialValue: Set(event.tags))
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    lyricCard
+                    tagSection
+                    if !selectedTags.isEmpty {
+                        postButton
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
+            }
+
+            if posted {
+                postedOverlay
+            }
+        }
+        .preferredColorScheme(.dark)
+        .navigationTitle("Howカードを作る")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+
+    // MARK: - 歌詞カード
+
+    @ViewBuilder
+    private var lyricCard: some View {
+        if let lyric = event.lyricLine {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 6) {
+                    Image(systemName: "quote.opening")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                    Text("この瞬間のフレーズ")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                    Spacer()
+                    Text(formatTime(event.startTime))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.gray)
+                }
+                Text(lyric)
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let translation = event.lyricTranslation {
+                    Text(translation)
+                        .font(.subheadline)
+                        .foregroundStyle(.gray)
+                }
+            }
+            .padding(16)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.6, green: 0.05, blue: 0.1).opacity(0.3), Color.white.opacity(0.04)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 16)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.25), lineWidth: 1)
+            )
+        } else {
+            HStack(spacing: 10) {
+                Image(systemName: "waveform")
+                    .foregroundStyle(.gray)
+                Text(formatTime(event.startTime) + " の反応区間")
+                    .font(.subheadline)
+                    .foregroundStyle(.gray)
+                Spacer()
+            }
+            .padding(16)
+            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    // MARK: - タグ選択
+
+    private var tagSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("気持ちのタグ（複数選択可）")
+                .font(.subheadline.bold())
+                .foregroundStyle(.white)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                ForEach(HowTag.allCases, id: \.self) { tag in
+                    let isSelected = selectedTags.contains(tag)
+                    Button {
+                        withAnimation(.spring(duration: 0.2)) {
+                            if isSelected { selectedTags.remove(tag) } else { selectedTags.insert(tag) }
+                        }
+                    } label: {
+                        VStack(spacing: 8) {
+                            Text(tagEmoji(tag)).font(.system(size: 32))
+                            Text(tag.label).font(.subheadline.bold()).foregroundStyle(.white)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(
+                            isSelected ? tag.color.opacity(0.2) : Color.white.opacity(0.05),
+                            in: RoundedRectangle(cornerRadius: 14)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(isSelected ? tag.color : Color.clear, lineWidth: 2)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .animation(.easeInOut(duration: 0.15), value: isSelected)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - 投稿ボタン
+
+    private var postButton: some View {
+        Button {
+            withAnimation(.spring(duration: 0.4)) { posted = true }
+            Task {
+                try? await Task.sleep(for: .seconds(1.8))
+                dismiss()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "paperplane.fill")
+                Text("Howカードを投稿")
+                    .font(.subheadline.bold())
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.45, blue: 0.45), Color(red: 0.85, green: 0.15, blue: 0.2)],
+                    startPoint: .leading, endPoint: .trailing
+                ),
+                in: RoundedRectangle(cornerRadius: 14)
+            )
+            .shadow(color: .red.opacity(0.4), radius: 8, y: 4)
+        }
+        .buttonStyle(.plain)
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
+    }
+
+    // MARK: - 投稿完了オーバーレイ
+
+    private var postedOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.75).ignoresSafeArea()
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 64))
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Text("Howカードを投稿しました")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                HStack(spacing: 6) {
+                    ForEach(Array(selectedTags), id: \.self) { tag in
+                        Text(tag.label)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(tag.color.opacity(0.8), in: Capsule())
+                    }
+                }
+            }
+            .padding(32)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 24))
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+    }
+
+    // MARK: - Helpers
+
+    private func formatTime(_ t: TimeInterval) -> String {
+        String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
+    }
+
+    private func tagEmoji(_ tag: HowTag) -> String {
+        switch tag {
+        case .groove:    return "🎵"
+        case .hype:      return "🔥"
+        case .chill:     return "❄️"
+        case .immersion: return "🎧"
+        case .hit:       return "💫"
+        case .afterglow: return "✨"
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        HowCardCreationView(event: ReactionEvent.mockSamples(trackDuration: 200)[1])
+    }
+}

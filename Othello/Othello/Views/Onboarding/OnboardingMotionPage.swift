@@ -1,0 +1,97 @@
+import SwiftUI
+
+struct OnboardingMotionPage: View {
+    @ObservedObject var viewModel: OnboardingViewModel
+    @State private var isRequesting = false
+
+    var body: some View {
+        ZStack {
+            HowTuneDesign.background.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                progressIndicator(current: 1, total: 2)
+                    .padding(.top, 60)
+                    .padding(.horizontal, 32)
+
+                Spacer()
+
+                VStack(spacing: 28) {
+                    ZStack {
+                        Circle()
+                            .fill(HowTuneDesign.accent.opacity(0.15))
+                            .frame(width: 100, height: 100)
+                        Image(systemName: "figure.walk.motion")
+                            .font(.system(size: 48))
+                            .foregroundStyle(HowTuneDesign.accent)
+                    }
+
+                    VStack(spacing: 10) {
+                        Text("モーションセンサーの使用")
+                            .font(.title2.bold())
+                            .foregroundStyle(.white)
+                        Text("音楽を聴いているときの身体の動きを検知します。あなたの「聴き方」の特徴を分析するためだけに使用します。")
+                            .font(.body)
+                            .foregroundStyle(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 32)
+
+                    VStack(spacing: 10) {
+                        purposeCard(
+                            icon: "lock.shield.fill",
+                            title: "端末内処理・外部送信なし",
+                            body: "モーションデータはデバイス上でのみ処理されます。"
+                        )
+
+                        if !viewModel.permissionState.airPodsAvailable {
+                            purposeCard(
+                                icon: "airpods",
+                                title: "AirPods 未接続",
+                                body: "iPhone 本体のモーションセンサーを代わりに使用します。"
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+
+                Spacer()
+
+                VStack(spacing: 14) {
+                    if viewModel.permissionState.motion == .authorized {
+                        authorizedBadge(label: "モーションが許可されました")
+                        nextButton
+                    } else {
+                        primaryButton(
+                            label: "モーションを許可する",
+                            icon: "figure.walk",
+                            isLoading: isRequesting
+                        ) {
+                            isRequesting = true
+                            Task {
+                                await viewModel.requestMotionPermission()
+                                isRequesting = false
+                            }
+                        }
+
+                        skipButton(label: "スキップして手動モードへ進む") {
+                            viewModel.proceedToManualMode()
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 48)
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var nextButton: some View {
+        primaryButton(label: "次へ", icon: "arrow.right") {
+            withAnimation { viewModel.currentPage = 2 }
+        }
+    }
+}
+
+#Preview {
+    OnboardingMotionPage(viewModel: OnboardingViewModel())
+}
