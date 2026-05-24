@@ -5,6 +5,9 @@ struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var playback = PlaybackViewModel()
     @State private var showSearchSheet = false
+    @State private var navigateToReaction = false
+    @State private var tappedLyric: String? = nil
+    @State private var tappedLyricTranslation: String? = nil
 
     init(useManualMode: Bool, permissionState: PermissionState) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(
@@ -14,21 +17,31 @@ struct HomeView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    trackHeader
-                    trackMeta
-                    seekBar
-                    playbackControls
-                    sensorStatusBar
-                    lyricsSection
+                ScrollView {
+                    VStack(spacing: 0) {
+                        trackHeader
+                        trackMeta
+                        seekBar
+                        playbackControls
+                        sensorStatusBar
+                        lyricsSection
+                    }
                 }
             }
+            .preferredColorScheme(.dark)
+            .navigationBarHidden(true)
+            .navigationDestination(isPresented: $navigateToReaction) {
+                ReactionDisplayView(
+                    isSensorAvailable: viewModel.sensorStatus.headMotion == .connected,
+                    lyric: tappedLyric,
+                    lyricTranslation: tappedLyricTranslation
+                )
+            }
         }
-        .preferredColorScheme(.dark)
         .task { await playback.onAppear() }
         .sheet(isPresented: $showSearchSheet) { searchSheet }
         .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
@@ -162,15 +175,11 @@ struct HomeView: View {
         return HStack(spacing: 0) {
             Spacer()
             Button {} label: {
-                Image(systemName: "shuffle")
-                    .font(.title3)
-                    .foregroundStyle(.gray)
+                Image(systemName: "shuffle").font(.title3).foregroundStyle(.gray)
             }
             Spacer()
             Button {} label: {
-                Image(systemName: "backward.end.fill")
-                    .font(.title2)
-                    .foregroundStyle(.white)
+                Image(systemName: "backward.end.fill").font(.title2).foregroundStyle(.white)
             }
             Spacer()
             Button {
@@ -182,13 +191,10 @@ struct HomeView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 1.0, green: 0.45, blue: 0.45), Color(red: 0.85, green: 0.15, blue: 0.2)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(LinearGradient(
+                            colors: [Color(red: 1.0, green: 0.45, blue: 0.45), Color(red: 0.85, green: 0.15, blue: 0.2)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ))
                         .frame(width: 72, height: 72)
                         .shadow(color: .red.opacity(0.5), radius: 12, y: 4)
                     Image(systemName: playing ? "pause.fill" : "play.fill")
@@ -200,22 +206,18 @@ struct HomeView: View {
             .buttonStyle(.plain)
             Spacer()
             Button {} label: {
-                Image(systemName: "forward.end.fill")
-                    .font(.title2)
-                    .foregroundStyle(.white)
+                Image(systemName: "forward.end.fill").font(.title2).foregroundStyle(.white)
             }
             Spacer()
             Button {} label: {
-                Image(systemName: "repeat")
-                    .font(.title3)
-                    .foregroundStyle(.gray)
+                Image(systemName: "repeat").font(.title3).foregroundStyle(.gray)
             }
             Spacer()
         }
         .padding(.vertical, 20)
     }
 
-    // MARK: - センサー状態バー（コンパクト）
+    // MARK: - センサー状態バー
     private var sensorStatusBar: some View {
         HStack(spacing: 12) {
             sensorDot(icon: "airpods", label: viewModel.sensorStatus.headMotion.label, color: viewModel.sensorStatus.headMotion.color)
@@ -226,20 +228,16 @@ struct HomeView: View {
             if !viewModel.isSessionActive {
                 Button { viewModel.startSession() } label: {
                     Text("リスニング開始")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .font(.caption.bold()).foregroundStyle(.white)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(Color(red: 0.85, green: 0.15, blue: 0.2), in: Capsule())
                 }
                 .buttonStyle(.plain)
             } else {
                 Button { viewModel.endSession() } label: {
                     Text("終了")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .font(.caption.bold()).foregroundStyle(.white)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(Color.gray.opacity(0.4), in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -252,12 +250,8 @@ struct HomeView: View {
 
     private func sensorDot(icon: String, label: String, color: Color) -> some View {
         HStack(spacing: 4) {
-            Circle()
-                .fill(color)
-                .frame(width: 7, height: 7)
-            Image(systemName: icon)
-                .font(.caption2)
-                .foregroundStyle(.gray)
+            Circle().fill(color).frame(width: 7, height: 7)
+            Image(systemName: icon).font(.caption2).foregroundStyle(.gray)
         }
     }
 
@@ -265,59 +259,59 @@ struct HomeView: View {
     private var lyricsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("歌詞 × Howカード")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                Text("歌詞 × Howカード").font(.headline).foregroundStyle(.white)
                 Spacer()
                 HStack(spacing: 4) {
-                    Image(systemName: "sparkles")
-                        .font(.caption)
-                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
-                    Text("タップで解説")
-                        .font(.caption.bold())
-                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                    Image(systemName: "sparkles").font(.caption).foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                    Text("タップで解説").font(.caption.bold()).foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 12)
+            .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
 
             Divider().overlay(Color.gray.opacity(0.3))
 
             VStack(spacing: 0) {
                 lyricsSectionHeader("VERSE 1")
-                LyricRow(lyric: "深夜二時の改札を抜けて", translation: "Through the late-night turnstile", howCount: 4, likeCount: 82, isHighlighted: false)
-                LyricRow(lyric: "コンビニの灯りに泳いだ", translation: "Swimming in the convenience-store glow", howCount: 12, likeCount: 341, isHighlighted: true)
-                LyricRow(lyric: "君のメッセージは未読のまま", translation: "Your message still unread", howCount: 3, likeCount: 118, isHighlighted: false)
-                LyricRow(lyric: "壊れた傘を畳んでいる", translation: "Folding a broken umbrella", howCount: 1, likeCount: 47, isHighlighted: false)
+                LyricRow(lyric: "深夜二時の改札を抜けて", translation: "Through the late-night turnstile", howCount: 4, likeCount: 82, isHighlighted: false, onHowTap: {
+                    tappedLyric = "深夜二時の改札を抜けて"
+                    tappedLyricTranslation = "Through the late-night turnstile"
+                    navigateToReaction = true
+                })
+                LyricRow(lyric: "コンビニの灯りに泳いだ", translation: "Swimming in the convenience-store glow", howCount: 12, likeCount: 341, isHighlighted: true, onHowTap: {
+                    tappedLyric = "コンビニの灯りに泳いだ"
+                    tappedLyricTranslation = "Swimming in the convenience-store glow"
+                    navigateToReaction = true
+                })
+                LyricRow(lyric: "君のメッセージは未読のまま", translation: "Your message still unread", howCount: 3, likeCount: 118, isHighlighted: false, onHowTap: {
+                    tappedLyric = "君のメッセージは未読のまま"
+                    tappedLyricTranslation = "Your message still unread"
+                    navigateToReaction = true
+                })
+                LyricRow(lyric: "壊れた傘を畳んでいる", translation: "Folding a broken umbrella", howCount: 1, likeCount: 47, isHighlighted: false, onHowTap: {
+                    tappedLyric = "壊れた傘を畳んでいる"
+                    tappedLyricTranslation = "Folding a broken umbrella"
+                    navigateToReaction = true
+                })
 
                 HStack(spacing: 8) {
-                    ForEach(0..<3) { _ in
-                        Circle().fill(Color.gray.opacity(0.4)).frame(width: 5, height: 5)
-                    }
-                    Text("INSTRUMENTAL")
-                        .font(.caption2)
-                        .foregroundStyle(.gray.opacity(0.6))
-                        .kerning(1.5)
+                    ForEach(0..<3) { _ in Circle().fill(Color.gray.opacity(0.4)).frame(width: 5, height: 5) }
+                    Text("INSTRUMENTAL").font(.caption2).foregroundStyle(.gray.opacity(0.6)).kerning(1.5)
                 }
-                .padding(.vertical, 20)
-                .padding(.horizontal, 20)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 20).padding(.horizontal, 20).frame(maxWidth: .infinity, alignment: .leading)
 
                 lyricsSectionHeader("PRE")
-                LyricRow(lyric: "夜行性のアパートで", translation: "In this nocturnal apartment", howCount: 2, likeCount: 29, isHighlighted: false)
+                LyricRow(lyric: "夜行性のアパートで", translation: "In this nocturnal apartment", howCount: 2, likeCount: 29, isHighlighted: false, onHowTap: {
+                    tappedLyric = "夜行性のアパートで"
+                    tappedLyricTranslation = "In this nocturnal apartment"
+                    navigateToReaction = true
+                })
             }
         }
     }
 
     private func lyricsSectionHeader(_ text: String) -> some View {
-        Text(text)
-            .font(.caption.bold())
-            .foregroundStyle(.gray.opacity(0.6))
-            .kerning(1.5)
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 8)
+        Text(text).font(.caption.bold()).foregroundStyle(.gray.opacity(0.6)).kerning(1.5)
+            .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -331,11 +325,9 @@ struct HomeView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.gray)
+                    Image(systemName: "magnifyingglass").foregroundStyle(.gray)
                     TextField("曲名・アーティスト名で検索", text: $playback.searchQuery)
-                        .foregroundStyle(.white)
-                        .submitLabel(.search)
+                        .foregroundStyle(.white).submitLabel(.search)
                         .onSubmit { Task { await playback.search() } }
                     if !playback.searchQuery.isEmpty {
                         Button { playback.searchQuery = "" } label: {
@@ -345,8 +337,7 @@ struct HomeView: View {
                 }
                 .padding(12)
                 .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 16).padding(.vertical, 12)
 
                 if playback.authorizationStatus != .authorized {
                     ContentUnavailableView(
@@ -356,36 +347,25 @@ struct HomeView: View {
                     )
                     .foregroundStyle(.white)
                 } else if playback.searchResults.isEmpty && !playback.searchQuery.isEmpty {
-                    ContentUnavailableView.search(text: playback.searchQuery)
-                        .foregroundStyle(.white)
+                    ContentUnavailableView.search(text: playback.searchQuery).foregroundStyle(.white)
                 } else {
                     List(playback.searchResults) { track in
                         Button {
-                            Task {
-                                await playback.select(track: track)
-                                showSearchSheet = false
-                            }
+                            Task { await playback.select(track: track); showSearchSheet = false }
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(track.title)
-                                    .font(.body)
-                                    .foregroundStyle(.white)
-                                Text(track.artistName)
-                                    .font(.caption)
-                                    .foregroundStyle(.gray)
+                                Text(track.title).font(.body).foregroundStyle(.white)
+                                Text(track.artistName).font(.caption).foregroundStyle(.gray)
                             }
                         }
                         .listRowBackground(Color.clear)
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
+                    .listStyle(.plain).scrollContentBackground(.hidden)
                 }
-
                 Spacer()
             }
             .background(Color.black.ignoresSafeArea())
-            .navigationTitle("曲を選ぶ")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("曲を選ぶ").navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
