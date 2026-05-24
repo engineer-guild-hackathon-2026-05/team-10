@@ -88,6 +88,7 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
         currentTrack = PlaybackTrack(song: song)
         unavailableReason = nil
         isPositionAvailable = true
+        isPlaying = true
         startPositionTimer()
     }
 
@@ -99,15 +100,18 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
 
         if isPlaying {
             player.pause()
+            isPlaying = false
             stopPositionTimer()
         } else {
             try? await player.play()
+            isPlaying = true
             startPositionTimer()
         }
     }
 
     func stop() {
         player.stop()
+        isPlaying = false
         stopPositionTimer()
         playbackTime = 0
         isPositionAvailable = currentTrack != nil

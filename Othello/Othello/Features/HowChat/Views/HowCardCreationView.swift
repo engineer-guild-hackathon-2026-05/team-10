@@ -4,6 +4,7 @@ struct HowCardCreationView: View {
     let event: ReactionEvent
 
     @State private var selectedTags: Set<HowTag>
+    @State private var commentText = ""
     @State private var posted = false
     @Environment(\.dismiss) private var dismiss
 
@@ -19,6 +20,7 @@ struct HowCardCreationView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     lyricCard
+                    commentSection
                     tagSection
                     if !selectedTags.isEmpty {
                         postButton
@@ -91,6 +93,55 @@ struct HowCardCreationView: View {
             .padding(16)
             .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
         }
+    }
+
+    // MARK: - コメント
+
+    private var commentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "text.bubble.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Text("コメント")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(commentText.count)/140")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.gray)
+            }
+
+            ZStack(alignment: .topLeading) {
+                if commentText.isEmpty {
+                    Text("この曲のここが好き")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.32))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                }
+
+                TextEditor(text: $commentText)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 96)
+                    .onChange(of: commentText) { _, newValue in
+                        if newValue.count > 140 {
+                            commentText = String(newValue.prefix(140))
+                        }
+                    }
+            }
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 16))
     }
 
     // MARK: - タグ選択
@@ -185,6 +236,13 @@ struct HowCardCreationView: View {
                             .padding(.vertical, 4)
                             .background(tag.color.opacity(0.8), in: Capsule())
                     }
+                }
+                if !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(commentText)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.76))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(32)

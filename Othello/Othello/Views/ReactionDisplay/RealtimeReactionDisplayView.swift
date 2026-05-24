@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RealtimeReactionDisplayView: View {
     @StateObject private var viewModel = ReactionDisplayViewModel()
+    @StateObject private var motionViewModel = AirPodsMotionViewModel()
     let isSensorAvailable: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -14,7 +15,7 @@ struct RealtimeReactionDisplayView: View {
                     VStack(spacing: 20) {
                         dominantStateCard
                         axesPanelCard
-                        if !isSensorAvailable {
+                        if shouldShowSensorUnavailableNote {
                             sensorUnavailableNote
                         }
                     }
@@ -36,7 +37,11 @@ struct RealtimeReactionDisplayView: View {
                     sessionToggleButton
                 }
             }
-            .onDisappear { viewModel.stopSession() }
+            .onDisappear { stopSession(presentTimeline: false) }
+            .onChange(of: motionViewModel.latestSample) { _, sample in
+                guard let sample else { return }
+                viewModel.updateScore(MotionReactionScoreEstimator.score(from: sample))
+            }
             .fullScreenCover(isPresented: $viewModel.showTimeline) {
                 ReactionTimelineView(
                     trackTitle: "— 曲タイトル —",
@@ -45,6 +50,10 @@ struct RealtimeReactionDisplayView: View {
                 )
             }
         }
+    }
+
+    private var shouldShowSensorUnavailableNote: Bool {
+        !isSensorAvailable || motionViewModel.fallbackRequired
     }
 
     private var dominantStateCard: some View {
@@ -139,15 +148,27 @@ struct RealtimeReactionDisplayView: View {
     private var sessionToggleButton: some View {
         Button {
             if viewModel.isSessionActive {
-                viewModel.stopSession()
+                stopSession()
             } else {
-                viewModel.startSession(sensorAvailable: isSensorAvailable)
+                startSession()
             }
         } label: {
             Text(viewModel.isSessionActive ? "終了" : "開始")
                 .font(.subheadline.bold())
                 .foregroundStyle(viewModel.isSessionActive ? .white : Color(red: 1.0, green: 0.3, blue: 0.3))
         }
+    }
+
+    private func startSession() {
+        viewModel.startSession(sensorAvailable: isSensorAvailable)
+        if isSensorAvailable {
+            motionViewModel.start()
+        }
+    }
+
+    private func stopSession(presentTimeline: Bool = true) {
+        motionViewModel.stop()
+        viewModel.stopSession(presentTimeline: presentTimeline)
     }
 }
 
