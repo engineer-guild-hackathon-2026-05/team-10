@@ -3,164 +3,155 @@ import SwiftUI
 struct ReactionDisplayView: View {
     @StateObject private var viewModel = ReactionDisplayViewModel()
     let isSensorAvailable: Bool
-    @Environment(\.dismiss) private var dismiss
+    let selectedLyric: String?
+    let selectedLyricTranslation: String?
+
+    init(isSensorAvailable: Bool, lyric: String? = nil, lyricTranslation: String? = nil) {
+        self.isSensorAvailable = isSensorAvailable
+        self.selectedLyric = lyric
+        self.selectedLyricTranslation = lyricTranslation
+    }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        dominantStateCard
-                        axesPanelCard
-                        if !isSensorAvailable {
-                            sensorUnavailableNote
+            ScrollView {
+                VStack(spacing: 24) {
+                    if let lyric = selectedLyric {
+                        selectedPhraseCard(lyric: lyric, translation: selectedLyricTranslation)
+                    } else {
+                        noLyricPlaceholder
+                    }
+                    howTagGrid
+                    if viewModel.selectedHowTag != nil {
+                        postButton
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
+            }
+        }
+        .preferredColorScheme(.dark)
+        .navigationTitle("Howカード")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            viewModel.selectedLyric = selectedLyric
+            viewModel.selectedLyricTranslation = selectedLyricTranslation
+        }
+    }
+
+    private func selectedPhraseCard(lyric: String, translation: String?) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "quote.opening").font(.caption.bold())
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Text("選択中のフレーズ").font(.caption.bold())
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Spacer()
+            }
+            Text(lyric).font(.title3.bold()).foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            if let translation {
+                Text(translation).font(.subheadline).foregroundStyle(.gray)
+            }
+        }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color(red: 0.6, green: 0.05, blue: 0.1).opacity(0.3), Color.white.opacity(0.04)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 16)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 16)
+            .stroke(Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.25), lineWidth: 1))
+    }
+
+    private var noLyricPlaceholder: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "text.bubble").font(.system(size: 36)).foregroundStyle(.gray.opacity(0.4))
+            Text("歌詞を選んでHowカードを作ろう").font(.subheadline).foregroundStyle(.gray).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity).padding(28)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var howTagGrid: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("このフレーズでの気持ちは？").font(.subheadline.bold()).foregroundStyle(.white)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                ForEach(HowTag.allCases, id: \.self) { tag in
+                    Button {
+                        withAnimation(.spring(duration: 0.2)) {
+                            viewModel.selectedHowTag = viewModel.selectedHowTag == tag ? nil : tag
                         }
+                    } label: {
+                        VStack(spacing: 8) {
+                            Text(howTagEmoji(tag)).font(.system(size: 32))
+                            Text(tag.label).font(.subheadline.bold()).foregroundStyle(.white)
+                        }
+                        .frame(maxWidth: .infinity).padding(.vertical, 18)
+                        .background(
+                            viewModel.selectedHowTag == tag ? tag.color.opacity(0.2) : Color.white.opacity(0.05),
+                            in: RoundedRectangle(cornerRadius: 14)
+                        )
+                        .overlay(RoundedRectangle(cornerRadius: 14)
+                            .stroke(viewModel.selectedHowTag == tag ? tag.color : Color.clear, lineWidth: 2))
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 40)
+                    .buttonStyle(.plain)
+                    .animation(.easeInOut(duration: 0.15), value: viewModel.selectedHowTag)
                 }
-            }
-            .preferredColorScheme(.dark)
-            .navigationTitle("リアルタイム反応")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("閉じる") { dismiss() }
-                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    sessionToggleButton
-                }
-            }
-            .onDisappear { viewModel.stopSession() }
-            .fullScreenCover(isPresented: $viewModel.showTimeline) {
-                ReactionTimelineView(
-                    trackTitle: "— 曲タイトル —",
-                    trackArtist: "— アーティスト —",
-                    duration: 268
-                )
             }
         }
+        .padding(16)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Dominant state card
-
-    private var dominantStateCard: some View {
-        VStack(spacing: 12) {
-            if viewModel.isSessionActive, let dominant = viewModel.score.dominant {
-                Text(dominant.emoji)
-                    .font(.system(size: 56))
-                    .transition(.scale.combined(with: .opacity))
-                Text(dominant.label)
-                    .font(.title2.bold())
-                    .foregroundStyle(dominant.color)
-                    .transition(.opacity)
-                Text("いまの状態")
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-            } else if viewModel.isSessionActive {
-                ProgressView()
-                    .tint(.gray)
-                Text("反応を検出中…")
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-                    .padding(.top, 4)
-            } else {
-                Image(systemName: "waveform.path")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.gray.opacity(0.4))
-                Text("リスニング開始で\nリアルタイム反応を表示")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 130)
-        .padding(20)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
-        .animation(.spring(duration: 0.4), value: viewModel.score.dominant?.id)
-        .animation(.easeInOut(duration: 0.3), value: viewModel.isSessionActive)
-    }
-
-    // MARK: - 6軸バーパネル
-
-    private var axesPanelCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("6軸スコア")
-                .font(.caption.bold())
-                .foregroundStyle(.gray.opacity(0.6))
-                .kerning(1.2)
-                .padding(.bottom, 4)
-
-            if viewModel.isSessionActive {
-                VStack(spacing: 14) {
-                    ForEach(viewModel.score.axes) { axis in
-                        ReactionAxisBar(axis: axis)
-                    }
-                }
-            } else {
-                VStack(spacing: 14) {
-                    ForEach(ReactionScore.empty.axes) { axis in
-                        ReactionAxisBar(axis: ReactionAxis(
-                            id: axis.id,
-                            label: axis.label,
-                            emoji: axis.emoji,
-                            value: 0,
-                            color: axis.color
-                        ))
-                    }
-                }
-                .opacity(0.3)
-            }
-        }
-        .padding(20)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
-        .animation(.easeInOut(duration: 0.15), value: viewModel.score)
-    }
-
-    // MARK: - センサー未使用時の注意
-
-    private var sensorUnavailableNote: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "hand.tap.fill")
-                .foregroundStyle(Color(red: 1.0, green: 0.55, blue: 0.1))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("手動ラベルモード")
-                    .font(.caption.bold())
-                    .foregroundStyle(.white)
-                Text("センサーが使えないため、ボタンで反応を記録します")
-                    .font(.caption2)
-                    .foregroundStyle(.gray)
-            }
-        }
-        .padding(14)
-        .background(Color(red: 1.0, green: 0.55, blue: 0.1).opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - セッション開始/終了ボタン
-
-    private var sessionToggleButton: some View {
+    private var postButton: some View {
         Button {
-            if viewModel.isSessionActive {
-                viewModel.stopSession()
-            } else {
-                viewModel.startSession(sensorAvailable: isSensorAvailable)
-            }
+            // TODO: Howカード投稿処理
         } label: {
-            Text(viewModel.isSessionActive ? "終了" : "開始")
-                .font(.subheadline.bold())
-                .foregroundStyle(viewModel.isSessionActive ? .white : Color(red: 1.0, green: 0.3, blue: 0.3))
+            HStack(spacing: 8) {
+                Image(systemName: "paperplane.fill")
+                if let tag = viewModel.selectedHowTag {
+                    Text("「\(tag.label)」でHowカードを投稿").font(.subheadline.bold())
+                }
+            }
+            .foregroundStyle(.white).frame(maxWidth: .infinity).padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.45, blue: 0.45), Color(red: 0.85, green: 0.15, blue: 0.2)],
+                    startPoint: .leading, endPoint: .trailing
+                ),
+                in: RoundedRectangle(cornerRadius: 14)
+            )
+            .shadow(color: .red.opacity(0.4), radius: 8, y: 4)
+        }
+        .buttonStyle(.plain)
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
+    }
+
+    private func howTagEmoji(_ tag: HowTag) -> String {
+        switch tag {
+        case .groove:    return "🎵"
+        case .hype:      return "🔥"
+        case .chill:     return "❄️"
+        case .immersion: return "🎧"
+        case .hit:       return "💫"
+        case .afterglow: return "✨"
         }
     }
 }
 
 #Preview {
     NavigationStack {
-        ReactionDisplayView(isSensorAvailable: true)
+        ReactionDisplayView(
+            isSensorAvailable: true,
+            lyric: "コンビニの灯りに泳いだ",
+            lyricTranslation: "Swimming in the convenience-store glow"
+        )
     }
 }
