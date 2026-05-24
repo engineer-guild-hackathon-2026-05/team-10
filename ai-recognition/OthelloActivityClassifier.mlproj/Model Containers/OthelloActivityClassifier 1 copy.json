@@ -1,0 +1,156 @@
+{
+  "activityEntities" : [
+    "trainingDataAdded",
+    [
+      {
+        "createdDate" : "2026-05-24T14:24:43Z",
+        "event" : "trainingDataAdded",
+        "id" : "96004E99-EF78-4D61-A11B-28D4E6CA0DD3",
+        "subtitle" : "CreateMLActivityData",
+        "title" : "Training Data Added"
+      }
+    ],
+    "experimentCreated",
+    [
+      {
+        "createdDate" : "2026-05-24T14:24:42Z",
+        "event" : "experimentCreated",
+        "id" : "1908A60E-933C-4B19-B248-FC0F22547A3E",
+        "subtitle" : "OthelloActivityClassifier 1 copy",
+        "title" : "Model Source Created"
+      }
+    ]
+  ],
+  "contentDataResult" : {
+    "createdDate" : "2026-05-24T09:26:31Z"
+  },
+  "createdDate" : "2026-05-24T14:24:42Z",
+  "evaluationContainerEntity" : {
+    "createdDate" : "2026-05-24T14:24:43Z",
+    "evaluationEntities" : [
+
+    ],
+    "id" : "eefdbf80-8db3-4549-acc0-142bc7eb3b76",
+    "modifiedDate" : "2026-05-24T14:24:43Z",
+    "previewType" : "activityClassifier",
+    "testingEvaluationEntity" : {
+      "analysedDataType" : "none",
+      "createdDate" : "2026-05-24T14:24:42Z",
+      "dataResult" : {
+        "createdDate" : "2026-05-24T14:24:42Z"
+      },
+      "id" : "8e587039-db15-4603-a018-821800943c17"
+    },
+    "trainingEvaluationEntity" : {
+      "analysedDataType" : "none",
+      "createdDate" : "2026-05-24T14:24:42Z",
+      "dataResult" : {
+        "createdDate" : "2026-05-24T14:24:42Z",
+        "dataSourceID" : "1A8DE18D-A53A-46C4-BA94-B645F57E2E0B",
+        "dataURL" : "file:///Users/atsushi/Downloads/CreateMLActivityData/"
+      },
+      "dataSourceID" : "1A8DE18D-A53A-46C4-BA94-B645F57E2E0B",
+      "id" : "e38fb5f1-1171-48e6-9d4c-8494c008e44b"
+    },
+    "validationEvaluationEntity" : {
+      "analysedDataType" : "auto",
+      "createdDate" : "2026-05-24T14:24:42Z",
+      "dataResult" : {
+        "createdDate" : "2026-05-24T14:24:42Z"
+      },
+      "id" : "16ff0206-28c9-4686-961c-f20885f34cf2"
+    }
+  },
+  "evaluationEntity" : {
+    "analysedDataType" : "none",
+    "dataResult" : {
+
+    },
+    "id" : "d18d0d93-0c1f-4286-89dd-6a9b035422df"
+  },
+  "evaluationState" : "uninitialized",
+  "id" : "A390AB00-A6B6-49B6-B072-D7B0C2CE05E3",
+  "modelEntity" : {
+    "createdDate" : "2026-05-24T14:24:42Z",
+    "experimentID" : "115E94DE-2CE7-47B9-B723-CD4791294572",
+    "id" : "6C7635FE-1FBA-4410-B0C1-63DF3C72E19C",
+    "modifiedDate" : "2026-05-24T14:24:42Z",
+    "title" : "",
+    "version" : "1.0"
+  },
+  "modifiedDate" : "2026-05-24T14:24:43Z",
+  "preferredFilename" : "OthelloActivityClassifier 1 copy",
+  "settingEntity" : {
+    "algorithmType" : "maxEnt",
+    "augmentations" : [
+
+    ],
+    "featureNames" : [
+      "ax",
+      "ay",
+      "az",
+      "gx",
+      "gy",
+      "gz",
+      "pitch",
+      "roll",
+      "yaw"
+    ],
+    "handActionClassifierAugmentations" : [
+
+    ],
+    "handPoseClassifierAugmentations" : [
+
+    ],
+    "harVideoAugmentations" : 0,
+    "iterationCount" : 10,
+    "seedType" : "default",
+    "styleTransferAlgorithmType" : "image",
+    "taskType" : "activityClassifier",
+    "transferLearningEmbeddingType" : "dynamic"
+  },
+  "snapshotRole" : {
+    "withoutSnapshots" : 0
+  },
+  "state" : "uninitialized",
+  "title" : "OthelloActivityClassifier 1 copy",
+  "trainingEntity" : {
+    "analysedDataType" : "datasource",
+    "checkpointMetrics" : {
+
+    },
+    "dataResult" : {
+      "createdDate" : "2026-05-24T14:24:42Z",
+      "dataSourceID" : "1A8DE18D-A53A-46C4-BA94-B645F57E2E0B",
+      "dataURL" : "file:///Users/atsushi/Downloads/CreateMLActivityData/",
+      "error" : {
+        "code" : 257,
+        "domain" : "NSCocoaErrorDomain",
+        "errorType" : "error",
+        "reason" : "You don’t have permission. at \"CreateMLActivityData\""
+      }
+    },
+    "dataSourceID" : "1A8DE18D-A53A-46C4-BA94-B645F57E2E0B",
+    "featureExtractionCheckpointMayBeAvailable" : false,
+    "progress" : [
+
+    ],
+    "snapshottableCheckpoints" : {
+
+    }
+  },
+  "validationEntity" : {
+    "analysedDataType" : "auto",
+    "dataResult" : {
+      "createdDate" : "2026-05-24T14:24:42Z"
+    },
+    "splitOptions" : {
+      "strategy" : {
+        "automatic" : {
+
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

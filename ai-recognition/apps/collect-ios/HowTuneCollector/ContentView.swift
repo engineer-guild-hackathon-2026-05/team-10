@@ -178,7 +178,7 @@ private struct ReviewScreen: View {
             VStack(alignment: .leading, spacing: 18) {
                 HeaderBlock(
                     title: "保存完了",
-                    bodyText: "Raw JSON と training_examples JSONL をアプリのDocumentsに保存しました。Filesアプリや共有からMacへ移せます。"
+                    bodyText: "Raw JSON、JSONL、Create ML向けCSVをアプリのDocumentsに保存しました。Filesアプリや共有からMacへ移せます。"
                 )
 
                 if let result = model.exportResult {
@@ -186,7 +186,14 @@ private struct ReviewScreen: View {
                         VStack(alignment: .leading, spacing: 12) {
                             ExportRow(title: "Raw JSON", url: result.rawJSONURL)
                             ExportRow(title: "Training JSONL", url: result.trainingJSONLURL)
-                            MetricPill(title: "examples", value: "\(result.examplesCount)")
+                            ExportRow(title: "Create ML Recording CSV", url: result.recordingCSVURL)
+                            ExportRow(title: "Create ML Annotations CSV", url: result.annotationsCSVURL)
+                            ExportRow(title: "Create ML GUI Folder", url: result.createMLActivityDataURL)
+
+                            HStack(spacing: 10) {
+                                MetricPill(title: "examples", value: "\(result.examplesCount)")
+                                MetricPill(title: "activity csv", value: "\(result.activityCSVCount)")
+                            }
 
                             HStack {
                                 ShareLink(item: result.rawJSONURL) {
@@ -199,6 +206,24 @@ private struct ReviewScreen: View {
                                 }
                                 .buttonStyle(.borderedProminent)
                             }
+
+                            HStack {
+                                ShareLink(item: result.recordingCSVURL) {
+                                    Label("記録CSV共有", systemImage: "waveform.path.ecg")
+                                }
+                                .buttonStyle(.bordered)
+
+                                ShareLink(item: result.annotationsCSVURL) {
+                                    Label("注釈CSV共有", systemImage: "tablecells")
+                                }
+                                .buttonStyle(.bordered)
+                            }
+
+                            ShareLink(item: result.createMLActivityDataURL) {
+                                Label("GUI用フォルダ共有", systemImage: "folder")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
                         }
                     }
                 }
