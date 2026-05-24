@@ -7,6 +7,7 @@ final class ReactionDisplayViewModel: ObservableObject {
     @Published private(set) var score: ReactionScore = .empty
     @Published private(set) var isSessionActive: Bool = false
     @Published private(set) var isSensorAvailable: Bool = false
+    @Published var showTimeline: Bool = false
 
     // NFR-03: 表示更新は 100ms ごとにバッファリングしてメインスレッド負荷を最小化
     private var displayUpdateTimer: AnyCancellable?
@@ -29,6 +30,7 @@ final class ReactionDisplayViewModel: ObservableObject {
         withAnimation(.easeOut(duration: 0.6)) {
             score = .empty
         }
+        showTimeline = true
     }
 
     /// 外部センサー（AirPodsMotionManager 等）からスコアを受け取る口

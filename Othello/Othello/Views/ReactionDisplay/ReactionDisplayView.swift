@@ -30,6 +30,13 @@ struct ReactionDisplayView: View {
             }
         }
         .onDisappear { viewModel.stopSession() }
+        .fullScreenCover(isPresented: $viewModel.showTimeline) {
+            ReactionTimelineView(
+                trackTitle: "— 曲タイトル —",
+                trackArtist: "— アーティスト —",
+                duration: 268
+            )
+        }
     }
 
     // MARK: - Dominant state card
