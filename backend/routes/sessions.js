@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { createSession, saveHowCard } = require('../repositories/firestore');
+const { createSession, getSession, saveHowCard } = require('../repositories/firestore');
 const { chat, generateHowCard } = require('../services/claude');
 
 // POST /sessions
 router.post('/', auth, async (req, res) => {
   const { songTitle, durationSec, reactions } = req.body;
+  if (!songTitle || typeof durationSec !== 'number' || !Array.isArray(reactions)) {
+    return res.status(400).json({ error: 'songTitle, durationSec, reactions が必要です' });
+  }
   try {
     const sessionId = await createSession({ uid: req.uid, songTitle, durationSec, reactions });
     res.json({ sessionId });
@@ -31,11 +34,24 @@ router.post('/:id/chat', async (req, res) => {
 // POST /sessions/:id/how-card
 router.post('/:id/how-card', auth, async (req, res) => {
   const { reactions, chatHistory, songTitle } = req.body;
+  if (!Array.isArray(reactions) || !Array.isArray(chatHistory) || !songTitle) {
+    return res.status(400).json({ error: 'reactions, chatHistory, songTitle が必要です' });
+  }
+
+  const sessionId = req.params.id;
+  const session = await getSession(sessionId);
+  if (!session) {
+    return res.status(404).json({ error: 'セッションが見つかりません' });
+  }
+  if (session.userId !== req.uid) {
+    return res.status(403).json({ error: 'このセッションへのアクセス権がありません' });
+  }
+
   try {
     const howCardData = await generateHowCard({ reactions, chatHistory, songTitle });
     const cardId = await saveHowCard({
       uid: req.uid,
-      sessionId: req.params.id,
+      sessionId,
       songTitle,
       ...howCardData,
     });
