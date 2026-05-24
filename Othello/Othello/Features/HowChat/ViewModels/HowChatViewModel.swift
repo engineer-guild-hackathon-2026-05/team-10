@@ -48,14 +48,7 @@ final class HowChatViewModel: ObservableObject {
         state = .loading
         do {
             let response = try await ChatAPIClient.shared.chat(event: event, messages: messages)
-            var aiMsg = HowChatMessage(sender: .ai, text: "", isStreaming: true)
-            messages.append(aiMsg)
-            let idx = messages.count - 1
-            for char in response.question {
-                try? await Task.sleep(nanoseconds: 18_000_000)
-                messages[idx].text.append(char)
-            }
-            messages[idx].isStreaming = false
+            messages.append(HowChatMessage(sender: .ai, text: response.question))
             choices = response.choices.map { HowChatChoice(label: $0) }
             state = .waitingReply
         } catch {

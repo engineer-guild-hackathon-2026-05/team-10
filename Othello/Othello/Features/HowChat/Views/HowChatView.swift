@@ -163,7 +163,7 @@ struct HowChatView: View {
                     .font(.caption)
                     .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
                     .frame(width: 20)
-                Text(msg.text + (msg.isStreaming ? "▋" : ""))
+                Text(msg.text)
                     .font(.subheadline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
