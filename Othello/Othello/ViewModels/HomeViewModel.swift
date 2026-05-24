@@ -22,8 +22,9 @@ class HomeViewModel: ObservableObject {
 
     func startSession() {
         isSessionActive = true
+        // セッション開始時にセンサー状態を「取得中」へ更新
         if sensorStatus.headMotion == .disconnected {
-            sensorStatus.headMotion = .disconnected
+            sensorStatus.headMotion = .disconnected // AirPods は接続状態による
         }
         if sensorStatus.bodyMotion == .stopped {
             sensorStatus.bodyMotion = .acquiring

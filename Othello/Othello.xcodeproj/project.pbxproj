@@ -254,6 +254,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Apple Music の楽曲を再生し、再生位置をセンサー記録と同期するために使用します。";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "音楽を聴いているときの感動の深さを可視化するため、心拍数データを読み取ります。";
 				INFOPLIST_KEY_NSMotionUsageDescription = "AirPods head motion is used to detect listening reactions during songs.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -300,6 +301,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Apple Music の楽曲を再生し、再生位置をセンサー記録と同期するために使用します。";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "音楽を聴いているときの感動の深さを可視化するため、心拍数データを読み取ります。";
 				INFOPLIST_KEY_NSMotionUsageDescription = "AirPods head motion is used to detect listening reactions during songs.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
