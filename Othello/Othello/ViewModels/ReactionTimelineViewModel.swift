@@ -11,11 +11,16 @@ final class ReactionTimelineViewModel: ObservableObject {
     let trackArtist: String
     let duration: TimeInterval
 
-    init(trackTitle: String, trackArtist: String, duration: TimeInterval) {
+    init(
+        trackTitle: String,
+        trackArtist: String,
+        duration: TimeInterval,
+        events: [ReactionEvent]? = nil
+    ) {
         self.trackTitle = trackTitle
         self.trackArtist = trackArtist
         self.duration = duration
-        self.events = ReactionEvent.mockSamples(trackDuration: duration)
+        self.events = events ?? ReactionEvent.mockSamples(trackDuration: duration)
     }
 
     func selectEvent(_ event: ReactionEvent) {

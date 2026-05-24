@@ -4,8 +4,11 @@ import MusicKit
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var playback = PlaybackViewModel()
+    @StateObject private var motion = AirPodsMotionViewModel(maxStoredSamples: 600)
+    @StateObject private var reactionDetection = ReactionDetectionViewModel()
     @State private var showSearchSheet = false
     @State private var navigateToReaction = false
+    @State private var showTimeline = false
     @State private var tappedLyric: String? = nil
     @State private var tappedLyricTranslation: String? = nil
 
@@ -28,6 +31,7 @@ struct HomeView: View {
                         seekBar
                         playbackControls
                         sensorStatusBar
+                        liveReactionSection
                         lyricsSection
                     }
                 }
@@ -41,8 +45,23 @@ struct HomeView: View {
                     lyricTranslation: tappedLyricTranslation
                 )
             }
+            .navigationDestination(isPresented: $showTimeline) {
+                ReactionTimelineView(
+                    trackTitle: currentTrackTitle,
+                    trackArtist: currentTrackArtist,
+                    duration: currentTrackDuration,
+                    events: reactionDetection.events
+                )
+            }
         }
         .task { await playback.onAppear() }
+        .onChange(of: motion.latestSample) { _, sample in
+            guard let sample else { return }
+            reactionDetection.ingest(sample)
+        }
+        .onChange(of: motion.status) { _, status in
+            viewModel.updateHeadMotionStatus(from: status)
+        }
         .sheet(isPresented: $showSearchSheet) { searchSheet }
         .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
             Button("OK", role: .cancel) {}
@@ -221,12 +240,11 @@ struct HomeView: View {
     private var sensorStatusBar: some View {
         HStack(spacing: 12) {
             sensorDot(icon: "airpods", label: viewModel.sensorStatus.headMotion.label, color: viewModel.sensorStatus.headMotion.color)
-            sensorDot(icon: "iphone", label: viewModel.sensorStatus.bodyMotion.label, color: viewModel.sensorStatus.bodyMotion.color)
             sensorDot(icon: "heart.fill", label: viewModel.sensorStatus.heartRate.label, color: viewModel.sensorStatus.heartRate.color)
             Spacer()
 
             if !viewModel.isSessionActive {
-                Button { viewModel.startSession() } label: {
+                Button { startListeningSession() } label: {
                     Text("リスニング開始")
                         .font(.caption.bold()).foregroundStyle(.white)
                         .padding(.horizontal, 12).padding(.vertical, 6)
@@ -234,7 +252,7 @@ struct HomeView: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                Button { viewModel.endSession() } label: {
+                Button { endListeningSession() } label: {
                     Text("終了")
                         .font(.caption.bold()).foregroundStyle(.white)
                         .padding(.horizontal, 12).padding(.vertical, 6)
@@ -252,7 +270,59 @@ struct HomeView: View {
         HStack(spacing: 4) {
             Circle().fill(color).frame(width: 7, height: 7)
             Image(systemName: icon).font(.caption2).foregroundStyle(.gray)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.gray)
         }
+    }
+
+    private var liveReactionSection: some View {
+        VStack(spacing: 10) {
+            if viewModel.isSessionActive || !reactionDetection.events.isEmpty {
+                LiveReactionScoreCard(
+                    score: reactionDetection.currentScore,
+                    eventCount: reactionDetection.events.count,
+                    classifierStatus: reactionDetection.classifierStatus,
+                    activityLabel: reactionDetection.latestActivityLabel,
+                    airPodsStatus: motion.status.title
+                )
+            }
+
+            if viewModel.isSessionActive && (viewModel.useManualMode || motion.fallbackRequired) {
+                manualReactionControls
+            }
+        }
+    }
+
+    private var manualReactionControls: some View {
+        let columns = [GridItem(.adaptive(minimum: 86), spacing: 8)]
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("手動リアクション")
+                .font(.caption.bold())
+                .foregroundStyle(.gray)
+
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(HowTag.allCases, id: \.self) { tag in
+                    Button {
+                        reactionDetection.recordManualReaction(tag, at: currentPlaybackTime)
+                    } label: {
+                        Text(tag.label)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(tag.color.opacity(0.8), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 20)
     }
 
     // MARK: - 歌詞 × Howカード
@@ -318,6 +388,40 @@ struct HomeView: View {
     private func formatTime(_ time: TimeInterval) -> String {
         let t = max(0, time)
         return String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
+    }
+
+    private var currentTrackTitle: String {
+        playback.currentTrack?.title ?? viewModel.mockTrackTitle
+    }
+
+    private var currentTrackArtist: String {
+        playback.currentTrack?.artistName ?? viewModel.mockTrackArtist
+    }
+
+    private var currentTrackDuration: TimeInterval {
+        playback.currentTrack?.duration ?? viewModel.mockTrackDuration
+    }
+
+    private var currentPlaybackTime: TimeInterval {
+        playback.currentTrack != nil ? playback.playbackTime : viewModel.playbackTime
+    }
+
+    private func startListeningSession() {
+        viewModel.startSession()
+        reactionDetection.startSession()
+        motion.start(
+            playbackPositionProvider: SessionAnchoredPlaybackPositionProvider(
+                startedAt: Date(),
+                initialPlaybackTime: currentPlaybackTime
+            )
+        )
+    }
+
+    private func endListeningSession() {
+        motion.stop()
+        reactionDetection.stopSession(finalPlaybackTime: currentPlaybackTime)
+        viewModel.endSession()
+        showTimeline = true
     }
 
     // MARK: - 検索シート

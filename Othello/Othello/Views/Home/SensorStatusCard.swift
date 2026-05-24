@@ -36,16 +36,6 @@ struct SensorStatusCard: View {
             Divider()
 
             SensorStatusRow(
-                icon: "iphone.radiowaves.left.and.right",
-                label: "iPhone 本体モーション",
-                statusLabel: isSessionActive ? sensorStatus.bodyMotion.label : "停止",
-                statusColor: isSessionActive ? sensorStatus.bodyMotion.color : .yellow,
-                statusImage: isSessionActive ? sensorStatus.bodyMotion.systemImage : "pause.circle.fill"
-            )
-
-            Divider()
-
-            SensorStatusRow(
                 icon: "heart.fill",
                 label: "心拍（HealthKit）",
                 statusLabel: isSessionActive ? sensorStatus.heartRate.label : "停止",

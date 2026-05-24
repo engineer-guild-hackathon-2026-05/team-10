@@ -3,7 +3,7 @@ import MusicKit
 import Combine
 
 @MainActor
-final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding {
+final class MusicKitPlaybackService: ObservableObject {
 
     @Published private(set) var authorizationStatus: MusicAuthorization.Status = .notDetermined
     @Published private(set) var currentTrack: PlaybackTrack?
@@ -19,7 +19,7 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
         observePlayerState()
     }
 
-    // MARK: - PlaybackPositionProviding
+    // MARK: - Playback position
 
     func currentPlaybackTime() -> TimeInterval? {
         guard isPositionAvailable else { return nil }

@@ -20,16 +20,16 @@ struct OnboardingMotionPage: View {
                         Circle()
                             .fill(HowTuneDesign.accent.opacity(0.15))
                             .frame(width: 100, height: 100)
-                        Image(systemName: "figure.walk.motion")
+                        Image(systemName: "airpods")
                             .font(.system(size: 48))
                             .foregroundStyle(HowTuneDesign.accent)
                     }
 
                     VStack(spacing: 10) {
-                        Text("モーションセンサーの使用")
+                        Text("AirPods 頭部モーションの使用")
                             .font(.title2.bold())
                             .foregroundStyle(.white)
-                        Text("音楽を聴いているときの身体の動きを検知します。あなたの「聴き方」の特徴を分析するためだけに使用します。")
+                        Text("音楽を聴いているときの頭の動きを検知します。あなたの「聴き方」の特徴を分析するためだけに使用します。")
                             .font(.body)
                             .foregroundStyle(.gray)
                             .multilineTextAlignment(.center)
@@ -47,7 +47,7 @@ struct OnboardingMotionPage: View {
                             purposeCard(
                                 icon: "airpods",
                                 title: "AirPods 未接続",
-                                body: "iPhone 本体のモーションセンサーを代わりに使用します。"
+                                body: "対応AirPodsがない場合は、曲中の反応を手動で記録できます。"
                             )
                         }
                     }
@@ -58,12 +58,12 @@ struct OnboardingMotionPage: View {
 
                 VStack(spacing: 14) {
                     if viewModel.permissionState.motion == .authorized {
-                        authorizedBadge(label: "モーションが許可されました")
+                        authorizedBadge(label: "AirPods 頭部モーションが利用できます")
                         nextButton
                     } else {
                         primaryButton(
-                            label: "モーションを許可する",
-                            icon: "figure.walk",
+                            label: "AirPods を確認する",
+                            icon: "airpods",
                             isLoading: isRequesting
                         ) {
                             isRequesting = true

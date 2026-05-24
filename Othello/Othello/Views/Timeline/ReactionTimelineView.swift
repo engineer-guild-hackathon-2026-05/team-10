@@ -4,11 +4,17 @@ struct ReactionTimelineView: View {
     @StateObject private var viewModel: ReactionTimelineViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(trackTitle: String, trackArtist: String, duration: TimeInterval) {
+    init(
+        trackTitle: String,
+        trackArtist: String,
+        duration: TimeInterval,
+        events: [ReactionEvent]? = nil
+    ) {
         _viewModel = StateObject(wrappedValue: ReactionTimelineViewModel(
             trackTitle: trackTitle,
             trackArtist: trackArtist,
-            duration: duration
+            duration: duration,
+            events: events
         ))
     }
 

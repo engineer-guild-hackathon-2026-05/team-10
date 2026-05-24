@@ -23,25 +23,8 @@ class OnboardingViewModel: ObservableObject {
 
     func requestMotionPermission() async {
         #if os(iOS)
-        guard CMMotionActivityManager.isActivityAvailable() else {
-            permissionState.motion = .denied
-            return
-        }
-        let manager = CMMotionActivityManager()
-        await withCheckedContinuation { continuation in
-            manager.queryActivityStarting(
-                from: Date(),
-                to: Date(),
-                to: .main
-            ) { [weak self] _, error in
-                if error != nil {
-                    self?.permissionState.motion = .denied
-                } else {
-                    self?.permissionState.motion = .authorized
-                }
-                continuation.resume()
-            }
-        }
+        checkAirPodsAvailability()
+        permissionState.motion = permissionState.airPodsAvailable ? .authorized : .denied
         #else
         permissionState.motion = .denied
         #endif
