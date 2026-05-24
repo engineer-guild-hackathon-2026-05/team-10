@@ -404,3 +404,7 @@ pnpm dev    # web(3000) + api(8080) 同時起動
 |------|------|-----------|------|------|
 | 5/24 14:00 | @username | Claude Code | MotionAnalyzer 実装 | 特徴量抽出のアルゴリズム設計を支援 |
 ```
+
+iOSについて
+- MVVMでstruct, class, protocolごとにファイルを区切ること
+- Feature-basedなディレクトリ設計にすること
