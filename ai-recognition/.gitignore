@@ -1,2 +1,5 @@
 .data/
 *.tsbuildinfo
+*.xcuserstate
+xcuserdata/
+DerivedData/

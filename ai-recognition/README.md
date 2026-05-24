@@ -15,6 +15,8 @@ packages/ml/
 apps/collect-web/
   src/app/collect/*    # データ収集 UI
   src/app/api/*        # MVP用 file-backed API
+apps/collect-ios/
+  HowTuneCollector.xcodeproj # iPhone実機で動くSwiftUI収集アプリ
 ```
 
 ## mise / セットアップ
@@ -37,6 +39,18 @@ npm run ml:evaluate
 学習済みモデルは `packages/ml/models/motion-reaction-v1/` に `model.json` と `weights.bin` として保存されます。
 
 ## データ収集アプリ
+
+### SwiftUI / iPhone実機
+
+ローカルネットワークやHTTPSの都合でWeb版が使いにくい場合は、こちらを使います。
+
+```bash
+open apps/collect-ios/HowTuneCollector.xcodeproj
+```
+
+XcodeでSigning Teamを設定してiPhone実機にRunしてください。セッション終了時に `Raw JSON` と `training_examples.jsonl` をiPhone内のDocumentsへ保存し、レビュー画面の共有ボタンからAirDropやFilesへ渡せます。
+
+### Web / Next.js
 
 ```bash
 npm run dev:collect
