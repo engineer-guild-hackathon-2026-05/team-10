@@ -5,7 +5,7 @@ struct OnboardingView: View {
 
     var body: some View {
         if viewModel.isOnboardingComplete {
-            HomeView()
+            HomeView(useManualMode: viewModel.useManualMode, permissionState: viewModel.permissionState)
         } else {
             TabView(selection: $viewModel.currentPage) {
                 OnboardingWelcomePage(currentPage: $viewModel.currentPage)
