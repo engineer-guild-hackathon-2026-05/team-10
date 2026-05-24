@@ -26,12 +26,15 @@ final class ChatAPIClient {
             return mockResponse(event: event, turn: messages.filter { $0.sender == .ai }.count)
         }
         let url = URL(string: "\(baseURL)/sessions/mock/chat")!
-        var req = URLRequest(url: url)
+        var req = URLRequest(url: url, timeoutInterval: 10)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let payload = buildPayload(event: event, messages: messages)
         req.httpBody = try JSONEncoder().encode(payload)
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
         return try JSONDecoder().decode(ChatResponse.self, from: data)
     }
 
