@@ -32,29 +32,21 @@ router.post('/:id/chat', async (req, res) => {
 });
 
 // POST /sessions/:id/how-card
-router.post('/:id/how-card', auth, async (req, res) => {
+// TODO: デモ後に auth ミドルウェアを戻す (#35)
+router.post('/:id/how-card', async (req, res) => {
   const { reactions, chatHistory, songTitle } = req.body;
   if (!Array.isArray(reactions) || !Array.isArray(chatHistory) || !songTitle) {
     return res.status(400).json({ error: 'reactions, chatHistory, songTitle が必要です' });
   }
-
-  const sessionId = req.params.id;
-  const session = await getSession(sessionId);
-  if (!session) {
-    return res.status(404).json({ error: 'セッションが見つかりません' });
-  }
-  if (session.userId !== req.uid) {
-    return res.status(403).json({ error: 'このセッションへのアクセス権がありません' });
-  }
-
   try {
     const howCardData = await generateHowCard({ reactions, chatHistory, songTitle });
     const cardId = await saveHowCard({
-      uid: req.uid,
-      sessionId,
+      uid: 'anonymous',
+      sessionId: req.params.id,
       songTitle,
       ...howCardData,
     });
+    console.log('[how-card] Firestore saved:', cardId);
     res.json({ howCard: { id: cardId, ...howCardData } });
   } catch (err) {
     console.error(err?.message ?? err);
