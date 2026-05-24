@@ -1,191 +1,96 @@
 # 開発ガイドライン (Development Guidelines)
 
-## コーディング規約
+> 対象: **iOS ネイティブ（Swift / SwiftUI）**。コードは `Othello/`、バックエンドは `backend/`、学習は `ai-recognition/`。
+
+## コーディング規約（Swift）
 
 ### 命名規則
 
-#### 変数・関数（TypeScript）
-
-```typescript
+```swift
 // ✅ 良い例
-const sensorFrames = recordMotionData();
-function extractFeatureVector(frames: SensorFrame[]): FeatureVector { }
-const isRecording = true;
-const hasReaction = reactions.length > 0;
+let motionFrames = recordHeadphoneMotion()
+func extractFeatures(_ frames: [MotionFrame], windowSec: Double) -> [FeatureVector] { }
+var isRecording = false
+var hasReaction: Bool { !reactions.isEmpty }
 
 // ❌ 悪い例
-const data = record();
-function calc(arr: any[]): any { }
+let data = record()
+func calc(_ a: [Any]) -> Any { }
 ```
 
 **原則**:
-- 変数: camelCase、名詞または名詞句
-- 関数: camelCase、動詞で始める（`generate`, `fetch`, `classify`, `detect`）
-- 定数: UPPER_SNAKE_CASE（`MAX_SESSION_DURATION_SEC = 600`）
-- Boolean: `is`, `has`, `should` で始める
+- 型（struct/class/enum/protocol）: PascalCase（`HowCard`, `HeartRateService`）
+- 変数・関数: lowerCamelCase、関数は動詞始まり（`extract`, `classify`, `start`）
+- 定数: lowerCamelCase（Swift 慣習。`static let maxSessionDurationSec = 600`）
+- Bool: `is` / `has` / `should` で始める
+- View: `〜View`、ViewModel: `〜ViewModel`、Service: `〜Service`
 
-#### クラス・インターフェース
+### ファイル構成（MVVM）
 
-```typescript
-// クラス: PascalCase
-class MotionAnalyzer { }
-class HowDialogOrchestrator { }
-class HowCardRepository { }
-
-// インターフェース: PascalCase（I 接頭辞なし）
-interface SensorFrame { }
-interface ListeningStateScores { }
-
-// 型エイリアス: PascalCase
-type HowTag = 'groove' | 'hype' | 'chill' | 'immersion' | 'hit' | 'afterglow';
-type SessionStatus = 'recording' | 'analyzing' | 'done';
-```
-
-#### React コンポーネント
-
-```tsx
-// コンポーネント: PascalCase
-export function HowChatDialog({ session }: Props) { }
-export function ReactionTimeline({ reactions, duration }: Props) { }
-
-// Props 型: `[コンポーネント名]Props`
-interface HowChatDialogProps {
-  session: ListeningSession;
-  onCardGenerated: (card: HowCard) => void;
-}
-```
-
----
+- **MVVM** を採用する。`struct` / `class` / `protocol` は**型ごとに 1 ファイル**で区切る（1ファイル1型を基本）
+- **Feature-based なディレクトリ設計**にする（`Views/Listening/`・`Views/Chat/` のように機能単位でまとめる）
+- 例: `HeartRateService.swift`（protocol + 実装）、`ListeningView.swift` / `ListeningViewModel.swift`
 
 ### コードフォーマット
-
-- **インデント**: 2スペース（prettier で自動整形）
-- **行の長さ**: 最大 100 文字
-- **セミコロン**: あり
-- **クォート**: シングルクォート（JSX は ダブルクォート）
-
-`.prettierrc`:
-```json
-{
-  "semi": true,
-  "singleQuote": true,
-  "tabWidth": 2,
-  "printWidth": 100,
-  "trailingComma": "es5"
-}
-```
-
----
+- インデント: 4スペース（Swift 標準、SwiftFormat で自動整形）
+- SwiftLint で静的解析
+- 1行は概ね 120 文字以内
 
 ### コメント規約
-
 **WHY が自明でない場合のみ書く**。コードを見れば分かることは書かない。
 
-```typescript
-// ✅ 良い例: なぜそうするかを説明
-// iOS Safari は HTTPS + ユーザージェスチャー後でないとセンサー許可が取れない
-await DeviceMotionEvent.requestPermission();
-
-// ✅ 良い例: 非自明なアルゴリズムの説明
-// sliding window で直前2秒との差分をスパイク検出に使う
-const prevEnergy = window.slice(-20).reduce((s, f) => s + f.mag, 0) / 20;
+```swift
+// ✅ 良い例: 非自明な制約を説明
+// CMHeadphoneMotionManager は対応 AirPods 接続時のみ deviceMotion を返す
+guard motionManager.isDeviceMotionAvailable else { fallbackToDeviceMotion(); return }
 
 // ❌ 悪い例: コードを読めば分かる
-// センサーデータを取得する
-const frames = await getSensorFrames();
+// モーションを開始する
+motionManager.startDeviceMotionUpdates()
 ```
 
----
+### 型安全・Optional
+```swift
+// ✅ Optional は guard / if let で安全に展開
+guard let session = currentSession else { return }
 
-### 型安全
-
-```typescript
-// ✅ 型を明示（any を使わない）
-function classifyWindow(features: FeatureVector): ListeningStateScores { }
-
-// ✅ Zod でランタイムバリデーション
-const sessionSchema = z.object({
-  songTitle: z.string().min(1).max(200),
-  sensorData: z.array(sensorFrameSchema).max(36000), // 最大60分
-});
-
-// ❌ any は使わない
-function classify(data: any): any { }
+// ✅ 強制アンラップ(!)は避ける（テストコード除く）
+// ❌ let x = optionalValue!
 ```
 
----
+### 並行処理
+- async/await を基本とする。センサーコールバックは `@MainActor` で UI 更新
+- 重い特徴量抽出・推論は background で実行し、結果のみメインに戻す
 
 ### エラーハンドリング
-
-```typescript
-// カスタムエラークラス
-class SensorPermissionDeniedError extends Error {
-  constructor() {
-    super('センサーの許可が必要です');
-    this.name = 'SensorPermissionDeniedError';
-  }
+```swift
+enum HowTuneError: Error {
+    case headphoneNotConnected
+    case healthAuthorizationDenied
+    case llmUnavailable
 }
 
-// API レイヤーでのエラー処理
-app.post('/sessions', async (req, res) => {
-  const parsed = sessionSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
-  }
-  try {
-    const session = await motionAnalyzer.analyze(parsed.data);
-    res.json(session);
-  } catch (error) {
-    if (error instanceof LLMUnavailableError) {
-      return res.status(503).json({ error: 'AI サービスが一時的に利用できません' });
-    }
-    console.error('Unexpected error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+// 予期されるエラーは型で表現し、UI でフォールバックを用意する
+do {
+    try await heartRateService.requestAuthorization()
+} catch {
+    // 心拍を無効化してモーションのみで継続（P4: センサーを前提にしない）
+    enableMotionOnlyMode()
+}
 ```
 
 **原則**:
-- 予期されるエラーは明示的なカスタムクラスで捕捉
-- LLM / センサーの障害は必ずフォールバックを用意
-- エラーを握りつぶさない（少なくとも `console.error` で記録）
+- センサー/LLM の障害は必ずフォールバック（手動ラベル・本体モーション・デフォルト質問）
+- エラーを握りつぶさない
 
----
+### Claude API（backend 経由）
+- **API キーは iOS アプリに置かない**。`backend/` のプロキシ経由で呼ぶ
+- LLM の system プロンプトにユーザー入力を混入しない（プロンプトインジェクション対策）
+- model は `claude-sonnet-4-6`、対話はストリーミング（SSE）
 
-### Claude API の使い方
-
-プロジェクトでは Claude API を問いかけ型の対話生成に使う。
-
-```typescript
-import Anthropic from '@anthropic-ai/sdk';
-
-const client = new Anthropic(); // ANTHROPIC_API_KEY 環境変数を自動参照
-
-// ストリーミングで返す（TTFB を短くするため必須）
-async function* generateQuestion(reaction: ReactionSpan, songTitle: string) {
-  const stream = client.messages.stream({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 200,
-    system: SYSTEM_PROMPT, // ユーザー入力とは分離
-    messages: [
-      {
-        role: 'user',
-        content: `曲: ${songTitle}\n反応区間: ${reaction.startMs}ms〜${reaction.endMs}ms\nスコア: ${JSON.stringify(reaction.scores)}`,
-      },
-    ],
-  });
-  for await (const chunk of stream) {
-    if (chunk.type === 'content_block_delta') {
-      yield chunk.delta.text;
-    }
-  }
-}
-```
-
-**ルール**:
-- `system` プロンプトにユーザー入力を混入しない（プロンプトインジェクション対策）
-- `model` は `claude-sonnet-4-6`（コスト・性能バランス）
-- ストリーミングを使い TTFB 1秒以内を維持
+### プライバシー
+- 心拍は HealthKit の機微情報。最小権限・明示同意・端末内処理優先
+- 認証トークンは Keychain に保持（UserDefaults に生トークンを置かない）
 
 ---
 
@@ -193,22 +98,17 @@ async function* generateQuestion(reaction: ReactionSpan, songTitle: string) {
 
 ### ブランチ戦略
 
-ハッカソン期間（3日間）は軽量 Git Flow を採用。
-
 ```
 main
-  └─ feat/sensor-recorder       ← 機能開発
-  └─ feat/motion-classifier
-  └─ feat/how-dialog
-  └─ fix/ios-sensor-permission  ← バグ修正
-  └─ docs/update-readme         ← ドキュメント
+  └─ feat/headphone-motion      ← 機能開発
+  └─ feat/heart-rate
+  └─ feat/how-chat
+  └─ fix/airpods-disconnect     ← バグ修正
+  └─ docs/update-spec           ← ドキュメント
 ```
 
 **ブランチ名**: `feat/xxx` / `fix/xxx` / `docs/xxx` / `refactor/xxx`
-
-**禁止**: `main` への直接 push（GitHub の branch protection ルールで強制）
-
----
+**禁止**: `main` への直接 push（PR 経由）
 
 ### コミットメッセージ規約
 
@@ -224,133 +124,99 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 | `fix` | バグ修正 |
 | `docs` | ドキュメント |
 | `refactor` | リファクタリング |
-| `test` | テスト追加・修正 |
-| `chore` | ビルド・設定変更 |
+| `test` | テスト |
+| `chore` | ビルド・設定 |
 
 **例**:
 ```
-feat(sensor): DeviceMotionEvent の記録機能を実装
+feat(motion): AirPods 頭部モーションの記録を実装
 
-- SensorRecorder クラスを追加
-- iOS のセンサー許可フローを実装
-- 100ms 間隔でフレームをバッファリング
+- HeadphoneMotionService を追加
+- CMHeadphoneMotionManager で姿勢・加速度を取得
+- 未接続時は DeviceMotionService へフォールバック
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
----
-
 ### PR プロセス
 
 **作成前チェック**:
-- [ ] 型チェック通過: `pnpm type-check`
-- [ ] Lint エラーなし: `pnpm lint`
-- [ ] テスト通過: `pnpm test`
+- [ ] Xcode でビルドが通る
+- [ ] SwiftLint エラーなし
+- [ ] XCTest 通過
 
-**PR テンプレート** (`.github/pull_request_template.md`):
+**PR テンプレート**:
 ```markdown
 ## 概要
 [変更内容の1行サマリー]
 
 ## 変更内容
-- [変更点1]
-- [変更点2]
+- [変更点]
 
 ## テスト
 - [ ] ユニットテスト追加
-- [ ] iPhone Safari で動作確認
-- [ ] Android Chrome で動作確認
+- [ ] 実機（iPhone + AirPods）で動作確認
 
-## AI 活用ログへの追記
+## AI 活用ログ
 - [ ] AI_USAGE_LOG.md に追記済み
-
-## 関連 Issue
-Closes #[番号]
 ```
 
-**マージ方針**: Squash merge（コミット履歴をきれいに保つ）
+**マージ方針**: Squash merge
 
 ---
 
 ## テスト戦略
 
-### テストの種類とカバレッジ目標
-
-| 種別 | 対象 | カバレッジ目標 | ツール |
-|------|------|--------------|--------|
-| ユニットテスト | `MotionAnalyzer`, `HowDialogOrchestrator`, Repository | 70%（MVP期間） | Vitest |
-| 統合テスト | API エンドポイント全体 | 主要ルートのみ | Vitest + Firebase Emulator |
-| E2Eテスト | センサー → AI対話 → Howカード | 手動（iOS/Android） | 手動 |
+| 種別 | 対象 | ツール |
+|------|------|--------|
+| ユニット | 特徴量抽出、ReactionClassifier、APIClient のデコード | XCTest |
+| 統合 | センサー → 特徴量 → Core ML 推論 | XCTest |
+| backend | LLM をモックした対話・カード生成 | （backend のテスト framework） |
+| E2E（手動） | 実機 AirPods 接続 → 再生 → 取得 → 対話 → Howカード | 手動 |
 
 ### ユニットテスト例
 
-```typescript
-// apps/api/tests/unit/MotionAnalyzer.test.ts
-import { describe, it, expect } from 'vitest';
-import { MotionAnalyzer } from '../../src/services/MotionAnalyzer';
+```swift
+import XCTest
+@testable import Othello
 
-describe('MotionAnalyzer', () => {
-  describe('extractFeatures', () => {
-    it('一定リズムで揺れるデータから高い rhythmRegularity を返す', () => {
-      const frames = generateRhythmicFrames(/* 2秒分 */);
-      const features = MotionAnalyzer.extractFeatures(frames, 2000);
-      expect(features.rhythmRegularity).toBeGreaterThan(0.7);
-    });
-
-    it('静止データから高い stillness を返す', () => {
-      const frames = generateStillFrames(/* 2秒分 */);
-      const features = MotionAnalyzer.extractFeatures(frames, 2000);
-      expect(features.stillness).toBeGreaterThan(0.8);
-    });
-  });
-});
+final class ReactionClassifierTests: XCTestCase {
+    func test_extractFeatures_steadyRhythm_highRhythmRegularity() {
+        let frames = makeRhythmicFrames(durationSec: 2)
+        let features = ReactionClassifier().extractFeatures(frames, [], windowSec: 2)
+        XCTAssertGreaterThan(features[0].rhythmRegularity, 0.7)
+    }
+}
 ```
 
 ### モック方針
-
-```typescript
-// Claude API: msw でモック
-// Firestore: Firebase Emulator Suite（@firebase/rules-unit-testing）
-// TF.js: 推論結果の固定値をモック
-
-const mockClassify = vi.fn().mockReturnValue({
-  groove: 0.8, hype: 0.2, chill: 0.1,
-  immersion: 0.1, hit: 0.3, afterglow: 0.0,
-});
-```
+- HealthKit / CMHeadphoneMotionManager は **protocol で抽象化**してモック注入
+- backend / Claude API はスタブレスポンス
 
 ---
 
 ## コードレビュー基準
 
-### レビューポイント
-
 **機能性**:
-- [ ] PRD の受け入れ条件を満たしているか
-- [ ] センサー系のエッジケース（センサー許可拒否・デスクトップアクセス）が考慮されているか
+- [ ] frontend-spec の受け入れ条件（AC）を満たすか
+- [ ] AirPods 未接続・権限拒否・心拍非対応のフォールバックがあるか
 - [ ] LLM 障害時のフォールバックがあるか
 
 **可読性**:
-- [ ] 命名が具体的か（`data` より `sensorFrames`、`result` より `howCard`）
-- [ ] コメントは WHY のみか（WHAT は書かない）
+- [ ] 命名が具体的か（`data` より `motionFrames`）
+- [ ] コメントは WHY のみか
 
-**セキュリティ**:
-- [ ] API キーがコードにハードコードされていないか
-- [ ] ユーザー入力が LLM system プロンプトに混入していないか
-- [ ] Firestore セキュリティルールが設定されているか
+**セキュリティ・プライバシー**:
+- [ ] Claude API キーをアプリに埋め込んでいないか（backend 経由か）
+- [ ] 心拍データを最小権限・端末内処理で扱っているか
+- [ ] トークンを Keychain に保持しているか
 
-### レビューコメントの書き方
+**レビューコメント例**:
+```
+[必須] AirPods 切断時に deviceMotion が nil になりクラッシュします。
+DeviceMotionService へのフォールバックを入れてください（P4 準拠）。
 
-```markdown
-[必須] この実装だとセンサー許可を拒否した場合にクラッシュします。
-try-catch でラップして、フォールバック UI を表示してください。
-
-[提案] `reactions.filter(r => r.scores.groove > 0.5)` より
-`filterDominantReactions(reactions, 'groove', 0.5)` と名前付き関数にすると
-意図が伝わりやすくなりそうです。
-
-[質問] ここで `await` が必要な理由はなんでしょうか？
-`Promise` を返していないように見えます。
+[提案] この特徴量計算は ReactionClassifier に寄せると View が薄くなります。
 ```
 
 ---
@@ -359,52 +225,42 @@ try-catch でラップして、フォールバック UI を表示してくださ
 
 ### 必要なツール
 
-| ツール | バージョン | インストール方法 |
-|--------|-----------|-----------------|
-| Node.js | v20 LTS | `nodenv install 20` or nvm |
-| pnpm | 9.x | `npm install -g pnpm` |
-| gcloud CLI | latest | [公式](https://cloud.google.com/sdk/docs/install) |
-| Firebase CLI | latest | `npm install -g firebase-tools` |
+| ツール | 用途 |
+|--------|------|
+| Xcode 15+ | iOS ビルド・実機デバッグ |
+| iPhone + 対応 AirPods | センサー実機テスト（必須） |
+| SwiftLint / SwiftFormat | 静的解析・整形 |
+| （backend）Node.js or Python | LLM プロキシ |
+| （ai-recognition）Python + TensorFlow | モデル学習 |
 
 ### セットアップ手順
 
 ```bash
-# 1. リポジトリのクローン
+# 1. クローン
 git clone https://github.com/engineer-guild-hackathon-2026-05/team-10.git
 cd team-10
 
-# 2. 依存関係のインストール
-pnpm install
+# 2. iOS アプリを開く
+open Othello/Othello.xcodeproj
+# Xcode で署名チームを設定し、実機を選んで Run
 
-# 3. 環境変数の設定
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env.local
-# .env ファイルを編集（ANTHROPIC_API_KEY, Firebase 設定など）
+# 3. backend（例）
+cd backend && (依存インストール・起動)
 
-# 4. Firebase Emulator 起動（開発時の Firestore）
-firebase emulators:start --only firestore,auth
-
-# 5. 開発サーバー起動
-pnpm dev    # web(3000) + api(8080) 同時起動
+# 4. ai-recognition（学習）
+cd ai-recognition && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 ```
 
-### iOS でのセンサーテスト
-
-1. Mac と iPhone を同じ Wi-Fi に接続
-2. `pnpm dev` で起動後、iPhone の Safari から `http://[MacのIP]:3000` にアクセス
-3. HTTPS でないとセンサーが動かないため、`ngrok http 3000` で HTTPS 化推奨
+### 実機テストの要点
+- **Info.plist に権限文言が必須**: `NSMotionUsageDescription` / `NSHealthShareUsageDescription`
+- AirPods の頭部モーションは対応機種でのみ取得可。シミュレータでは取得不可なので実機必須
+- 心拍は対応 AirPods + ヘルス権限が必要
 
 ### AI 活用ログの記録
-
-**Claude を使った作業は必ず `AI_USAGE_LOG.md` に記録する**。
-審査の「AI 活用度」評価の根拠資料になる。最低 1 日 3 件以上。
+**Claude を使った作業は必ず `AI_USAGE_LOG.md` に記録**。最低 1 日 3 件以上。
 
 ```markdown
 | 日時 | 担当 | 利用ツール | 用途 | 効果 |
 |------|------|-----------|------|------|
-| 5/24 14:00 | @username | Claude Code | MotionAnalyzer 実装 | 特徴量抽出のアルゴリズム設計を支援 |
+| 5/24 14:00 | @username | Claude Code | HeadphoneMotionService 設計 | CMHeadphoneMotion の使い方を整理 |
 ```
-
-iOSについて
-- MVVMでstruct, class, protocolごとにファイルを区切ること
-- Feature-basedなディレクトリ設計にすること

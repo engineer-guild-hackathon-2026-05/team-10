@@ -2,7 +2,7 @@
 
 ## 概要
 
-HowTune プロジェクト内で使用される用語の定義を管理します。
+HowTune プロジェクト（iOS ネイティブ）の用語定義。仕様の正は [`frontend-spec.md`](./frontend-spec.md)。
 
 **更新日**: 2026-05-24
 
@@ -11,239 +11,111 @@ HowTune プロジェクト内で使用される用語の定義を管理します
 ## ドメイン用語
 
 ### How（ハウ）
-
 **定義**: 音楽の楽しみ方・聴き方の様式。「どのように」聴いているか。
-
-**説明**: 「何を（What）聴くか」（曲名・アーティスト・ジャンル）ではなく、「どのように（How）聴いているか」という軸で音楽体験を表現する概念。HowTune のコアコンセプト。
-
-**関連用語**: Howタグ、Howカード、聴取状態
-
-**使用例**:
-- 「ベースラインの入りに反応するのは、グルーヴ型の How を持つリスナー」
-- 「同じ曲を How で検索する」
-
-**英語表記**: How（そのまま使用）
-
----
+**説明**: 「何を（What）聴くか」ではなく「どのように（How）聴いているか」という軸で音楽体験を表現する、HowTune のコアコンセプト。
+**英語表記**: How
 
 ### Howタグ
-
-**定義**: ユーザーの音楽の楽しみ方を表現した短いラベル文字列。
-
-**説明**: AI対話の結果から生成される、ユーザーの聴き方の特徴を表すキーワード群。ユーザー同士のマッチングに使用される。
-
-**関連用語**: Howカード、聴取状態
-
-**使用例**:
-- `groove`（リズムに乗るタイプ）
-- `bass-driven`（ベースに反応するタイプ）
-- `chill-listener`（穏やかに聴き込むタイプ）
-- `drop-hype`（展開で盛り上がるタイプ）
-
-**英語表記**: How Tag
-
----
+**定義**: ユーザーの聴き方を表す短いラベル文字列。AI 対話の結果から生成され、マッチングに使う。
+**使用例**: `groove`（リズムに乗る） / `bass-driven`（ベースに反応） / `chill-listener` / `drop-hype`
 
 ### Howカード
-
-**定義**: ユーザー1回のリスニングセッションから生成される、聴き方を可視化したプロフィールカード。
-
-**説明**: センサーデータ解析→AI対話の結果、生成される共有可能なコンテンツ。Howタグ・説明文・代表的な反応地点（タイムスタンプ）を含む。
-
-**関連用語**: Howタグ、リスニングセッション
-
-**使用例**:
-- 「Howカードをシェアして、同じ聴き方の人を探す」
-- 「自分の Howカードを見直して、音楽の楽しみ方を振り返る」
-
-**英語表記**: How Card
-
----
+**定義**: 1回のリスニングセッションから生成される、聴き方を可視化したカード（タイトル・説明・Howタグ・代表的な反応地点）。ユーザーの確認・編集を経て確定する（自動確定しない）。
 
 ### 聴取状態（Listening State）
+**定義**: 音楽を聴いているときの身体・生理状態の分類。モーション+心拍から推定する。マルチラベル（同時複数可）。
 
-**定義**: 音楽を聴いているときの身体的・心理的な状態の分類。センサーデータから推定する。
+| 状態 | 英語 | 特徴 |
+|------|------|------|
+| ノリ | Groove | リズムに乗って規則的に揺れる |
+| 高揚 | Hype | サビ・展開で急にテンションが上がる（心拍上昇を伴うことが多い）|
+| チル | Chill | 穏やかにゆっくり揺れる |
+| 没入 | Immersion | 集中してほぼ動かない |
+| 刺さり | Hit | 一瞬に短く強く反応する |
+| 余韻 | Afterglow | 盛り上がりの後、静かに浸る |
 
-**説明**: 6種類の状態を定義する（詳細は下表）。これらはマルチラベル（同時に複数が成立可能）。
-
-| 状態名 | 英語 | 特徴 | センサーの特徴 |
-|--------|------|------|---------------|
-| ノリ | Groove | リズムに乗って規則的に揺れている | 一定周期の揺れ、高い rhythmRegularity |
-| 高揚 | Hype | サビや展開で急激にテンションが上がる | 急激な加速度増加、高い maxDelta |
-| チル | Chill | 穏やかにゆっくりと揺れている | 小さい揺れ、低い energy |
-| 没入 | Immersion | 集中して聴いており、ほとんど動かない | 高い stillness |
-| 刺さり | Hit | 特定の一瞬（歌詞・音）に短く強く反応する | 短時間のスパイク |
-| 余韻 | Afterglow | 盛り上がりの後、静かに余韻に浸っている | 直前の動きが減少 |
-
-**関連用語**: MotionReactionClassifier、SensorFrame、ReactionSpan
-
-**英語表記**: Listening State
-
----
-
-### 身体反応（Body Reaction）
-
-**定義**: 音楽を聴いているときにスマホの動きとして検出される、ユーザーの無意識な身体の動き。
-
-**説明**: 頭を振る・足を踏む・身体を揺らすなど、音楽への反応が加速度センサーで記録される。この反応を起点にして AI が問いかけを生成する。
-
-**関連用語**: DeviceMotionEvent、SensorFrame、反応区間
-
-**英語表記**: Body Reaction / Motion Reaction
+### 身体・生理反応（Body / Physiological Reaction）
+**定義**: 音楽を聴いているときに検出される、頭部・本体の動きと心拍の変化。これを起点に AI が問いかけを生成する。
 
 ---
 
 ## 技術用語
 
-### DeviceMotionEvent
+### CMHeadphoneMotionManager
+**定義**: AirPods 等の頭部モーション（加速度・回転速度・姿勢）を取得する iOS（Core Motion）の API。
+**本プロジェクトでの用途**: AirPods 装着時の頭の動きを身体反応シグナルとして取得。
+**制約**: 対応 AirPods（Pro / 3rd 以降 / Max 等）接続時のみ。シミュレータ不可、実機必須。
+**関連**: `Othello/Othello/Services/HeadphoneMotionService.swift`
 
-**定義**: ブラウザ標準 API。スマートフォンの加速度センサーとジャイロスコープのデータをリアルタイムに取得する。
+### Core Motion
+**定義**: iPhone 本体の加速度・ジャイロを取得する iOS フレームワーク。
+**本プロジェクトでの用途**: AirPods 非接続時の本体モーション取得（フォールバック）。
 
-**本プロジェクトでの用途**: 音楽再生中のユーザーの身体反応（揺れ・動き）を検出するために使用。100ms 間隔でサンプリング。
+### HealthKit
+**定義**: iOS のヘルスデータ（心拍等）を扱うフレームワーク。機微情報として明示同意が必要。
+**本プロジェクトでの用途**: 対応 AirPods の心拍数・心拍変動を取得し曲中時刻に対応づける。
+**制約**: 粒度が粗い場合があり、トレンド（上昇/下降/安定）として扱う。
 
-**制約**: iOS Safari では HTTPS + `DeviceMotionEvent.requestPermission()` 呼び出しが必須。
+### MusicKit
+**定義**: Apple Music の楽曲再生・再生位置取得を提供する iOS フレームワーク。
+**本プロジェクトでの用途**: 曲を再生位置付きで再生（DECISION-01 の有力候補）。Apple Music サブスクが必要な場合がある。
 
-**関連ドキュメント**: `apps/web/components/sensor/SensorRecorder.tsx`
+### Core ML
+**定義**: iOS 端末上で機械学習モデルを実行するフレームワーク。
+**本プロジェクトでの用途**: `ai-recognition/` で TensorFlow 学習したモデルを変換し、端末上で6軸スコアを推論。
 
----
+### coremltools
+**定義**: TensorFlow / PyTorch モデルを Core ML 形式（.mlmodel）に変換する Python ライブラリ。
+**本プロジェクトでの用途**: `ai-recognition/` の学習成果物を `Othello/` に組み込む際の変換。
 
-### MotionReactionClassifier
-
-**定義**: TensorFlow.js で実装した、センサー特徴量から聴取状態の6軸スコアを推定するMLモデル。
-
-**本プロジェクトでの用途**: センサーデータを1〜3秒の時間窓に分割し、各窓の聴取状態スコアを推定する。MVP ではルールベースの分類、後に TF.js モデルに置換予定。
-
-**入力**: `FeatureVector`（特徴量10次元）
-**出力**: `ListeningStateScores`（6軸スコア 0〜1）
-
-**関連ドキュメント**: `apps/api/src/services/MotionAnalyzer.ts`
-
----
-
-### HowDialogOrchestrator
-
-**定義**: Claude API を使ってユーザーとの対話を管理し、Howカードを生成するサービスクラス。
-
-**本プロジェクトでの用途**: 反応区間情報を受け取り、問いかけ → 回答 → 深掘り → Howカード生成 の対話フローを制御する。
-
-**関連ドキュメント**: `apps/api/src/services/HowDialogOrchestrator.ts`
-
----
-
-### SensorFrame
-
-**定義**: 1サンプル分のセンサーデータを表す型。
-
-```typescript
-interface SensorFrame {
-  t: number;   // 曲中タイムスタンプ（ms）
-  x: number;   // x軸加速度 (m/s²)
-  y: number;   // y軸加速度 (m/s²)
-  z: number;   // z軸加速度 (m/s²)
-  mag: number; // 合成加速度 sqrt(x²+y²+z²)
-}
-```
-
-**関連ドキュメント**: `packages/shared/src/types/sensor.ts`
-
----
+### MotionFrame / HeartRateSample
+**定義**: 1サンプル分のモーション / 心拍データを表す Swift 型。曲中時刻に同期して記録される。
 
 ### ReactionSpan
+**定義**: 検出された身体・生理反応区間（開始・終了秒 + 6軸スコア）を表す Swift 型。
 
-**定義**: センサーデータから検出された「身体反応区間」を表す型。開始・終了タイムスタンプと聴取状態スコアを持つ。
-
-```typescript
-interface ReactionSpan {
-  startMs: number;
-  endMs: number;
-  scores: ListeningStateScores;
-}
-```
-
-**英語表記**: Reaction Span
-
----
-
-## 略語・頭字語
-
-### How
-
-**正式名称**: How（音楽の楽しみ方）
-
-**意味**: ドメイン用語「How」を参照。ファイル名・変数名・コンポーネント名でも prefix として使用（`HowCard`, `HowTag`, `HowChatDialog`）。
-
-**本プロジェクトでの使用**: ファイル名・型名・コンポーネント名の prefix
-
----
+### 心拍変動 (HRV)
+**定義**: 心拍間隔のゆらぎ。緊張・リラックスなどの生理状態の指標。
+**本プロジェクトでの用途**: 高揚・没入などの聴取状態の裏付けに利用（取得可能な場合）。
 
 ### SSE
-
 **正式名称**: Server-Sent Events
-
 **意味**: サーバーからクライアントへ一方向のリアルタイムストリームを送る HTTP 技術。
+**本プロジェクトでの用途**: backend が Claude API の応答を iOS アプリへ逐次返す（`POST /sessions/:id/chat`）。
 
-**本プロジェクトでの使用**: Claude API のストリーミングレスポンスをフロントエンドに届けるために使用（`POST /sessions/:id/chat`）
-
----
-
-### TF.js
-
-**正式名称**: TensorFlow.js
-
-**意味**: JavaScript/TypeScript で動作する ML フレームワーク。ブラウザと Node.js の両方で動作する。
-
-**本プロジェクトでの使用**: `MotionReactionClassifier` の推論エンジン（サーバーサイドで `@tensorflow/tfjs-node` を使用）
-
----
-
-### DAU
-
-**正式名称**: Daily Active Users（日次アクティブユーザー数）
-
-**意味**: 1日あたりにサービスを利用したユニークユーザー数。
-
-**本プロジェクトでの使用**: PRD の成功指標（KPI）で使用
+### TensorFlow
+**定義**: Python の機械学習フレームワーク。
+**本プロジェクトでの用途**: `ai-recognition/` でモーション+心拍特徴量から6軸スコアを学習。学習後 Core ML へ変換。
 
 ---
 
 ## アーキテクチャ用語
 
-### モノレポ（Monorepo）
+### SwiftUI / MVVM
+**定義**: SwiftUI は宣言的 UI フレームワーク。MVVM は View / ViewModel / Model に責務分離するパターン。
+**本プロジェクトでの適用**: View（画面）/ ViewModel（状態）/ Service（センサー・通信・推論）に分離。
 
-**定義**: 複数のアプリケーション・パッケージを1つの Git リポジトリで管理する構成。
-
-**本プロジェクトでの適用**: `apps/web`（フロントエンド）と `apps/api`（バックエンド）、`packages/shared`（共通型）を1リポジトリで管理。pnpm workspace + Turborepo を使用。
-
-**関連コンポーネント**: `turbo.json`, `package.json`（ルート）
-
----
-
-### Repository パターン
-
-**定義**: データアクセスロジックを抽象化するデザインパターン。サービス層がデータベースの実装詳細を知らなくてよい構成にする。
-
-**本プロジェクトでの適用**: `SessionRepository`, `HowCardRepository` として実装。Firestore のクエリはすべてこれらのクラスに集約する。
-
-**関連コンポーネント**: `apps/api/src/repositories/`
+### LLM プロキシ（backend）
+**定義**: Claude API キーをクライアントに露出させないため、バックエンドが LLM 呼び出しを中継する構成。
+**本プロジェクトでの適用**: `backend/` が Claude API を中継し、iOS アプリは backend のみを呼ぶ。
 
 ---
 
 ## ステータス・状態
 
-### セッションステータス（SessionStatus）
+### SessionStatus
 
 | ステータス | 意味 | 遷移条件 | 次の状態 |
 |----------|------|---------|---------|
-| `recording` | センサーデータ記録中 | 再生停止 | `analyzing` |
-| `analyzing` | TF.js で反応区間を解析中 | 解析完了 | `done` |
+| `recording` | センサー記録中 | 再生停止 | `analyzing` |
+| `analyzing` | Core ML で反応区間を解析中 | 推論完了 | `done` |
 | `done` | 解析完了・AI 対話可能 | — | — |
 
-**状態遷移図**:
 ```mermaid
 stateDiagram-v2
     [*] --> recording: 再生開始
     recording --> analyzing: 再生停止
-    analyzing --> done: TF.js 推論完了
+    analyzing --> done: Core ML 推論完了
     done --> [*]
 ```
 
@@ -252,105 +124,39 @@ stateDiagram-v2
 ## データモデル用語
 
 ### User
-
-**定義**: HowTune のユーザーを表すエンティティ。Firebase Auth と1対1で対応する。
-
-**主要フィールド**:
-- `id`: Firebase Auth の UID
-- `displayName`: 表示名
-- `howTags`: 過去のセッションから蓄積されたHowタグ一覧
-
-**関連エンティティ**: ListeningSession, HowCard
-
----
+**主要フィールド**: `id`（認証UID） / `displayName` / `howTags`（蓄積タグ）
 
 ### ListeningSession
-
-**定義**: 1回のリスニングセッション（曲再生→センサー記録→解析）を表すエンティティ。
-
-**主要フィールド**:
-- `id`: UUID
-- `userId`: FK → User
-- `songTitle`: ユーザーが入力した曲名
-- `sensorData`: SensorFrame の配列
-- `reactions`: 検出された ReactionSpan の配列
-- `status`: `recording` | `analyzing` | `done`
-
-**関連エンティティ**: User, HowCard
-
----
+**主要フィールド**: `id` / `userId` / `songTitle` / `motionFrames` / `heartRateSamples` / `reactions` / `status`
 
 ### HowCard
-
-**定義**: 1回のリスニングセッションから生成される、ユーザーの聴き方を可視化したカード。
-
-**主要フィールド**:
-- `id`: UUID
-- `userId`: FK → User
-- `sessionId`: FK → ListeningSession
-- `howTags`: 生成されたHowタグ配列
-- `tagLabel`: 代表的な説明ラベル（例: 「ベースの入りに反応する人」）
-- `description`: 2〜3文の詳細説明
-- `highlightMs`: 代表的な反応地点のタイムスタンプ
-
-**関連エンティティ**: User, ListeningSession
+**主要フィールド**: `id` / `userId` / `sessionId` / `howTags` / `tagLabel` / `description` / `highlightSec`
 
 ---
 
 ## エラー・例外
 
-### SensorPermissionDeniedError
+### HowTuneError.headphoneNotConnected
+**発生条件**: AirPods が未接続で頭部モーションが取得できない。
+**対処**: 本体モーション（Core Motion）へフォールバック（P4 準拠）。
 
-**クラス名**: `SensorPermissionDeniedError`
+### HowTuneError.healthAuthorizationDenied
+**発生条件**: HealthKit のヘルス権限が拒否された、または心拍非対応機種。
+**対処**: 心拍機能を無効化し、モーションのみで体験を成立させる。
 
-**発生条件**: ユーザーが DeviceMotionEvent の許可を拒否した場合
-
-**対処方法**: センサーなしモード（手動でラベルをタップ）にフォールバックする。UI に説明メッセージを表示。
-
----
-
-### LLMUnavailableError
-
-**クラス名**: `LLMUnavailableError`
-
-**発生条件**: Claude API がタイムアウトまたはエラーを返した場合（3回リトライ後も失敗）
-
-**対処方法**: デフォルトの汎用質問文にフォールバック。セッションは継続可能。
+### HowTuneError.llmUnavailable
+**発生条件**: Claude API がタイムアウト/エラー（リトライ後も失敗）。
+**対処**: デフォルトの汎用質問にフォールバック。セッションは継続可能。
 
 ---
 
 ## 計算・アルゴリズム
 
 ### rhythmRegularity（リズム規則性）
-
-**定義**: センサーデータのピーク間隔の一定性を表す指標（0〜1）。高いほど規則的なリズムで動いている。
-
-**計算式**:
-```
-ピーク間隔の配列を intervals とする
-rhythmRegularity = 1 / (1 + std(intervals))
-```
-
-**実装箇所**: `apps/api/src/services/MotionAnalyzer.ts`
-
-**例**:
-- 一定テンポで揺れている → `rhythmRegularity ≈ 0.9`（Groove 判定に寄与）
-- バラバラな動き → `rhythmRegularity ≈ 0.2`
-
----
+**定義**: モーションのピーク間隔の一定性（0〜1）。高いほど規則的なリズム。Groove 判定に寄与。
 
 ### stillness（静止度）
+**定義**: 動きのなさ（0〜1）。高いほど静止。Immersion / Afterglow 判定に寄与。
 
-**定義**: センサーデータの動きのなさを表す指標（0〜1）。高いほど静止している。
-
-**計算式**:
-```
-energy = sum(mag²) / n
-stillness = 1 / (1 + energy)
-```
-
-**実装箇所**: `apps/api/src/services/MotionAnalyzer.ts`
-
-**例**:
-- ほぼ動かない → `stillness ≈ 0.85`（Immersion / Afterglow 判定に寄与）
-- 活発に動いている → `stillness ≈ 0.1`
+### heartRateTrend（心拍トレンド）
+**定義**: 心拍数の時間変化（上昇/下降/安定）。Hype・Immersion の生理的裏付けに使う。粒度が粗いため秒単位の断定はしない。
