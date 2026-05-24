@@ -47,3 +47,9 @@ logs/
 .cache/
 coverage/
 .nyc_output/
+
+# 生成物（ソースから再生成可能: node docs/share/build.mjs / marp docs/slides/howtune.md）
+docs/share/index.html
+docs/slides/*.html
+docs/slides/*.pdf
+docs/slides/*.pptx
