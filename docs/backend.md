@@ -39,11 +39,11 @@ PORT=3000
 ## Firebase セットアップ（コードを書く前に済ませる）
 
 1. Firebase コンソールでプロジェクトを作成
-2. Firestore を有効化（最初はテストモード）
+2. Firestore を有効化（クライアント直接アクセス禁止前提。テストモードは使わない）
 3. Authentication → Sign in with Apple を有効化
 4. サービスアカウントキーを生成 → `backend/serviceAccountKey.json` として保存（gitignore 対象）
 5. `GoogleService-Info.plist` をダウンロード → `Othello/Othello/` に追加（iOS 側のみ）
-6. リポジトリルートで `firebase init` を実行 → Firestore のみ選択 → `firestore.rules` と `firestore.indexes.json` が生成される
+6. リポジトリルートで `firebase init` を実行 → Firestore のみ選択 → `firestore.rules` と `firestore.indexes.json` を生成し、ルールは `allow read, write: if false;` に設定
 
 ---
 
@@ -193,7 +193,7 @@ Firestore からセッション（reactions + chatHistory）を読み込み、Cl
 
 **Firestore 書き込み**:
 - `how-cards/{cardId}` を作成
-- `sessions/:id` の status を `"done"` に更新
+- `sessions/{sessionId}` の status を `"done"` に更新
 - 主要な `howTags` を `users/{uid}/howTags` に追記
 
 ---
