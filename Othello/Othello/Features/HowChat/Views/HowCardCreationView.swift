@@ -4,6 +4,7 @@ struct HowCardCreationView: View {
     let event: ReactionEvent
 
     @State private var selectedTags: Set<HowTag>
+    @State private var posted = false
     @Environment(\.dismiss) private var dismiss
 
     init(event: ReactionEvent) {
@@ -26,6 +27,10 @@ struct HowCardCreationView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 40)
+            }
+
+            if posted {
+                postedOverlay
             }
         }
         .preferredColorScheme(.dark)
@@ -132,7 +137,11 @@ struct HowCardCreationView: View {
 
     private var postButton: some View {
         Button {
-            // TODO: #39 backend POST /sessions/:id/how-card を呼び出す
+            withAnimation(.spring(duration: 0.4)) { posted = true }
+            Task {
+                try? await Task.sleep(for: .seconds(1.8))
+                dismiss()
+            }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "paperplane.fill")
@@ -153,6 +162,35 @@ struct HowCardCreationView: View {
         }
         .buttonStyle(.plain)
         .transition(.opacity.combined(with: .move(edge: .bottom)))
+    }
+
+    // MARK: - 投稿完了オーバーレイ
+
+    private var postedOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.75).ignoresSafeArea()
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 64))
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Text("Howカードを投稿しました")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                HStack(spacing: 6) {
+                    ForEach(Array(selectedTags), id: \.self) { tag in
+                        Text(tag.label)
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(tag.color.opacity(0.8), in: Capsule())
+                    }
+                }
+            }
+            .padding(32)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 24))
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }
 
     // MARK: - Helpers
