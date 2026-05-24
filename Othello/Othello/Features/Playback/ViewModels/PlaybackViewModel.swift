@@ -27,9 +27,6 @@ final class PlaybackViewModel: ObservableObject {
 
     func onAppear() async {
         await service.requestAuthorization()
-        if service.authorizationStatus != .authorized {
-            positionUnavailableAlertShown = true
-        }
     }
 
     func search() async {
@@ -99,8 +96,11 @@ final class PlaybackViewModel: ObservableObject {
             .compactMap { $0 }
             .receive(on: RunLoop.main)
             .sink { [weak self] message in
-                self?.positionUnavailableMessage = message
-                self?.positionUnavailableAlertShown = true
+                guard let self else { return }
+                self.positionUnavailableMessage = message
+                if self.currentTrack != nil {
+                    self.positionUnavailableAlertShown = true
+                }
             }
             .store(in: &cancellables)
     }

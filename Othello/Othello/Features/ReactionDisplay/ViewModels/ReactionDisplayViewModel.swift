@@ -10,7 +10,11 @@ final class ReactionDisplayViewModel: ObservableObject {
     @Published private(set) var isSensorAvailable: Bool = false
     @Published var showTimeline: Bool = false
 
-    // NFR-03: 表示更新は 100ms ごとにバッファリングしてメインスレッド負荷を最小化
+    @Published var selectedLyric: String? = nil
+    @Published var selectedLyricTranslation: String? = nil
+    @Published var selectedHowTag: HowTag? = nil
+    @Published var showHowTagSheet: Bool = false
+
     private var displayUpdateTimer: AnyCancellable?
     private var pendingScore: ReactionScore = .empty
     private var mockTimer: AnyCancellable?
@@ -19,37 +23,27 @@ final class ReactionDisplayViewModel: ObservableObject {
         isSessionActive = true
         isSensorAvailable = sensorAvailable
         startDisplayUpdateTimer()
-        if sensorAvailable {
-            startMockSensorSimulation()
-        }
+        if sensorAvailable { startMockSensorSimulation() }
     }
 
     func stopSession() {
         isSessionActive = false
         stopDisplayUpdateTimer()
         stopMockSensorSimulation()
-        withAnimation(.easeOut(duration: 0.6)) {
-            score = .empty
-        }
+        withAnimation(.easeOut(duration: 0.6)) { score = .empty }
         showTimeline = true
     }
 
-    /// 外部センサー（AirPodsMotionManager 等）からスコアを受け取る口
-    /// メインスレッド以外から呼んでも pendingScore に書き込むだけ
     func updateScore(_ newScore: ReactionScore) {
         pendingScore = newScore
     }
-
-    // MARK: - Private
 
     private func startDisplayUpdateTimer() {
         displayUpdateTimer = Timer.publish(every: 0.1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 guard let self, self.isSessionActive else { return }
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    self.score = self.pendingScore
-                }
+                withAnimation(.easeInOut(duration: 0.15)) { self.score = self.pendingScore }
             }
     }
 
@@ -57,8 +51,6 @@ final class ReactionDisplayViewModel: ObservableObject {
         displayUpdateTimer?.cancel()
         displayUpdateTimer = nil
     }
-
-    // MARK: - Mock simulation（センサー実装完了まで）
 
     private var mockPhase: Double = 0
 
