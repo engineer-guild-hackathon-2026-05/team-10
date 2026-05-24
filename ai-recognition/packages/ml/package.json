@@ -1,0 +1,23 @@
+{
+  "name": "@howtune/ml",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./features": "./src/features.ts",
+    "./model": "./src/model.ts",
+    "./predict": "./src/predict.ts"
+  },
+  "scripts": {
+    "train": "tsx src/train.ts",
+    "evaluate": "tsx src/evaluate.ts",
+    "predict": "tsx src/predict.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0"
+  }
+}
+
