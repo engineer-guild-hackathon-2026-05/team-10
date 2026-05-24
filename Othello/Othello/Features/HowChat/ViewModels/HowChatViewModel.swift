@@ -11,7 +11,7 @@ final class HowChatViewModel: ObservableObject {
 
     enum ChatState { case idle, loading, waitingReply, done, error }
 
-    private let event: ReactionEvent
+    let event: ReactionEvent
 
     init(event: ReactionEvent) {
         self.event = event
