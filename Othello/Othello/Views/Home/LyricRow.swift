@@ -6,6 +6,7 @@ struct LyricRow: View {
     let howCount: Int
     let likeCount: Int
     let isHighlighted: Bool
+    var onHowTap: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -22,16 +23,21 @@ struct LyricRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 6) {
-                HStack(spacing: 4) {
-                    Image(systemName: "bubble.left")
-                        .font(.caption2)
-                    Text("\(howCount)")
-                        .font(.caption.bold())
+                Button {
+                    onHowTap?()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bubble.left")
+                            .font(.caption2)
+                        Text("\(howCount)")
+                            .font(.caption.bold())
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(isHighlighted ? Color(red: 0.85, green: 0.15, blue: 0.2) : Color.white.opacity(0.12), in: Capsule())
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(isHighlighted ? Color(red: 0.85, green: 0.15, blue: 0.2) : Color.white.opacity(0.12), in: Capsule())
+                .buttonStyle(.plain)
 
                 HStack(spacing: 4) {
                     Image(systemName: "heart")

@@ -10,6 +10,12 @@ final class ReactionDisplayViewModel: ObservableObject {
     @Published private(set) var isSensorAvailable: Bool = false
     @Published var showTimeline: Bool = false
 
+    // 選択フレーズ・気持ち選択シート
+    @Published var selectedLyric: String? = nil
+    @Published var selectedLyricTranslation: String? = nil
+    @Published var selectedHowTag: HowTag? = nil
+    @Published var showHowTagSheet: Bool = false
+
     // NFR-03: 表示更新は 100ms ごとにバッファリングしてメインスレッド負荷を最小化
     private var displayUpdateTimer: AnyCancellable?
     private var pendingScore: ReactionScore = .empty
