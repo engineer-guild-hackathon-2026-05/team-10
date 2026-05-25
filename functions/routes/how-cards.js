@@ -1,18 +1,74 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { getHowCardsByTag } = require('../repositories/firestore');
+const { createHowCard, getHowCards, likeHowCard } = require('../repositories/firestore');
 
-// GET /how-cards?tag=groove
-router.get('/', auth, async (req, res) => {
-  const { tag } = req.query;
-  if (!tag) return res.status(400).json({ error: 'tag パラメータが必要です' });
+// GET /how-cards
+router.get('/', auth, async (_req, res) => {
   try {
-    const howCards = await getHowCardsByTag(tag);
+    const howCards = await getHowCards();
     res.json({ howCards });
   } catch (err) {
     console.error(err?.message ?? err);
     res.status(500).json({ error: 'Howカードの取得に失敗しました' });
+  }
+});
+
+// POST /how-cards
+router.post('/', auth, async (req, res) => {
+  const { comment, songStart, songEnd, songTitle } = req.body;
+
+  if (typeof comment !== 'string' || !comment.trim()) {
+    return res.status(400).json({ error: 'comment が必要です' });
+  }
+  if (typeof songStart !== 'number' || typeof songEnd !== 'number') {
+    return res.status(400).json({ error: 'songStart, songEnd は数値で指定してください' });
+  }
+  if (songStart < 0 || songEnd <= songStart) {
+    return res.status(400).json({ error: 'songStart, songEnd の範囲が不正です' });
+  }
+  if (typeof songTitle !== 'string' || !songTitle.trim()) {
+    return res.status(400).json({ error: 'songTitle が必要です' });
+  }
+
+  try {
+    const trimmedComment = comment.trim();
+    const trimmedSongTitle = songTitle.trim();
+    const cardId = await createHowCard({
+      uid: req.uid,
+      comment: trimmedComment,
+      songStart,
+      songEnd,
+      songTitle: trimmedSongTitle,
+    });
+    res.json({
+      howCard: {
+        id: cardId,
+        userId: req.uid,
+        comment: trimmedComment,
+        songStart,
+        songEnd,
+        songTitle: trimmedSongTitle,
+        likes: 0,
+      },
+    });
+  } catch (err) {
+    console.error(err?.message ?? err);
+    res.status(500).json({ error: 'Howカードの作成に失敗しました' });
+  }
+});
+
+// POST /how-cards/:id/like
+router.post('/:id/like', auth, async (req, res) => {
+  try {
+    const likes = await likeHowCard({ cardId: req.params.id, uid: req.uid });
+    if (likes === null) {
+      return res.status(404).json({ error: 'Howカードが見つかりません' });
+    }
+    res.json({ likes });
+  } catch (err) {
+    console.error(err?.message ?? err);
+    res.status(500).json({ error: 'いいねに失敗しました' });
   }
 });
 
