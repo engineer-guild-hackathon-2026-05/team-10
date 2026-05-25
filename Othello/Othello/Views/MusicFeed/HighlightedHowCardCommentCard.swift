@@ -71,20 +71,24 @@ struct HighlightedHowCardCommentCard: View {
             }
         }
         .padding(16)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.16),
-                    Color.white.opacity(0.055)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-        )
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.24), lineWidth: 1)
+                .stroke(
+                    Color(red: 1.0, green: 0.3, blue: 0.3).opacity(isSelected ? 0.24 : 0),
+                    lineWidth: 1
+                )
+        )
+    }
+
+    private var cardBackground: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 1.0, green: 0.3, blue: 0.3).opacity(isSelected ? 0.16 : 0.05),
+                Color.white.opacity(0.055)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
         )
     }
 
