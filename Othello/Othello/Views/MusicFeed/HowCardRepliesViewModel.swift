@@ -42,6 +42,9 @@ final class HowCardRepliesViewModel: ObservableObject {
     }
 
     func postReply() async -> Int? {
+        guard !isPosting else {
+            return nil
+        }
         guard let cardID = post.cardID, let body = normalizedDraft else {
             return nil
         }
@@ -57,7 +60,8 @@ final class HowCardRepliesViewModel: ObservableObject {
             draft = ""
             return response.replyCount
         } catch {
-            errorMessage = "返信を送信できませんでした"
+            print("[HowCardReplies] post failed: \(error.localizedDescription)")
+            errorMessage = Self.message(for: error, fallback: "返信を送信できませんでした")
             return nil
         }
     }
@@ -66,5 +70,30 @@ final class HowCardRepliesViewModel: ObservableObject {
         let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         return String(trimmed.prefix(180))
+    }
+
+    private static func message(for error: Error, fallback: String) -> String {
+        guard let apiError = error as? FirebaseAPIError else {
+            return fallback
+        }
+
+        switch apiError {
+        case .missingBaseURL:
+            return "API_BASE_URL が設定されていません"
+        case .notAuthenticated:
+            return "ログイン状態を確認できませんでした"
+        case .documentNotFound:
+            return "Howカードが見つかりませんでした"
+        case .badServerResponse(let statusCode, let message):
+            if statusCode == 404 {
+                return "返信APIがまだ反映されていません"
+            }
+            if let message, !message.isEmpty {
+                return message
+            }
+            return fallback
+        default:
+            return fallback
+        }
     }
 }

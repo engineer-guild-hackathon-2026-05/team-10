@@ -110,7 +110,6 @@ async function getHowCardReplies({ cardId, limit = 50 } = {}) {
 async function createHowCardReply({ cardId, uid, body }) {
   const cardRef = db().collection('how-cards').doc(cardId);
   const replyRef = cardRef.collection('replies').doc();
-  let replyCount = 0;
   let replyData = null;
 
   await db().runTransaction(async transaction => {
@@ -129,11 +128,13 @@ async function createHowCardReply({ cardId, uid, body }) {
 
     transaction.set(replyRef, replyData);
     transaction.update(cardRef, {
-      reply_count: replyCount,
+      reply_count: FieldValue.increment(1),
       updated_at: FieldValue.serverTimestamp(),
     });
   });
 
+  const updatedCard = await cardRef.get();
+  const replyCount = updatedCard.exists ? currentReplyCount(updatedCard.data()) : 0;
   const reply = serializeHowCardReply(replyRef.id, cardId, { ...replyData, created_at: null });
   const [withUserName] = await attachReplyUserNames([reply]);
   return { reply: withUserName, replyCount };

@@ -85,4 +85,10 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         try container.encode(goods, forKey: .goods)
         try container.encode(replyCount, forKey: .replyCount)
     }
+
+    func replacingReplyCount(_ replyCount: Int) -> HowCardComment {
+        var next = self
+        next.replyCount = replyCount
+        return next
+    }
 }

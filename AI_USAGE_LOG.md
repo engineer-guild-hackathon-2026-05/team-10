@@ -1557,7 +1557,7 @@
 
 ### #005 Howカード返信機能の実装
 
-- **時刻**：06:31
+- **時刻**：2026-05-25 21:31 UTC（2026-05-26 06:31 JST）
 - **ツール**：Codex / node / xcodebuild
 - **目的**：Howカード投稿に返信する画面・Functions API・Firestore 設計を追加し、投稿から会話できるようにする
 - **プロンプト**：
@@ -1572,6 +1572,27 @@
   - backend / data-model / architecture / functions README と steering docs を更新
 - **評価**：採用
 - **採用 / 不採用の理由**：Howカード本体の投稿・いいね導線を崩さず、返信をサブコレクションに分離して会話機能を追加できたため。
+
+### #006 Howカード返信 PRレビュー対応と送信失敗調査
+
+- **時刻**：06:48
+- **ツール**：Codex / GitHub CLI / curl / node / xcodebuild
+- **目的**：PR #101 のレビュー指摘を反映し、実機で返信送信に失敗する原因を確認する
+- **プロンプト**：
+  ```text
+  返信を送信できませんでした。ちゃんとみて。
+
+  また、prにレビューついてるからそれも直して
+  ```
+- **出力サマリ**：
+  - 本番 Functions の `/how-cards/:id/replies` が未デプロイで `Cannot GET` の 404 になっていることを確認
+  - `FeedPost.replacingCommentCount` が nested `HowCardComment.replyCount` も更新するよう修正
+  - 返信投稿の連打で複数 Task が走らないよう `isPosting` guard を追加
+  - `HowCardReplyRow` を独立ファイルへ分離し、1ファイル1型ルールへ合わせた
+  - Firestore の `reply_count` 更新を `FieldValue.increment(1)` に変更し、送信失敗時の HTTP エラー内容を確認しやすくした
+  - `functions:api` をデプロイし、`/how-cards/test/replies` が未デプロイ時の 404 から認証必須の 401 へ変わったことを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘を反映しつつ、実際の送信失敗原因がクライアントではなく未デプロイの Functions endpoint であることを確認できたため。
 
 ---
 
