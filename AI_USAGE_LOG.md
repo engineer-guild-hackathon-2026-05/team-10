@@ -968,7 +968,25 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：既存APIとの重複を避け、おすすめ表示専用Functionとして責務・返却形式・初期おすすめロジック・受け入れ条件を明確化できたため。
 
-### #048 PR #86 レビュー対応と main conflict 解消
+### #048 おすすめコメント取得Function実装
+
+- **時刻**：21:10
+- **ツール**：Codex / Firebase CLI / node
+- **目的**：Home dashboard 向けにおすすめコメント一覧を返す Firebase Function を追加してデプロイする
+- **プロンプト**：
+  ```text
+  firebase cliが繋がったので、おすすめコメントを取得 というfunctionを追加してデプロイしてしまっていい。いい感じに新しかったり、いいね数が多かったりする物をピックアップすると良い。
+  ```
+- **出力サマリ**：
+  - `GET /recommended-comments` を追加し、Firebase ID token 認証付きで `{ comments: [...] }` を返すようにした
+  - Firestore の `created_at desc` と `likes desc` の候補を merge し、recency と likes を合わせたスコアで並び替える実装にした
+  - 既存 `serializeHowCard` を使い、`song_id` contract 修正を維持したままおすすめ一覧に反映
+  - Functions docs と steering docs を更新
+  - Firebase Functions deploy を実行し、`api(asia-northeast1)` / `onUserSignup(asia-northeast1)` の更新完了と `/health` の 200、未認証 `/recommended-comments` の 401 を確認
+- **評価**：採用
+- **採用 / 不採用の理由**：追加 index に依存せず、最新コメントと人気コメントを混ぜた dashboard 用 API を小さな Functions 差分で追加できたため。
+
+### #049 PR #86 レビュー対応と main conflict 解消
 
 - **時刻**：21:34
 - **ツール**：Codex / GitHub CLI / node
@@ -985,7 +1003,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #86 の MusicKit song_id 契約を維持しつつ、main 側の HowChat 変更とログを失わず統合できたため。
 
-### #049 PR #86 再レビュー対応と main 再merge
+### #050 PR #86 再レビュー対応と main 再merge
 
 - **時刻**：21:48
 - **ツール**：Codex / GitHub CLI / node / xcodebuild
@@ -1001,6 +1019,23 @@
   - functions README / backend docs / steering tasklist をレビュー指摘に合わせて更新
 - **評価**：採用
 - **採用 / 不採用の理由**：最新 main のユーザー名連携を落とさず、PR #86 の song_id contract とレビュー指摘の likes 表記を両立できたため。
+
+### #051 PR #87 conflict 解消
+
+- **時刻**：22:06
+- **ツール**：Codex / GitHub CLI / node / xcodebuild
+- **目的**：PR #87（おすすめコメントFunction）の base branch conflict を解消する
+- **プロンプト**：
+  ```text
+  pr #87のコンフリクトを直しておいて
+  ```
+- **出力サマリ**：
+  - PR #87 が `feat/recommended-comments-function` → `fix/how-cards-song-id-contract` で `CONFLICTING` 状態であることを確認
+  - `origin/fix/how-cards-song-id-contract` を merge し、`AI_USAGE_LOG.md` と `functions/README.md` の conflict を両方の内容を残して解消
+  - `/recommended-comments` の README に `user_name` 返却を追記し、repository 側でも `attachUserNames` を通すよう調整
+  - Functions の `node --check`、`git diff --check`、iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：おすすめコメントFunctionの追加と base 側の song_id / user_name 契約を両立し、GitHub上の conflict を解消できる状態にしたため。
 
 ---
 
