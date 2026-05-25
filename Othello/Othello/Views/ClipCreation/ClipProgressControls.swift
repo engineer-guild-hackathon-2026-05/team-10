@@ -23,8 +23,9 @@ struct ClipProgressControls: View {
 
             GeometryReader { geo in
                 let width = geo.size.width
-                let safeDuration = max(totalDuration, 1e-6)
-                let progress = min(max(currentTime / safeDuration, 0), 1)
+                let progress = totalDuration > 0
+                    ? min(max(currentTime / totalDuration, 0), 1)
+                    : 0
 
                 ZStack(alignment: .leading) {
                     Capsule()

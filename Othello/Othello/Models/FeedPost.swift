@@ -10,8 +10,17 @@ struct FeedPost: Identifiable {
     let timeAgo: String
     let comment: String
     let song: Song
+    let howCardComment: HowCardComment?
     let likeCount: Int
     let commentCount: Int
+
+    var playbackContext: NowPlayingContext {
+        if let howCardComment {
+            return NowPlayingContext(song: song, howCardComment: howCardComment)
+        }
+
+        return NowPlayingContext(song: song)
+    }
 }
 
 extension FeedPost {
@@ -28,6 +37,7 @@ extension FeedPost {
             timeAgo: "今",
             comment: howCard.comment,
             song: song,
+            howCardComment: howCard,
             likeCount: howCard.goods,
             commentCount: 0
         )

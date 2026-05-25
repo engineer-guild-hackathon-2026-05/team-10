@@ -64,23 +64,31 @@ struct ClipRangeWaveformView: View {
                         let rawRatio = Double(value.location.x / width)
                         guard rawRatio.isFinite else { return }
                         let ratio = rawRatio.clamped(to: 0...1)
-                        let startRatio = clipStart / safeDuration
-                        let endRatio = clipEnd / safeDuration
+                        let startRatio = (clipStart / safeDuration).clamped(to: 0...1)
+                        let endRatio = (clipEnd / safeDuration).clamped(to: 0...1)
 
                         if isDraggingStart == nil {
                             isDraggingStart = abs(ratio - startRatio) <= abs(ratio - endRatio)
                         }
 
                         if isDraggingStart == true {
-                            onDrag(min(ratio, endRatio - 0.05), endRatio)
+                            let nextStartRatio = min(ratio, endRatio - 0.05).clamped(to: 0...1)
+                            onDrag(nextStartRatio, endRatio)
                         } else {
-                            onDrag(startRatio, max(ratio, startRatio + 0.05))
+                            let nextEndRatio = max(ratio, startRatio + 0.05).clamped(to: 0...1)
+                            onDrag(startRatio, nextEndRatio)
                         }
                     }
                     .onEnded { _ in
                         isDraggingStart = nil
                     }
             )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("クリップ範囲")
+            .accessibilityValue(accessibilityValue)
+            .accessibilityAdjustableAction { direction in
+                adjustRange(for: direction)
+            }
         }
     }
 
@@ -94,5 +102,39 @@ struct ClipRangeWaveformView: View {
                     .stroke(Color.black.opacity(0.18), lineWidth: 0.5)
             )
             .accessibilityHidden(true)
+    }
+
+    private var accessibilityValue: String {
+        "\(formatTime(clipStart))から\(formatTime(clipEnd))"
+    }
+
+    private func adjustRange(for direction: AccessibilityAdjustmentDirection) {
+        guard totalDuration > 0 else { return }
+
+        let step = max(totalDuration * 0.01, 0.1)
+        let start = clipStart.clamped(to: 0...totalDuration)
+        let end = clipEnd.clamped(to: 0...totalDuration)
+        let nextStart: Double
+        let nextEnd: Double
+
+        switch direction {
+        case .increment:
+            nextStart = start
+            nextEnd = min(totalDuration, max(end + step, start))
+        case .decrement:
+            nextStart = max(0, min(start - step, end))
+            nextEnd = end
+        @unknown default:
+            return
+        }
+
+        onDrag(nextStart / totalDuration, nextEnd / totalDuration)
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        let clampedSeconds = max(0, seconds)
+        let minutes = Int(clampedSeconds) / 60
+        let seconds = Int(clampedSeconds) % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }

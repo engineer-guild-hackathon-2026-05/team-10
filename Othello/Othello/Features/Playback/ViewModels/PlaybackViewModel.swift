@@ -40,8 +40,8 @@ final class PlaybackViewModel: ObservableObject {
     }
 
     @discardableResult
-    func select(track: PlaybackTrack) async -> PlaybackTrack? {
-        try? await service.play(track: track)
+    func select(track: PlaybackTrack, initialPlaybackTime: TimeInterval = 0) async -> PlaybackTrack? {
+        try? await service.play(track: track, startingAt: initialPlaybackTime)
         if !service.isPositionAvailable {
             positionUnavailableAlertShown = true
             return nil
@@ -50,7 +50,7 @@ final class PlaybackViewModel: ObservableObject {
     }
 
     @discardableResult
-    func select(song: Song) async -> PlaybackTrack? {
+    func select(song: Song, initialPlaybackTime: TimeInterval = 0) async -> PlaybackTrack? {
         if let musicKitID = song.musicKitID {
             let track = PlaybackTrack(
                 id: MusicItemID(rawValue: musicKitID),
@@ -63,7 +63,7 @@ final class PlaybackViewModel: ObservableObject {
                 duration: song.duration,
                 artworkURL: song.artworkURL
             )
-            return await select(track: track)
+            return await select(track: track, initialPlaybackTime: initialPlaybackTime)
         }
 
         do {
@@ -73,7 +73,7 @@ final class PlaybackViewModel: ObservableObject {
                 positionUnavailableAlertShown = true
                 return nil
             }
-            return await select(track: track)
+            return await select(track: track, initialPlaybackTime: initialPlaybackTime)
         } catch {
             positionUnavailableMessage = "Apple Music の曲検索に失敗しました。"
             positionUnavailableAlertShown = true

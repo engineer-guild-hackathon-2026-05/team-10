@@ -3,7 +3,7 @@ import SwiftUI
 struct MusicFeedView: View {
     let artist: Artist
     let highlightedComment: HomeDashboardComment?
-    let onSongTap: (Song) -> Void
+    let onPlaybackContext: (NowPlayingContext) -> Void
     @ObservedObject private var playback: PlaybackViewModel
     @StateObject private var viewModel: MusicFeedViewModel
     @Environment(\.dismiss) private var dismiss
@@ -11,12 +11,12 @@ struct MusicFeedView: View {
     init(
         artist: Artist,
         highlightedComment: HomeDashboardComment? = nil,
-        onSongTap: @escaping (Song) -> Void,
+        onPlaybackContext: @escaping (NowPlayingContext) -> Void,
         playback: PlaybackViewModel
     ) {
         self.artist = artist
         self.highlightedComment = highlightedComment
-        self.onSongTap = onSongTap
+        self.onPlaybackContext = onPlaybackContext
         self.playback = playback
         self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
     }
@@ -99,7 +99,7 @@ struct MusicFeedView: View {
             LazyVStack(spacing: 12) {
                 if let highlightedComment {
                     HighlightedHowCardCommentCard(item: highlightedComment) {
-                        onSongTap(highlightedComment.song)
+                        play(comment: highlightedComment)
                     }
                 }
 
@@ -141,9 +141,19 @@ struct MusicFeedView: View {
 
     private func play(post: FeedPost) {
         Task {
-            guard let track = await playback.select(song: post.song) else { return }
+            let context = post.playbackContext
+            guard let track = await playback.select(song: post.song, initialPlaybackTime: context.initialPlaybackTime) else { return }
             let resolvedSong = Song(playbackTrack: track, fallback: post.song)
-            onSongTap(resolvedSong)
+            onPlaybackContext(context.replacingSong(resolvedSong))
+        }
+    }
+
+    private func play(comment: HomeDashboardComment) {
+        Task {
+            let context = NowPlayingContext(song: comment.song, howCardComment: comment.howCard)
+            guard let track = await playback.select(song: comment.song, initialPlaybackTime: context.initialPlaybackTime) else { return }
+            let resolvedSong = Song(playbackTrack: track, fallback: comment.song)
+            onPlaybackContext(context.replacingSong(resolvedSong))
         }
     }
 
@@ -156,5 +166,5 @@ struct MusicFeedView: View {
 }
 
 #Preview {
-    MusicFeedView(artist: Artist.catalog[0], onSongTap: { _ in }, playback: PlaybackViewModel())
+    MusicFeedView(artist: Artist.catalog[0], onPlaybackContext: { _ in }, playback: PlaybackViewModel())
 }

@@ -43,7 +43,7 @@ struct FeedPostCard: View {
                 .foregroundStyle(Color.white.opacity(0.85))
                 .lineLimit(3)
 
-            MiniSongCard(song: post.song, onTap: onSongTap)
+            MiniSongCard(context: post.playbackContext, onTap: onSongTap)
 
             HStack(spacing: 20) {
                 Button {

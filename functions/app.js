@@ -6,6 +6,7 @@ app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/how-cards', require('./routes/how-cards'));
+app.use('/recommended-comments', require('./routes/recommended-comments'));
 app.use('/users', require('./routes/users'));
 
 app.get('/health', (_, res) => res.json({ status: 'ok' }));

@@ -8,10 +8,15 @@
 - [x] ビルドと差分チェックを実行する
 - [x] AI_USAGE_LOG.md に作業ログを追記する
 - [x] コミット・push・PR 作成を行う
+- [x] CodeRabbit の再レビュー指摘を確認する
+- [x] 最新 `origin/main` を取り込み、ログ conflict を解消する
+- [x] progress / waveform accessibility / clamp 指摘を修正する
+- [x] 再検証して PR ブランチへ push する
 
 ## 振り返り
 
 - 上部バーは再生位置のみを示す共通コンポーネントへ整理し、切り抜き範囲の操作は中央波形だけにした。
 - sheet版とinline版は同じ `ClipRangeSelectionView` を使うため、表示・操作の差分が出にくくなった。
 - 波形に左右ハンドルを追加し、操作説明文に頼らず範囲の端を認識できる見た目にした。
+- 再レビューでは、ゼロ秒曲の progress 固定、ドラッグ比率の再 clamp、VoiceOver からの範囲調整を追加した。
 - PR: https://github.com/engineer-guild-hackathon-2026-05/team-10/pull/93

@@ -44,7 +44,7 @@ struct HighlightedHowCardCommentCard: View {
                 .foregroundStyle(Color.white.opacity(0.88))
                 .fixedSize(horizontal: false, vertical: true)
 
-            MiniSongCard(song: item.song, onTap: onSongTap)
+            MiniSongCard(context: NowPlayingContext(song: item.song, howCardComment: item.howCard), onTap: onSongTap)
 
             HStack(spacing: 20) {
                 Button {

@@ -49,6 +49,7 @@ functions/
 │   └── firestore.js          # Firestore 読み書き（how-cards / users）
 ├── routes/
 │   ├── how-cards.js          # /how-cards 配下
+│   ├── recommended-comments.js # /recommended-comments
 │   └── users.js              # /users / /users/me
 ├── package.json
 └── .gitignore
@@ -124,6 +125,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
 | PATCH | `/how-cards/:id` | ✅ | 自分のHowカードコメント更新 |
 | POST | `/how-cards/:id/like` | ✅ | いいね（冪等、二重防止） |
+| GET | `/recommended-comments` | ✅ | Home dashboard 向けおすすめコメント一覧 |
 | GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
 | PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
 
@@ -139,6 +141,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
   "song_start": 78.4,
   "song_end": 84.2,
   "song_id": "1704093812",
+  "song_slug": "ado-show",
   "artist_id": "ado"
 }
 ```
@@ -148,8 +151,12 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | `comment` | string | ユーザー記入のコメント（空文字不可） |
 | `song_start` | number | 区間開始（秒、0 以上） |
 | `song_end` | number | 区間終了（秒、`song_start` より大きい） |
-| `song_id` | string | 曲 ID |
+| `song_id` | string | MusicKit / Apple Music / iTunes の曲 ID |
+| `itunes_id` | string | 任意。`song_id` が legacy slug の場合に canonical 曲 ID として使う |
+| `song_slug` | string | 任意。表示・移行用の曲 slug。`song_id` には入れない |
 | `artist_id` | string | アーティスト ID |
+
+`song_id` は client が MusicKit metadata lookup に使う canonical ID とする。slug や曲名由来の値は `song_slug` など別フィールドで送る。
 
 **レスポンス**
 
@@ -161,9 +168,10 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
     "song_start": 78.4,
     "song_end": 84.2,
     "song_id": "1704093812",
+    "itunes_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
-    "goods": 0
+    "likes": 0
   }
 }
 ```
@@ -184,16 +192,46 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "song_start": 78.4,
       "song_end": 84.2,
       "song_id": "1704093812",
+      "itunes_id": "1704093812",
       "artist_id": "ado",
       "user_id": "uid123",
       "user_name": "Atsushi",
-      "goods": 3
+      "likes": 3
     }
   ]
 }
 ```
 
 `user_name` は `users/{user_id}.display_name` から Admin SDK で参照した表示用フィールド。メールアドレスなどの user 詳細は返さない。
+
+### `GET /recommended-comments`
+
+Home dashboard 向けのおすすめ Howカードコメント一覧を返す。`created_at` が新しいコメントと `likes` が多いコメントから候補を取り、Functions 側でスコアリングして混ぜる。
+
+`limit` は 1〜50。未指定時は 12 件。
+
+**レスポンス**
+
+```json
+{
+  "comments": [
+    {
+      "id": "card456",
+      "comment": "...",
+      "song_start": 78.4,
+      "song_end": 84.2,
+      "song_id": "1704093812",
+      "itunes_id": "1704093812",
+      "song_slug": "ado-show",
+      "artist_id": "ado",
+      "user_id": "uid123",
+      "user_name": "Atsushi",
+      "likes": 12,
+      "created_at": "2026-05-25T12:00:00.000Z"
+    }
+  ]
+}
+```
 
 ### `POST /how-cards/:id/like`
 
@@ -202,14 +240,14 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 **レスポンス**
 
 ```json
-{ "goods": 4, "likes": 4 }
+{ "likes": 4 }
 ```
 
 **動作:**
 
 - `how-cards/{id}/liked-by/{uid}` の存在を確認
-- 未いいねなら: `liked-by/{uid}` 作成 + `goods` を +1
-- 既いいねなら: ノーオペ（現在の `goods` を返す）
+- 未いいねなら: `liked-by/{uid}` 作成 + `likes` を +1
+- 既いいねなら: ノーオペ（現在の `likes` を返す）
 
 ### `GET /users/me` / `PUT /users/me`
 
@@ -243,9 +281,11 @@ how-cards/{cardId}
   song_start: number
   song_end: number
   song_id: string
+  itunes_id: string
+  song_slug: string | null
   artist_id: string
   user_id: string
-  goods: number
+  likes: number
   created_at: timestamp
   updated_at: timestamp | absent
 
