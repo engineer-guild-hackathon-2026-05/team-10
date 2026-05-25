@@ -84,11 +84,11 @@ backend/
 
 ### ai-recognition/ (AI モデル)
 
-モーション+心拍特徴量から6軸聴取状態スコアを学習する TensorFlow コード。
+モーション+心拍特徴量から3状態スコア（groove / chill / neutral）を学習するコード。
 
 ```
 ai-recognition/
-├── data/                       # 教師データ（JSONL 等、別仕様 002- で収集）
+├── data/                       # 教師データ（Create ML GUI用CSV 等）
 ├── train/                      # 学習スクリプト（Python / TensorFlow）
 ├── export/                     # coremltools で .mlmodel へ変換
 └── README.md

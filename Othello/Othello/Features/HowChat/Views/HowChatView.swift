@@ -150,10 +150,10 @@ struct HowChatView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
             }
-            .onChange(of: vm.messages.count) { _ in
+            .onChange(of: vm.messages.count) { _, _ in
                 withAnimation { proxy.scrollTo(vm.messages.last?.id) }
             }
-            .onChange(of: vm.state) { _ in
+            .onChange(of: vm.state) { _, _ in
                 withAnimation { proxy.scrollTo(vm.messages.last?.id) }
             }
         }

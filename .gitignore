@@ -16,7 +16,7 @@ Thumbs.db
 *.pem
 
 # Firebase
-backend/serviceAccountKey.json
+**/serviceAccountKey.json
 
 # Node
 node_modules/
@@ -66,5 +66,6 @@ docs/slides/*.pdf
 docs/slides/*.pptx
 
 **/GoogleInfo.plist
+**/GoogleService-Info.plist
 
 **/ENV.plist

@@ -13,6 +13,7 @@ final class PlaybackViewModel: ObservableObject {
     @Published var searchResults: [PlaybackTrack] = []
     @Published var searchQuery: String = ""
     @Published var positionUnavailableAlertShown: Bool = false
+    @Published private(set) var positionUnavailableMessage: String = "Apple Music の認証が必要です。このセッションでは反応の同期が無効になります。"
 
     private let service: MusicKitPlaybackService
     private var cancellables: Set<AnyCancellable> = []
@@ -28,9 +29,6 @@ final class PlaybackViewModel: ObservableObject {
         // 起動直後のwatchdogタイムアウトを避けるため少し遅延してから認証
         try? await Task.sleep(for: .milliseconds(500))
         await service.requestAuthorization()
-        if service.authorizationStatus != .authorized {
-            positionUnavailableAlertShown = true
-        }
     }
 
     func search() async {
@@ -41,8 +39,14 @@ final class PlaybackViewModel: ObservableObject {
         searchResults = (try? await service.search(query: searchQuery)) ?? []
     }
 
-    func select(track: PlaybackTrack) async {
+    @discardableResult
+    func select(track: PlaybackTrack) async -> PlaybackTrack? {
         try? await service.play(track: track)
+        if !service.isPositionAvailable {
+            positionUnavailableAlertShown = true
+            return nil
+        }
+        return service.currentTrack
     }
 
     func togglePlayback() async {
@@ -56,6 +60,10 @@ final class PlaybackViewModel: ObservableObject {
     /// センサー記録に渡す再生位置（取得不可の場合 nil）
     func currentPlaybackTime() -> TimeInterval? {
         service.currentPlaybackTime()
+    }
+
+    func playbackPositionProvider() -> PlaybackPositionProviding {
+        service
     }
 
     // MARK: - Private
@@ -84,6 +92,18 @@ final class PlaybackViewModel: ObservableObject {
         service.$authorizationStatus
             .receive(on: RunLoop.main)
             .assign(to: \.authorizationStatus, on: self)
+            .store(in: &cancellables)
+
+        service.$unavailableReason
+            .compactMap { $0 }
+            .receive(on: RunLoop.main)
+            .sink { [weak self] message in
+                guard let self else { return }
+                self.positionUnavailableMessage = message
+                if self.currentTrack != nil {
+                    self.positionUnavailableAlertShown = true
+                }
+            }
             .store(in: &cancellables)
     }
 }

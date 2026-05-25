@@ -13,8 +13,8 @@
 | CMHeadphoneMotionManager | AirPods 頭部モーション取得 | AirPods の加速度・姿勢を取得する唯一の手段 |
 | HealthKit | 心拍取得 | 対応 AirPods の心拍をヘルスデータ経由で取得 |
 | MusicKit | 楽曲再生・再生位置取得 | Apple Music の曲を再生位置付きで再生（DECISION-01） |
-| AVFoundation | ローカル音源再生（代替） | MusicKit 不可時のフォールバック |
-| Core ML | 端末上の6軸スコア推論 | TF 学習モデルを変換して端末推論（DECISION-02） |
+| AVFoundation | 音量取得・収集アプリのローカル音源再生 | 本番アプリは MusicKit、学習データ収集アプリはローカル音源にも対応 |
+| Core ML | 端末上の反応スコア補助推論 | `ai-recognition/` の3状態モデル候補と特徴量から、iOS側で6軸 `ReactionScore` に展開（DECISION-02） |
 | Keychain Services | 認証トークン保持 | 機微情報の安全な保存 |
 
 ### バックエンド（`backend/`）
@@ -30,8 +30,8 @@
 
 | 技術 | 用途 | 選定理由 |
 |------|------|----------|
-| TensorFlow / Keras (Python) | モーション+心拍からの6軸スコア学習 | `ai-recognition/` の指定。学習はサーバー/ローカル |
-| coremltools | TF → Core ML 変換 | 学習済みモデルを iOS に組み込み |
+| TensorFlow.js / Create ML | モーションからの3状態ラベル学習 | `ai-recognition/` のMVPは groove / chill / neutral で収集し、iOSの6軸表示へ接続 |
+| coremltools / Create ML | TF / 収集データ → Core ML 変換 | 学習済みモデルを iOS に組み込み |
 
 ### 開発ツール
 
@@ -63,7 +63,7 @@
 │  │  - HeadphoneMotionService (CMHeadphoneMotion)    │     │
 │  │  - DeviceMotionService (Core Motion)             │     │
 │  │  - HeartRateService (HealthKit)                  │     │
-│  │  - PlayerService (MusicKit/AVFoundation)         │     │
+│  │  - PlayerService (MusicKit)                      │     │
 │  │  - ReactionClassifier (Core ML)                  │     │
 │  └──────────────────┬──────────────────────────────┘     │
 └─────────────────────┼────────────────────────────────────┘
@@ -96,7 +96,7 @@
 #### Service レイヤー
 - **HeadphoneMotionService / DeviceMotionService / HeartRateService**: センサー取得・時刻同期
 - **PlayerService**: 再生・再生位置供給
-- **ReactionClassifier**: Core ML 推論（特徴量 → 6軸スコア）
+- **ReactionClassifier / ReactionScoringService**: Core ML 推論候補と特徴量から6軸スコアを算出（学習データ収集は3状態から開始）
 - **APIClient**: backend との HTTP/SSE 通信
 
 #### バックエンド
@@ -212,5 +212,5 @@ team-10/
 | Combine / async-await | 非同期・状態管理 |
 | CoreMotion | 本体・AirPods モーション |
 | HealthKit | 心拍 |
-| MusicKit / AVFoundation | 再生・再生位置 |
+| MusicKit | 再生・再生位置 |
 | CoreML | 推論 |

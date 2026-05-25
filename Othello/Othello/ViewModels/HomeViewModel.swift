@@ -4,16 +4,8 @@ import Foundation
 @MainActor
 class HomeViewModel: ObservableObject {
     @Published var isSessionActive: Bool = false
-    @Published var isPlaying: Bool = false
-    @Published var playbackTime: TimeInterval = 0
     @Published var sensorStatus: SensorStatusBundle
     @Published var useManualMode: Bool
-
-    let mockTrackTitle: String = "感電"
-    let mockTrackArtist: String = "米津玄師"
-    let mockTrackDuration: TimeInterval = 268
-
-    private var timerCancellable: AnyCancellable?
 
     init(useManualMode: Bool, permissionState: PermissionState) {
         self.useManualMode = useManualMode
@@ -22,12 +14,8 @@ class HomeViewModel: ObservableObject {
 
     func startSession() {
         isSessionActive = true
-        // セッション開始時にセンサー状態を「取得中」へ更新
         if sensorStatus.headMotion == .disconnected {
-            sensorStatus.headMotion = .disconnected // AirPods は接続状態による
-        }
-        if sensorStatus.bodyMotion == .stopped {
-            sensorStatus.bodyMotion = .acquiring
+            sensorStatus.headMotion = .disconnected
         }
         if sensorStatus.heartRate == .stopped {
             sensorStatus.heartRate = .acquiring
@@ -36,8 +24,6 @@ class HomeViewModel: ObservableObject {
 
     func endSession() {
         isSessionActive = false
-        isPlaying = false
-        stopTimer()
         sensorStatus = SensorStatusBundle(
             headMotion: sensorStatus.headMotion == .unsupported ? .unsupported : .disconnected,
             bodyMotion: sensorStatus.bodyMotion == .unauthorized || sensorStatus.bodyMotion == .unsupported
@@ -45,33 +31,5 @@ class HomeViewModel: ObservableObject {
             heartRate: sensorStatus.heartRate == .unauthorized || sensorStatus.heartRate == .unsupported
                 ? sensorStatus.heartRate : .stopped
         )
-    }
-
-    func togglePlayback() {
-        isPlaying.toggle()
-        if isPlaying {
-            startTimer()
-        } else {
-            stopTimer()
-        }
-    }
-
-    private func startTimer() {
-        timerCancellable = Timer.publish(every: 0.1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self else { return }
-                if self.playbackTime < self.mockTrackDuration {
-                    self.playbackTime += 0.1
-                } else {
-                    self.isPlaying = false
-                    self.stopTimer()
-                }
-            }
-    }
-
-    private func stopTimer() {
-        timerCancellable?.cancel()
-        timerCancellable = nil
     }
 }

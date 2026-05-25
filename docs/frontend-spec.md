@@ -20,8 +20,8 @@
 ### 対象プラットフォーム（固定事項）
 
 本プロダクトは **iOS ネイティブアプリ（Xcode / SwiftUI）** を対象とする。Web 版は作らない。
-身体反応の主シグナルは **AirPods の頭部モーション・心拍**、および **iPhone 本体のモーション**である。
-これらは Web の `DeviceMotionEvent` では取得できず、`CMHeadphoneMotionManager` / Core Motion / HealthKit などネイティブ API を必須とするため、ネイティブを固定事項とする。
+身体反応の主シグナルは **iPhone の音量・本体モーション**である。AirPods の頭部モーション・心拍は利用可能な場合に補助として使用する（ADR-0005）。
+これらは Web の `DeviceMotionEvent` では取得できず、`CMHeadphoneMotionManager` / Core Motion / HealthKit などネイティブ API を必要とするため、ネイティブを固定事項とする。
 
 ---
 
@@ -35,14 +35,13 @@
 
 ### 3.1 In Scope（MVP）
 
-- AirPods 接続・センサー権限（モーション / ヘルス）取得・オンボーディング
 - 楽曲の再生と再生位置（曲中時刻）の取得
-- **AirPods 頭部モーション**・**iPhone 本体モーション**の取得と曲中時刻への同期記録
-- **心拍（心拍数・心拍変動）の取得**と曲中時刻への対応づけ
-- 反応区間の検出と 6 軸聴取状態スコアの取得・表示
-- **反応地点に対応する歌詞行の表示（歌詞 API 連携）**
-- 反応地点に基づく AI 対話
-- 対話結果からの How カード生成・編集・保存
+- **時刻同期歌詞の表示**（Musixmatch API / ADR-0004）
+- **歌詞行タップ → AI 対話 → HowCard 生成**（コア UX フロー）
+- 音量・本体モーションによる Groove レベルの算出・表示
+- AirPods 頭部モーション・心拍の取得（接続時の補助、ADR-0005）
+- iPhone 本体モーションの取得と曲中時刻への同期記録
+- How カード生成・編集・保存
 - 同じ How を持つ人 / 曲 / リスナーの表示
 
 ### 3.2 Out of Scope（MVP では作らない）
@@ -92,7 +91,7 @@
 - **FR-PLAY-02** *While* 再生中, システムは現在の曲中時刻（再生位置）を継続的に取得・表示 *shall*。
 - **FR-PLAY-03** システムは再生位置をセンサー記録および反応検出の基準時刻として供給 *shall*。
 - **FR-PLAY-04** *If* 再生位置の取得手段が利用できない場合, *then* システムはユーザーにその旨を通知し、当該セッションの反応同期を無効化 *shall*。
-  > 注: 具体的な音源（MusicKit / AVFoundation 等）は plan.md の決定事項。本仕様は「再生位置が取得可能」であることのみを要求する。MusicKit が有力候補（DECISION-01）。
+  > 注: MVP の音源・再生位置取得は MusicKit を使う（DECISION-01）。
 
 ### 6.3 SENS — 本体モーション取得（iPhone）
 
@@ -115,8 +114,8 @@
 
 ### 6.6 DETECT — 反応検出 / スコアリング
 
-- **FR-DETECT-01** システムは 1〜3 秒の時間窓ごとに特徴量（meanMagnitude / stdMagnitude / maxDelta / energy / peakCount / rhythmRegularity / stillness、および**心拍数・心拍変動**等）を抽出 *shall*。
-- **FR-DETECT-02** システムは 6 軸聴取状態スコア（groove / hype / chill / immersion / hit / afterglow）を取得 *shall*（マルチラベル＝同時複数可）。
+- **FR-DETECT-01** システムは 5 秒の時間窓ごとに特徴量（meanMagnitude / stdMagnitude / maxDelta / energy / peakCount / rhythmRegularity / stillness、および**心拍数・心拍変動**等）を抽出 *shall*。
+- **FR-DETECT-02** システムは 3 状態スコア（groove / chill / neutral）を取得 *shall*。
 - **FR-DETECT-03** *While* リスニング中, システムは反応の出方をリアルタイムに表示 *shall*。
 - **FR-DETECT-04** システムは検出された反応区間を曲中タイムライン上に提示 *shall*。
   > 注: 推論を端末上（Core ML）で行うか、特徴量を送信して外部で行うかは plan.md の決定事項。端末上（Core ML）が有力（DECISION-02）。
@@ -200,20 +199,20 @@
 - **[DEC-A] 主シグナルは頭部モーション。** AirPods 頭部モーション（CMHeadphoneMotionManager）と iPhone 本体モーション（Core Motion）を主シグナルとする。リアルタイム・確実に取れる加速度系を中心に据える。
 - **[DEC-B] 心拍は補助。** AirPods Pro 3 は心拍数のみ（HRV 不可）で、第三者アプリからのリアルタイム取得に制約があるため、心拍は MVP 必須にしない。取得できればトレンドとして補助的に使う（FR-HR-02/03）。→ DECISION-06/07 に反映。
 - **[DEC-C] 推論はルールベース主体 + Core ML 並行。** MVP は閾値ルールで 6 軸スコアを確実に算出する。`ai-recognition/` で TensorFlow 学習を並行し、間に合えば同一インターフェースで Core ML に差し替える。→ DECISION-02 を解決。
-- **[DEC-D] MVP は1人分のコア体験を完結。** 「聴く → 頭部モーション → 6 軸スコア → AI 対話 → How カード」を確実に動かす。コミュニティはダミーデータで提示。歌詞表示は Musixmatch API で実装済みのため **P0 に格上げ**。共有は P1。
+- **[DEC-D] MVP は1人分のコア体験を完結。** 「聴く → 頭部モーション → 6 軸スコア → AI 対話 → How カード」を確実に動かす。コミュニティはダミーデータで提示、歌詞・共有は P1。
 
 ### 9.2 未決（Deferred）
 
 > SDD では未決事項を仕様段階で明示し、設計段階で解消する。
 
-- **[DECISION-01] 音源と再生位置の取得手段。** ⏳ 保留中（**MusicKit を予定**。要 entitlement・再生位置取得の検証。デモ確実性の代替として AVFoundation + ローカル音源あり）。**MVP の成否を最も左右する決定。**
+- **[DECISION-01] 音源と再生位置の取得手段。** ✅ **MusicKit で進める。** Spotify / AVFoundation は MVP では使用しない。
 - **[DECISION-02] 6 軸推論の実行位置。** ✅ **DEC-C で解決**: 端末上、ルールベース主体 + Core ML 並行。
 - **[DECISION-03] データ永続化先。** Firestore（iOS SDK）/ CloudKit / Supabase / その他。
 - **[DECISION-04] LLM 連携経路。** `backend/` プロキシ経由を前提。既存プロキシ流用可否。
 - **[DECISION-05] 共有機能（FR-COMM-04）を MVP に含めるか。** → DEC-D により **P1**（MVP 必須から除外）。
 - **[DECISION-06] 心拍のリアルタイム同期方式。** ✅ **DEC-B で方針決定**（補助扱い）。実機での取得粒度は [DECISION-07] で要検証。
 - **[DECISION-07] AirPods 心拍の取得 API と対応機種の確定。** ⏳ 要実機検証（AirPods Pro 3 = HR のみ／HRV 不可、第三者アプリのリアルタイム取得粒度を確認）。
-- **[DECISION-08] 歌詞ソースと時間同期方式。** ✅ **解決**: Musixmatch API で実装済み。時刻同期は MusicKit 再生位置と LRC タイムスタンプを突合。
+- **[DECISION-08] 歌詞ソースと時間同期方式。** 歌詞 API の選定、楽曲との時刻同期手段。
 
 ---
 
@@ -221,7 +220,7 @@
 
 - **How**: 「どう聴いているか」という聴き方の価値観。曲・ジャンル等の「What」と対比。
 - **How カード**: 対話で言語化された聴き方を、共有可能な形にまとめたカード（タイトル・説明・How タグ）。
-- **How タグ**: groove / hype / chill / immersion / hit / afterglow を中心とする聴取状態の分類。
+- **How タグ**: groove / chill / neutral を起点とする聴取状態の分類。
 - **反応区間**: モーション・心拍から検出された、身体・生理反応が起きていた曲中の時間帯。
 - **頭部モーション**: AirPods 内蔵センサーで取得する頭部の加速度・回転速度・姿勢。`CMHeadphoneMotionManager` で取得。
 - **心拍変動 (HRV)**: 心拍間隔のゆらぎ。緊張・リラックスなどの生理状態の指標。

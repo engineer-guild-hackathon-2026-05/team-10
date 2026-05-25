@@ -224,8 +224,8 @@ AIが波形を見て問いかける。「1:18、ここで何か感じました�
    ↓
 📲 動く              センサーが身体の反応・モメンタムを自動記録
    ↓
-🧠 スコア推定        6軸スコアを推定（groove / hype / chill …）
-                      ※ ルールベース → 学習モデルへ進化
+🧠 スコア推定        3状態ML候補を起点に、6軸スコアへ展開
+                      ※ groove / chill / neutral → groove / hype / chill …
    ↓
 🌊 見る              モメンタム波形が眼前に現れる（驚き）
    ↓
@@ -313,37 +313,39 @@ AIが波形を見て問いかける。「1:18、ここで何か感じました�
 
 | レイヤー | 技術 |
 |---|---|
-| フロントエンド | **Next.js 15** (App Router) + Tailwind CSS |
-| バックエンド | **Node.js / Express** on Cloud Run |
-| ML | **TensorFlow.js**（MotionReactionClassifier） |
+| iOSアプリ | **SwiftUI** + MusicKit + Core Motion |
+| バックエンド | **Express**（backend / Firebase Functions） |
+| ML | **Core ML** + TensorFlow.js / Create ML（ai-recognition） |
 | LLM | **Claude API**（claude-sonnet-4-6） |
-| データベース | **Firestore** / Cloud Storage |
-| 認証 | **Firebase Auth**（Google OAuth） |
+| データベース | **Firestore** |
+| 認証 | **Firebase Auth** / Sign in with Apple |
 
 ---
 
 ## システム構成
 
 ```
-   📱 スマホ (Next.js)
-   SensorRecorder / ReactionTimeline / HowChat
+   📱 iOSアプリ (SwiftUI)
+   Home / ReactionTimeline / HowChat
         │  HTTPS / SSE
         ▼
-   ☁️ Cloud Run (Express)
+   ☁️ backend / Firebase Functions (Express)
    ┌─────────────┬──────────────────┐
-   │ MotionAnalyzer │ HowDialogOrchestrator │
-   │   (TF.js)      │    (Claude API)        │
+   │ HowCard API │ HowDialogOrchestrator │
+   │ Firestore   │ Claude API proxy      │
    └─────────────┴──────────────────┘
         │
         ▼
-   🔥 Firestore / Cloud Storage
+   🔥 Firestore
+
+   ai-recognition ── Core ML model ──▶ iOSアプリ
 ```
 
 ---
 
 ## センサー解析アルゴリズム
 
-1〜3秒の時間窓ごとに特徴量を抽出 → 6軸スコアを推定
+5秒の時間窓ごとに特徴量を抽出 → 3状態候補を推定し、6軸スコアに展開
 
 <div class="cols">
 <div>
@@ -462,8 +464,8 @@ pnpm workspace + Turborepo
 ### 🚫 作らない
 - DM・フォロー
 - 完全SNSタイムライン
-- Spotify/Apple Music連携
-- 歌詞API
+- Spotify連携
+- 独自歌詞DB
 - 本格的な音源解析
 
 </div>
@@ -475,11 +477,11 @@ pnpm workspace + Turborepo
 
 | フェーズ | モデル | 必要データ | 状態 |
 |---|---|---|---|
-| **MVP（今）** | ルールベース6軸 | 0 | ✅ 実装中 |
+| **MVP（今）** | 3状態収集 + ルールベース6軸 | seed / 実機サンプル | ✅ 実装中 |
 | **β版** | 学習モデル 16〜32次元 | 〜1,000セッション | 📅 〜6ヶ月 |
 | **スケール** | 高次元埋め込み 128次元 | 10,000セッション〜 | 📅 1年〜 |
 
-> 6軸は「人間用のビューア」。モデルは高次元で学習し、表示時に射影する設計。
+> 3状態は学習データを集めるための入口。6軸は「人間用のビューア」で、表示時に身体反応を解釈しやすい言葉へ射影する。
 > **使えば使うほど賢くなる** — AI対話の回答が暗黙のラベルになる。
 
 ---

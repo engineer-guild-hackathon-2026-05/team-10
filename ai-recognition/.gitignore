@@ -1,0 +1,6 @@
+.data/
+*.tsbuildinfo
+*.xcuserstate
+xcuserdata/
+**/*.xcodeproj/project.xcworkspace/
+DerivedData/

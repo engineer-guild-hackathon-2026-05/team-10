@@ -25,14 +25,19 @@ final class ChatAPIClient {
     static let shared = ChatAPIClient()
     private init() {}
 
-    private let baseURL = ProcessInfo.processInfo.environment["API_BASE_URL"]
-        ?? "http://localhost:3000"
-
     func chat(event: ReactionEvent, messages: [HowChatMessage]) async throws -> ChatResponse {
         if isMockMode {
             return mockResponse(event: event, turn: messages.filter { $0.sender == .ai }.count)
         }
-        let url = URL(string: "\(baseURL)/sessions/mock/chat")!
+
+        guard let baseURL else {
+            throw URLError(.badURL)
+        }
+
+        guard let url = URL(string: "/sessions/default/chat", relativeTo: baseURL)?.absoluteURL else {
+            throw URLError(.badURL)
+        }
+
         var req = URLRequest(url: url, timeoutInterval: 10)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -43,6 +48,17 @@ final class ChatAPIClient {
             throw URLError(.badServerResponse)
         }
         return try JSONDecoder().decode(ChatResponse.self, from: data)
+    }
+
+    private var baseURL: URL? {
+        guard
+            let rawValue = EnvironmentValueProvider.value(forKey: "API_BASE_URL")?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !rawValue.isEmpty
+        else {
+            return nil
+        }
+
+        return URL(string: rawValue)
     }
 
     func postHowCard(event: ReactionEvent, messages: [HowChatMessage], selectedTags: [HowTag]) async throws -> HowCardResponse {
@@ -79,7 +95,24 @@ final class ChatAPIClient {
     }
 
     private var isMockMode: Bool {
-        ProcessInfo.processInfo.environment["API_BASE_URL"] == nil
+        if isEnabled(EnvironmentValueProvider.value(forKey: "HOWTUNE_CHAT_MOCK")) {
+            return true
+        }
+
+        #if DEBUG
+        return baseURL == nil
+        #else
+        return false
+        #endif
+    }
+
+    private func isEnabled(_ value: String?) -> Bool {
+        switch value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "1", "true", "yes", "on":
+            return true
+        default:
+            return false
+        }
     }
 
     private func buildPayload(event: ReactionEvent, messages: [HowChatMessage]) -> ChatPayload {

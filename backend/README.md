@@ -1,6 +1,18 @@
 # HowTune バックエンド
 
-LLM プロキシ + データ API。Node.js + Express + Firestore + Anthropic SDK。
+> **⚠️ DEPRECATED — このディレクトリはローカル開発の参照用です。**
+>
+> 本番デプロイは [`functions/`](../functions) で行います（Firebase Cloud Functions v2）。
+> **新規の変更は [`functions/`](../functions) に加えてください。** ここを編集してもデプロイには反映されません。
+>
+> ローカルで Express を起動して動作確認したい場合のみ、このディレクトリを使ってください。
+> 機能変更を加えた場合は、必ず `functions/` 側にも反映してください（コード重複・ドリフトに注意）。
+
+---
+
+LLM プロキシ + データ API。Node.js + Express + Firestore + Anthropic SDK + Firebase Auth（Email/Password）。
+
+詳細設計は [`docs/backend.md`](../docs/backend.md) を参照。
 
 ---
 
@@ -10,7 +22,7 @@ LLM プロキシ + データ API。Node.js + Express + Firestore + Anthropic SDK
 backend/
 ├── index.js                  # エントリーポイント（Firebase 初期化・ルートマウント）
 ├── middleware/
-│   └── auth.js               # Firebase ID トークン検証 → req.uid をセット
+│   └── auth.js               # Firebase ID トークン検証 → req.uid / email / displayName
 ├── repositories/
 │   └── firestore.js          # Firestore 読み書き（sessions / how-cards / users）
 ├── services/
@@ -51,20 +63,23 @@ Firebase の認証情報は `serviceAccountKey.json`（Firebase コンソール 
 
 ## 認証
 
-**`POST /sessions/:id/chat` 以外のすべてのエンドポイントは Firebase ID トークンが必要。**
+**`GET /health` 以外のすべてのエンドポイントは Firebase ID トークン必須。**
 
-iOS 側は Firebase Auth でサインイン後、すべてのリクエストに以下のヘッダーを付与する:
+iOS 側は Firebase Auth（Email/Password）でサインイン後、すべてのリクエストに以下のヘッダーを付与する:
 
 ```
 Authorization: Bearer <firebase-id-token>
 ```
 
-Swift での取得方法:
+ミドルウェアで以下を抽出し、各ハンドラから参照可能:
 
-```swift
-let token = try await Auth.auth().currentUser?.getIDToken()
-// → "Authorization: Bearer \(token)" としてリクエストヘッダーに追加
-```
+| `req.*` | 出典 | 説明 |
+|---------|------|------|
+| `req.uid` | token | Firebase UID |
+| `req.email` | token | 認証時のメールアドレス（必ず存在） |
+| `req.displayName` | token | Firebase user の displayName（未設定なら `null`） |
+
+iOS チーム向けの実装例は [`docs/backend.md` の「iOS 実装ガイド」](../docs/backend.md#ios-実装ガイド) を参照。
 
 ---
 
@@ -72,11 +87,19 @@ let token = try await Auth.auth().currentUser?.getIDToken()
 
 ベース URL（ローカル）: `http://localhost:3000`
 
+| メソッド | パス | 認証 | 用途 |
+|---------|------|------|------|
+| GET | `/health` | ❌ | 死活確認 |
+| POST | `/sessions` | ✅ | セッション作成 |
+| POST | `/sessions/:id/chat` | ✅ | AI 対話（1ターン） |
+| POST | `/sessions/:id/how-card` | ✅ | Howカード生成・保存 |
+| GET | `/how-cards?tag=...` | ✅ | Howカード一覧（タグ検索） |
+
 ---
 
 ### `GET /health`
 
-認証不要。サーバーの死活確認。
+サーバーの死活確認。
 
 **レスポンス**
 ```json
@@ -86,8 +109,6 @@ let token = try await Auth.auth().currentUser?.getIDToken()
 ---
 
 ### `POST /sessions`
-
-**認証必須。**
 
 Core ML がオンデバイスで計算した反応区間を受け取り、Firestore にセッションを作成する。返却された `sessionId` を以降のエンドポイントで使用する。
 
@@ -121,8 +142,6 @@ Core ML がオンデバイスで計算した反応区間を受け取り、Firest
 ---
 
 ### `POST /sessions/:id/chat`
-
-**認証不要**（iOS 既存実装との互換性維持のため）。
 
 反応区間の情報をもとに Claude が確認形の問いかけと選択肢を返す。iOS 側が `history` を管理し、毎回リクエストに含める（ステートレス）。
 
@@ -177,9 +196,9 @@ Core ML がオンデバイスで計算した反応区間を受け取り、Firest
 
 ### `POST /sessions/:id/how-card`
 
-**認証必須。**
-
 反応区間と対話履歴から Howカードを生成し、Firestore に保存して返す。`:id` は `POST /sessions` で取得した `sessionId`。
+
+**事前検証**: セッションが `req.uid` の所有でない場合は 403、存在しなければ 404。
 
 **リクエスト**
 ```json
@@ -212,18 +231,18 @@ Core ML がオンデバイスで計算した反応区間を受け取り、Firest
 }
 ```
 
-**副作用（Firestore）**
-- `how-cards/{id}` にカードを作成
+**副作用（Firestore batch）**
+- `how-cards/{id}` にカードを作成（`displayName` も保存）
 - `sessions/{sessionId}` の status を `"done"` に更新
-- `users/{uid}/howTags` に今回のタグを追記
+- `users/{uid}` に email / displayName / howTags をマージ（初回なら自動作成）
 
 ---
 
 ### `GET /how-cards?tag=groove`
 
-**認証必須。**
-
 指定タグを持つ Howカード一覧を返す。コミュニティ画面で使用する。
+
+`displayName` がカードに含まれているので、追加のユーザー参照は不要。
 
 **クエリパラメータ**
 
@@ -238,6 +257,7 @@ Core ML がオンデバイスで計算した反応区間を受け取り、Firest
     {
       "id": "card456",
       "userId": "uid123",
+      "displayName": "ノリ太郎",
       "songTitle": "Blinding Lights",
       "howTags": ["groove", "bass-driven"],
       "tagLabel": "ベースの入りに反応する人",
@@ -255,6 +275,12 @@ Core ML がオンデバイスで計算した反応区間を受け取り、Firest
 ## Firestore データモデル
 
 ```
+users/{uid}
+  email: string             ← トークンから自動取得
+  displayName: string       ← トークンから自動取得（iOS で profile に設定したもの）
+  howTags: string[]         ← HowCard 生成のたびに追記
+  updatedAt: timestamp
+
 sessions/{sessionId}
   userId: string
   songTitle: string
@@ -266,6 +292,7 @@ sessions/{sessionId}
 
 how-cards/{cardId}
   userId: string
+  displayName: string       ← 非正規化（コミュニティ表示用）
   sessionId: string
   songTitle: string
   howTags: string[]
@@ -273,10 +300,9 @@ how-cards/{cardId}
   description: string
   highlightSec: number
   createdAt: timestamp
-
-users/{uid}
-  howTags: string[]     ← HowCard 生成のたびに追記される
 ```
+
+`users/{uid}` は初回 HowCard 生成時に自動作成される（明示的な登録 API は無い）。
 
 ---
 
@@ -291,5 +317,7 @@ users/{uid}
 | HTTP ステータス | 意味 |
 |----------------|------|
 | 400 | リクエスト不正（パラメータ不足など） |
-| 401 | 認証失敗（トークンなし・無効） |
+| 401 | 認証失敗（トークンなし・無効・期限切れ） |
+| 403 | アクセス権なし（他ユーザーのリソース） |
+| 404 | リソースが見つからない |
 | 500 | サーバーエラー（Claude API / Firestore 障害） |

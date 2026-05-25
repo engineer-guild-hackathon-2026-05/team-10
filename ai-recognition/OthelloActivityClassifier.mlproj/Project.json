@@ -1,0 +1,29 @@
+{
+  "activityEntities" : [
+    "projectCreated",
+    [
+      {
+        "createdDate" : "2026-05-24T09:26:30Z",
+        "event" : "projectCreated",
+        "id" : "4AFE3E94-D36F-4301-9A2F-1CD80AE3F49D",
+        "subtitle" : "OthelloActivityClassifier",
+        "title" : "Project Created"
+      }
+    ]
+  ],
+  "authorName" : "AtsushiHosaka",
+  "createdDate" : "2026-05-24T09:26:30Z",
+  "description" : "",
+  "id" : "06DFF692-0BF8-449C-8ABA-D78A0ECF4258",
+  "license" : "",
+  "location" : "",
+  "modifiedDate" : "2026-05-24T09:26:30Z",
+  "projectName" : "OthelloActivityClassifier",
+  "settingsEntity" : {
+    "snapshotOnExtendTraining" : true,
+    "snapshotOnResumeTraining" : false
+  },
+  "taskType" : "activityClassifier",
+  "title" : "Activity Classification",
+  "version" : "1.1"
+}
