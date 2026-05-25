@@ -21,6 +21,10 @@ struct FeedPost: Identifiable {
 
         return NowPlayingContext(song: song)
     }
+
+    var selectionID: String {
+        howCardComment?.id ?? cardID ?? id.uuidString
+    }
 }
 
 extension FeedPost {

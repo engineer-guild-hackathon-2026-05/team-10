@@ -1721,6 +1721,58 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：再生状態は NowPlaying 上部に集約し、下部タブは歌詞閲覧と範囲選択という作業対象だけを切り替える構造にできたため。
 
+### #010 MusicFeed の選択中表示移動
+
+- **時刻**：06:49
+- **ツール**：Codex / xcodebuild
+- **目的**：MusicFeed で他の投稿を再生した時に「選択中」表示がその投稿へ移動するようにする
+- **プロンプト**：
+  ```text
+  曲を流すと「選択中」ってのが出てくると思うんだけど、その選択中 のやつがほかの投稿をタップしてもそっちに移動しない。これを修正するPRを立てて欲しい
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `fix/selected-how-card-state` ブランチを作成
+  - `MusicFeedView` に選択中カードIDの state を追加し、再生成功後に選択IDを更新
+  - `HighlightedHowCardCommentCard` / `FeedPostCard` が `isSelected` を受け取り、該当カードだけ「選択中」を表示するよう変更
+  - `FeedPost` に選択状態判定用の安定IDを追加
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：再生中の投稿とUIの選択表示が一致し、別投稿をタップした時に意図通り表示が移動するため。
+
+### #011 PR #102 選択中 Howカード表示レビュー対応
+
+- **時刻**：07:20
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #102 のレビュー指摘に従い、未選択の highlighted Howカードが選択中に見えないよう表示を調整する
+- **プロンプト**：
+  ```text
+  pr 102のレビュー対応してpushして
+  ```
+- **出力サマリ**：
+  - PR #102 の CodeRabbit レビューコメントを確認
+  - `HighlightedHowCardCommentCard` の背景グラデーションと枠線を `isSelected` に連動
+  - 未選択時は選択中の赤い枠線を表示せず、背景の赤い強調も通常カード相当まで抑制
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：選択ラベルだけでなくカード全体の強調表示も選択状態と一致し、未選択カードが再生中に見える誤解を避けられるため。
+
+### #012 PR #102 main merge conflict 解消
+
+- **時刻**：07:29
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #102 に `origin/main` を取り込み、返信機能と選択中表示のコンフリクトを解消する
+- **プロンプト**：
+  ```text
+  mainとconflictしてるからなおしてほしい　レビューも直すものあれば直してください
+  ```
+- **出力サマリ**：
+  - PR #102 のレビューと `origin/main` の最新状態を確認
+  - `AI_USAGE_LOG.md`、`HighlightedHowCardCommentCard.swift`、`MusicFeedView.swift` の conflict を解消
+  - `main` 側の Howカード返信 sheet / reply count と、PR #102 側の選択中カード state を両立
+  - 未選択 highlighted card の強調枠抑制を維持
+- **評価**：採用
+- **採用 / 不採用の理由**：`main` の返信機能を失わず、再生中カードだけに選択表示が移る PR #102 の意図も維持できるため。
+
 ---
 
 ## 全体振り返り
