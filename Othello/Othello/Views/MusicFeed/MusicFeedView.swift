@@ -2,14 +2,14 @@ import SwiftUI
 
 struct MusicFeedView: View {
     let artist: Artist
-    let onSongTap: (Song) -> Void
+    let onPlaybackContext: (NowPlayingContext) -> Void
     @StateObject private var viewModel: MusicFeedViewModel
     @State private var clipSong: Song?
     @Environment(\.dismiss) private var dismiss
 
-    init(artist: Artist, onSongTap: @escaping (Song) -> Void) {
+    init(artist: Artist, onPlaybackContext: @escaping (NowPlayingContext) -> Void) {
         self.artist = artist
-        self.onSongTap = onSongTap
+        self.onPlaybackContext = onPlaybackContext
         self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
     }
 
@@ -90,8 +90,8 @@ struct MusicFeedView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.posts) { post in
-                    FeedPostCard(post: post, onSongTap: {
-                        onSongTap(post.song)
+                    FeedPostCard(post: post, onPlay: { context in
+                        onPlaybackContext(context)
                     })
                 }
             }
@@ -105,7 +105,7 @@ struct MusicFeedView: View {
 
 private struct FeedPostCard: View {
     let post: FeedPost
-    let onSongTap: () -> Void
+    let onPlay: (NowPlayingContext) -> Void
     @State private var isLiked: Bool = false
 
     var body: some View {
@@ -145,7 +145,9 @@ private struct FeedPostCard: View {
                 .foregroundStyle(Color.white.opacity(0.85))
                 .lineLimit(3)
 
-            MiniSongCard(song: post.song, onTap: onSongTap)
+            MiniSongCard(context: post.playbackContext, onTap: {
+                onPlay(post.playbackContext)
+            })
 
             HStack(spacing: 20) {
                 Button {
@@ -181,9 +183,11 @@ private struct FeedPostCard: View {
 // MARK: - Mini Song Card
 
 private struct MiniSongCard: View {
-    let song: Song
+    let context: NowPlayingContext
     let onTap: () -> Void
     @State private var isPlaying: Bool = false
+
+    private var song: Song { context.song }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -198,13 +202,15 @@ private struct MiniSongCard: View {
                 Text(song.artistName)
                     .font(.caption)
                     .foregroundStyle(.gray)
+                if context.hasHighlight {
+                    Text("How \(formatTime(context.highlightStart ?? context.initialPlaybackTime)) - \(formatTime(context.highlightEnd ?? context.initialPlaybackTime))")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                }
             }
             Spacer()
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isPlaying.toggle()
-                }
-                onTap()
+                startPlayback()
             } label: {
                 Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 36))
@@ -213,9 +219,25 @@ private struct MiniSongCard: View {
         }
         .padding(12)
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .onTapGesture {
+            startPlayback()
+        }
+    }
+
+    private func startPlayback() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isPlaying.toggle()
+        }
+        onTap()
+    }
+
+    private func formatTime(_ time: TimeInterval) -> String {
+        let safeTime = max(0, Int(time.rounded()))
+        return "\(safeTime / 60):\(String(format: "%02d", safeTime % 60))"
     }
 }
 
 #Preview {
-    MusicFeedView(artist: Artist.mock[0], onSongTap: { _ in })
+    MusicFeedView(artist: Artist.mock[0], onPlaybackContext: { _ in })
 }

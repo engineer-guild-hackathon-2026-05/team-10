@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var authVM = AuthViewModel()
     @StateObject private var onboardingVM = OnboardingViewModel()
-    @State private var nowPlayingSong: Song?
+    @State private var nowPlayingContext: NowPlayingContext?
     @State private var showNowPlaying: Bool = false
     @State private var miniPlayerIsPlaying: Bool = true
 
@@ -32,11 +32,11 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
 
-            ForYouView(nowPlayingSong: $nowPlayingSong)
+            ForYouView(nowPlayingContext: $nowPlayingContext)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if nowPlayingSong != nil {
-                GlobalMiniPlayerView(song: nowPlayingSong, onTap: {
+            if nowPlayingContext != nil {
+                GlobalMiniPlayerView(song: nowPlayingContext?.song, onTap: {
                     showNowPlaying = true
                 }, isPlaying: $miniPlayerIsPlaying)
                 .padding(.horizontal, 12)
@@ -44,12 +44,12 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onChange(of: nowPlayingSong) { _, newSong in
-            if newSong != nil { showNowPlaying = true }
+        .onChange(of: nowPlayingContext?.id) { _, newContextID in
+            if newContextID != nil { showNowPlaying = true }
         }
         .fullScreenCover(isPresented: $showNowPlaying) {
-            if let song = nowPlayingSong {
-                NowPlayingView(song: song)
+            if let context = nowPlayingContext {
+                NowPlayingView(context: context)
             }
         }
     }

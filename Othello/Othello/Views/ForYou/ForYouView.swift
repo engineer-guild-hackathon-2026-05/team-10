@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ForYouView: View {
-    @Binding var nowPlayingSong: Song?
+    @Binding var nowPlayingContext: NowPlayingContext?
     @StateObject private var viewModel = ForYouViewModel()
     @State private var selectedArtist: Artist?
 
@@ -21,9 +21,9 @@ struct ForYouView: View {
             }
             .navigationBarHidden(true)
             .navigationDestination(item: $selectedArtist) { artist in
-                MusicFeedView(artist: artist, onSongTap: { song in
+                MusicFeedView(artist: artist, onPlaybackContext: { context in
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        nowPlayingSong = song
+                        nowPlayingContext = context
                     }
                 })
             }
@@ -188,5 +188,5 @@ private struct TagChip: View {
 }
 
 #Preview {
-    ForYouView(nowPlayingSong: .constant(nil))
+    ForYouView(nowPlayingContext: .constant(nil))
 }

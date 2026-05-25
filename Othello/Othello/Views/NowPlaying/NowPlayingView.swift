@@ -5,16 +5,27 @@ enum NowPlayingTab {
 }
 
 struct NowPlayingView: View {
-    let song: Song
+    let context: NowPlayingContext
     @Environment(\.dismiss) private var dismiss
     @State private var isPlaying: Bool = true
-    @State private var progress: Double = 0.32
+    @State private var playbackTime: TimeInterval
     @State private var activeTab: NowPlayingTab = .playback
+
+    private var song: Song { context.song }
 
     private let lyrics: [(section: String, lines: [String])] = [
         ("Intro", ["ふと見上げた空に咲いた", "小さな花のように"]),
         ("Verse 1", ["風が運ぶ 街の音", "君と歩いた あの坂道"])
     ]
+
+    init(context: NowPlayingContext) {
+        self.context = context
+        _playbackTime = State(initialValue: context.initialPlaybackTime)
+    }
+
+    init(song: Song) {
+        self.init(context: NowPlayingContext(song: song))
+    }
 
     var body: some View {
         ZStack {
@@ -49,6 +60,7 @@ struct NowPlayingView: View {
             Spacer()
             vinylRecord
             songInfo
+            playbackTimeline
             Spacer()
             sectionChip
             lyricsCard
@@ -128,7 +140,7 @@ struct NowPlayingView: View {
 
     private var sectionChip: some View {
         HStack {
-            Text("● Section 1・イントロ")
+            Text(context.hasHighlight ? "How区間 \(highlightRangeText)" : "Section 1・イントロ")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(.white)
@@ -139,6 +151,53 @@ struct NowPlayingView: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 8)
+    }
+
+    private var playbackTimeline: some View {
+        VStack(spacing: 8) {
+            GeometryReader { geometry in
+                let width = geometry.size.width
+                let highlightStartX = width * highlightStartProgress
+                let highlightWidth = width * max(0.02, highlightEndProgress - highlightStartProgress)
+                let playheadX = width * playbackProgress
+
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.12))
+                        .frame(height: 5)
+                    if context.hasHighlight {
+                        Capsule()
+                            .fill(Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.9))
+                            .frame(width: highlightWidth, height: 5)
+                            .offset(x: highlightStartX)
+                    }
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 13, height: 13)
+                        .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+                        .offset(x: min(max(playheadX - 6.5, 0), max(width - 13, 0)))
+                }
+            }
+            .frame(height: 16)
+
+            HStack {
+                Text(formatTime(playbackTime))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.white)
+                Spacer()
+                if context.hasHighlight {
+                    Text("選択中 \(highlightRangeText)")
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                }
+                Spacer()
+                Text(formatTime(duration))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.gray)
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.bottom, 10)
     }
 
     private var lyricsCard: some View {
@@ -193,6 +252,40 @@ struct NowPlayingView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Color(red: 0.3, green: 0.2, blue: 0.5).opacity(0.3), in: Capsule())
+    }
+
+    private var duration: TimeInterval {
+        max(TimeInterval(song.durationSeconds), 1)
+    }
+
+    private var playbackProgress: Double {
+        min(max(playbackTime / duration, 0), 1)
+    }
+
+    private var highlightStart: TimeInterval {
+        min(max(context.highlightStart ?? context.initialPlaybackTime, 0), duration)
+    }
+
+    private var highlightEnd: TimeInterval {
+        let rawEnd = context.highlightEnd ?? max(highlightStart + 12, context.initialPlaybackTime)
+        return min(max(rawEnd, highlightStart), duration)
+    }
+
+    private var highlightStartProgress: Double {
+        min(max(highlightStart / duration, 0), 1)
+    }
+
+    private var highlightEndProgress: Double {
+        min(max(highlightEnd / duration, highlightStartProgress), 1)
+    }
+
+    private var highlightRangeText: String {
+        "\(formatTime(highlightStart)) - \(formatTime(highlightEnd))"
+    }
+
+    private func formatTime(_ time: TimeInterval) -> String {
+        let safeTime = max(0, Int(time.rounded()))
+        return "\(safeTime / 60):\(String(format: "%02d", safeTime % 60))"
     }
 
     // MARK: - フッター
