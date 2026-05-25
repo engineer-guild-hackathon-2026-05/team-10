@@ -3,6 +3,7 @@ import SwiftUI
 struct RealtimeReactionDisplayView: View {
     @StateObject private var viewModel = ReactionDisplayViewModel()
     @StateObject private var motionViewModel = AirPodsMotionViewModel()
+    @StateObject private var reactionDetector = ReactionDetectionViewModel()
     let isSensorAvailable: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -40,7 +41,8 @@ struct RealtimeReactionDisplayView: View {
             .onDisappear { stopSession(presentTimeline: false) }
             .onChange(of: motionViewModel.latestSample) { _, sample in
                 guard let sample else { return }
-                viewModel.updateScore(MotionReactionScoreEstimator.score(from: sample))
+                reactionDetector.ingest(sample)
+                viewModel.updateScore(reactionDetector.currentScore)
             }
             .fullScreenCover(isPresented: $viewModel.showTimeline) {
                 ReactionTimelineView(
@@ -96,7 +98,7 @@ struct RealtimeReactionDisplayView: View {
 
     private var axesPanelCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("6軸スコア")
+            Text("3状態スコア")
                 .font(.caption.bold())
                 .foregroundStyle(.gray.opacity(0.6))
                 .kerning(1.2)
@@ -161,6 +163,7 @@ struct RealtimeReactionDisplayView: View {
 
     private func startSession() {
         viewModel.startSession(sensorAvailable: isSensorAvailable)
+        reactionDetector.startSession()
         if isSensorAvailable {
             motionViewModel.start()
         }
@@ -168,6 +171,7 @@ struct RealtimeReactionDisplayView: View {
 
     private func stopSession(presentTimeline: Bool = true) {
         motionViewModel.stop()
+        reactionDetector.stopSession(finalPlaybackTime: nil)
         viewModel.stopSession(presentTimeline: presentTimeline)
     }
 }

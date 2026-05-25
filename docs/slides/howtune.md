@@ -306,7 +306,7 @@ footer { color: rgba(240,240,245,0.32); font-size: 14px; }
 
 <br>
 
-`余韻派` `immersion` `afterglow`
+`groove` `chill` `neutral`
 
 📍 *1:18 — "ooh, I'm blinded by the lights"*
 

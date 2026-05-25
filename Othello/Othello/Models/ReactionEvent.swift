@@ -1,28 +1,24 @@
 import SwiftUI
 
-// FR-DETECT-02: 6軸聴取状態タグ
+// FR-DETECT-02: 3状態聴取タグ
 enum HowTag: String, CaseIterable, Hashable {
-    case groove, hype, chill, immersion, hit, afterglow
+    case groove
+    case chill
+    case neutral
 
     var label: String {
         switch self {
-        case .groove:    return "groove"
-        case .hype:      return "hype"
-        case .chill:     return "chill"
-        case .immersion: return "immersion"
-        case .hit:       return "hit"
-        case .afterglow: return "afterglow"
+        case .groove:  return "のっている"
+        case .chill:   return "ちるい"
+        case .neutral: return "neutral"
         }
     }
 
     var color: Color {
         switch self {
-        case .groove:    return Color(red: 1.0, green: 0.3, blue: 0.3)
-        case .hype:      return Color(red: 1.0, green: 0.55, blue: 0.1)
-        case .chill:     return Color(red: 0.2, green: 0.7, blue: 1.0)
-        case .immersion: return Color(red: 0.6, green: 0.3, blue: 1.0)
-        case .hit:       return Color(red: 1.0, green: 0.2, blue: 0.5)
-        case .afterglow: return Color(red: 0.9, green: 0.75, blue: 0.3)
+        case .groove:  return Color(red: 1.0, green: 0.42, blue: 0.20)
+        case .chill:   return Color(red: 0.18, green: 0.68, blue: 1.0)
+        case .neutral: return Color(red: 0.64, green: 0.68, blue: 0.70)
         }
     }
 }
@@ -81,7 +77,7 @@ struct ReactionEvent: Identifiable {
             ),
             ReactionEvent(
                 id: UUID(), startTime: 42, endTime: 52, intensity: 1.0,
-                tags: [.hit, .immersion],
+                tags: [.groove],
                 lyricLine: "コンビニの灯りに泳いだ",
                 lyricTranslation: "Swimming in the convenience-store glow",
                 heartRateTrend: .rising
@@ -95,14 +91,14 @@ struct ReactionEvent: Identifiable {
             ),
             ReactionEvent(
                 id: UUID(), startTime: 115, endTime: 122, intensity: 0.8,
-                tags: [.hype, .groove],
+                tags: [.groove],
                 lyricLine: nil,
                 lyricTranslation: nil,
                 heartRateTrend: .rising
             ),
             ReactionEvent(
                 id: UUID(), startTime: 188, endTime: 196, intensity: 0.6,
-                tags: [.afterglow],
+                tags: [.neutral],
                 lyricLine: "壊れた傘を畳んでいる",
                 lyricTranslation: "Folding a broken umbrella",
                 heartRateTrend: .falling

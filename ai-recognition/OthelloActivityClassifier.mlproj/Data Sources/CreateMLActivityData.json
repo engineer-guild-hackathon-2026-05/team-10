@@ -89,17 +89,14 @@
     "dataAnalysis" : {
       "classifierAnalysis" : {
         "labelStats" : {
-          "afterglow" : 1,
           "chill" : 3,
           "groove" : 2,
-          "hit" : 1,
-          "hype" : 3,
-          "immersion" : 2
+          "neutral" : 0
         }
       },
       "issues" : [
         {
-          "description" : "6 classes found, including chill, hype, groove",
+          "description" : "3 classes expected: groove, chill, neutral",
           "severity" : "debug"
         },
         {
@@ -107,7 +104,7 @@
           "severity" : "warning"
         },
         {
-          "description" : "Smallest class is \"afterglow\" with 1 activity recording files",
+          "description" : "Smallest class is \"neutral\" with 0 activity recording files - regenerate this Create ML data source from the 3-state collector exports",
           "severity" : "debug"
         },
         {

@@ -3,12 +3,9 @@
   "trainedAt": "2026-05-24T05:03:21.267Z",
   "examples": 16,
   "labelCounts": {
-    "groove": 3,
-    "hype": 4,
-    "chill": 3,
-    "immersion": 4,
-    "hit": 2,
-    "afterglow": 2
+    "groove": 6,
+    "chill": 4,
+    "neutral": 6
   },
   "training": {
     "epochs": 120,
