@@ -56,6 +56,11 @@ final class AirPodsMotionViewModel: ObservableObject {
         samples.suffix(18).map(\.interactionIntensity).max() ?? latestSample?.interactionIntensity ?? 0
     }
 
+    /// セッション中に「一番動いた」瞬間（FR-RES-01）。ML 不使用、interactionIntensity ピーク。
+    var peakMoment: PeakMoment? {
+        PeakMotionTracker.peak(from: samples)
+    }
+
     func start(playbackPositionProvider: PlaybackPositionProviding? = nil) {
         samples.removeAll()
         latestSample = nil

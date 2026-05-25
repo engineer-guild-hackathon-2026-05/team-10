@@ -83,7 +83,7 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showSearchSheet) { searchSheet }
         .sheet(item: $selectedHowChatEvent) { event in
-            HowChatView(event: event)
+            HowChatView(event: event, peak: airPodsMotion.peakMoment)
         }
         .fullScreenCover(isPresented: $showReactionDisplay) {
             RealtimeReactionDisplayView(isSensorAvailable: !viewModel.useManualMode)
