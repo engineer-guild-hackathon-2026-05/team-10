@@ -13,7 +13,6 @@
   },
   "type": "commonjs",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.98.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "firebase-admin": "^13.10.0",

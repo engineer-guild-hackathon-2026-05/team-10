@@ -3,13 +3,15 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var authVM = AuthViewModel()
     @StateObject private var onboardingVM = OnboardingViewModel()
-    @State private var selectedTab: Int = 0
+    @State private var nowPlayingSong: Song?
+    @State private var showNowPlaying: Bool = false
+    @State private var miniPlayerIsPlaying: Bool = true
 
     var body: some View {
         if !authVM.isLoggedIn {
             LoginView(authVM: authVM)
         } else if onboardingVM.isOnboardingComplete {
-            mainTabView
+            mainView
         } else {
             onboardingFlow
         }
@@ -26,25 +28,27 @@ struct ContentView: View {
         .animation(.easeInOut, value: onboardingVM.currentPage)
     }
 
-    private var mainTabView: some View {
-        TabView(selection: $selectedTab) {
-            HomeView(useManualMode: onboardingVM.useManualMode, permissionState: onboardingVM.permissionState)
-                .tabItem { Label("再生", systemImage: "waveform.path") }
-                .tag(0)
-            CommunityView()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("ログアウト") { authVM.signOut() }
-                            .foregroundStyle(HowTuneDesign.accent)
-                    }
-                }
-                .tabItem { Label("コミュニティ", systemImage: "person.2.fill") }
-                .tag(1)
+    private var mainView: some View {
+        ZStack(alignment: .bottom) {
+            Color.black.ignoresSafeArea()
+
+            ForYouView(nowPlayingSong: $nowPlayingSong)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if nowPlayingSong != nil {
+                GlobalMiniPlayerView(song: nowPlayingSong, onTap: {
+                    showNowPlaying = true
+                }, isPlaying: $miniPlayerIsPlaying)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+            }
         }
         .preferredColorScheme(.dark)
-        .tint(Color(red: 1.0, green: 0.3, blue: 0.3))
-        .toolbarBackground(Color.black.opacity(0.9), for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
+        .fullScreenCover(isPresented: $showNowPlaying) {
+            if let song = nowPlayingSong {
+                NowPlayingView(song: song)
+            }
+        }
     }
 }
 

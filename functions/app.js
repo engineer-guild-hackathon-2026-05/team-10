@@ -5,8 +5,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-app.use('/sessions', require('./routes/sessions'));
 app.use('/how-cards', require('./routes/how-cards'));
+app.use('/users', require('./routes/users'));
 
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 

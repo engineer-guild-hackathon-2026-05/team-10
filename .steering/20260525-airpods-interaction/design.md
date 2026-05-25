@@ -27,10 +27,10 @@ ai-recognition は MVP の分類対象を `groove/chill/neutral` に絞ってい
 
 Home 波形は AirPods の `interactionIntensity` から3状態を推定し、状態ごとの色だけで反応を示す。状態名のテキスト表示は行わない。
 
-### パーティクル
+### Metal 波形・パーティクル描画
 
-`AirPodsReactiveWaveformView` 内で、motion intensity が一定値を超えた時だけ粒子を発生させる。粒子は Canvas 上で寿命・速度・角度を持ち、波形リングの外側へ散る。
+`AirPodsReactiveWaveformView` は iOS では `MTKView` を SwiftUI にブリッジし、`MetalWaveformRenderer` が波形リングとパーティクルを描画する。リングと sparkle は CPU 側で頂点列を生成し、shared `MTLBuffer` をローテーションして `setVertexBuffer` で渡す。
 
-### Metal 判断
+パーティクルは motion intensity が一定値を超えた時だけ発生させる。粒子は寿命・速度・角速度を持ち、波形リングの外側へ散る。色は `groove/chill/neutral` のパレットをゆっくり補間する。
 
-粒子数と波形点数は小さく、既存 UI は SwiftUI ベースである。MetalKit/MTKView を追加するとビルド設定・ライフサイクル・アクセシビリティ境界が増えるため、今回は SwiftUI Canvas で実装する。将来的に数千粒子やポストエフェクトが必要になった時に Metal 化する。
+MusicKit の PCM 制約により、FFT 入力は引き続き再生位置・曲 seed・音量相当値・AirPods motion から作る合成信号とする。Metal は合成済み amplitude の描画負荷を下げる目的で使う。

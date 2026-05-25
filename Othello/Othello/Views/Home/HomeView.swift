@@ -96,6 +96,11 @@ struct HomeView: View {
             syncAirPodsMotionCapture()
         }
         .onChange(of: displayTrackIdentifier) { _, _ in
+            stopAirPodsMotionCapture(reason: "track changed")
+            reactionDetector.stopSession(finalPlaybackTime: displayPlaybackTime)
+            syncAirPodsMotionCapture()
+        }
+        .onChange(of: viewModel.useManualMode) { _, _ in
             syncAirPodsMotionCapture()
         }
         .onChange(of: airPodsMotion.latestSample) { _, sample in
@@ -810,6 +815,12 @@ struct HomeView: View {
             return
         }
 
+        guard !viewModel.useManualMode else {
+            stopAirPodsMotionCapture(reason: "manual mode active")
+            reactionDetector.stopSession(finalPlaybackTime: displayPlaybackTime)
+            return
+        }
+
         debugAirPodsMotion(
             "sync requested isPlaying=\(displayIsPlaying) "
                 + "hasTrack=\(displayTrack != nil) "
@@ -820,8 +831,7 @@ struct HomeView: View {
 
         guard displayIsPlaying, displayTrack != nil else {
             if airPodsMotion.isRecording {
-                debugAirPodsMotion("stopping capture because playback/track condition is not satisfied")
-                airPodsMotion.stop()
+                stopAirPodsMotionCapture(reason: "playback/track condition is not satisfied")
                 reactionDetector.stopSession(finalPlaybackTime: displayPlaybackTime)
             } else {
                 debugAirPodsMotion("capture not started because playback/track condition is not satisfied")
@@ -837,6 +847,16 @@ struct HomeView: View {
         debugAirPodsMotion("starting capture")
         reactionDetector.startSession()
         airPodsMotion.start(playbackPositionProvider: playback.playbackPositionProvider())
+    }
+
+    private func stopAirPodsMotionCapture(reason: String) {
+        guard airPodsMotion.isRecording else {
+            debugAirPodsMotion("capture not recording; skip stop for \(reason)")
+            return
+        }
+
+        debugAirPodsMotion("stopping capture because \(reason)")
+        airPodsMotion.stop()
     }
 
     private func debugAirPodsMotion(_ message: String) {

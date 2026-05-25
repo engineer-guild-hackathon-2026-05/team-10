@@ -1,81 +1,92 @@
 import FirebaseAuth
-import FirebaseFirestore
 import Foundation
-
-enum FirebaseAPIError: Error {
-    case missingDocumentID
-    case documentNotFound
-    case missingEmail
-    case signOutRollbackFailed(original: Error, signOut: Error)
-}
 
 final class FirebaseAPI {
     static let shared = FirebaseAPI()
 
-    private let firestore: Firestore
+    private let session: URLSession
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
 
-    init(firestore: Firestore = Firestore.firestore()) {
-        self.firestore = firestore
+    init(session: URLSession = .shared) {
+        self.session = session
+        self.encoder = JSONEncoder()
+        self.decoder = JSONDecoder()
     }
 
     func createHowCard(_ howCard: HowCardComment) async throws -> String {
-        let document = howCard.documentID.map { howCardsCollection.document($0) } ?? howCardsCollection.document()
-        var persistedHowCard = howCard
-        persistedHowCard.documentID = document.documentID
-        try await setData(from: persistedHowCard, at: document, merge: false)
-        return document.documentID
-    }
+        let response: HowCardResponseEnvelope = try await send(
+            path: "how-cards",
+            method: "POST",
+            body: HowCardCommentPayload(howCard)
+        )
 
-    func updateHowCard(_ howCard: HowCardComment) async throws {
-        guard let documentID = howCard.documentID else {
+        guard let id = response.howCard.documentID else {
             throw FirebaseAPIError.missingDocumentID
         }
 
-        try await setData(from: howCard, at: howCardsCollection.document(documentID), merge: true)
+        return id
     }
 
-    func fetchHowCard(id: String) async throws -> HowCardComment {
-        let snapshot = try await howCardsCollection.document(id).getDocument()
-        guard snapshot.exists else {
-            throw FirebaseAPIError.documentNotFound
+    func updateHowCard(_ howCard: HowCardComment) async throws {
+        guard let id = howCard.documentID else {
+            throw FirebaseAPIError.missingDocumentID
         }
 
-        return try snapshot.data(as: HowCardComment.self)
-    }
-
-    func fetchHowCards(songID: String, limit: Int = 50) async throws -> [HowCardComment] {
-        let query = howCardsCollection
-            .whereField(FieldKey.songID, isEqualTo: songID)
-            .limit(to: limit)
-        let snapshot = try await getDocuments(for: query)
-        return try snapshot.documents.map { try $0.data(as: HowCardComment.self) }
-    }
-
-    func incrementGoods(cardID: String) async throws {
-        try await updateData(
-            [FieldKey.goods: FieldValue.increment(Int64(1))],
-            at: howCardsCollection.document(cardID)
+        let _: HowCardResponseEnvelope = try await send(
+            path: "how-cards/\(id)",
+            method: "PATCH",
+            body: HowCardCommentPayload(howCard)
         )
     }
 
-    func upsertUser(_ user: FirestoreUser) async throws {
-        let documentID = user.documentID ?? user.userID
-        let document = usersCollection.document(documentID)
-        let snapshot = try await document.getDocument()
-        if snapshot.exists {
-            try await updateUser(user, at: document)
-        } else {
-            try await createUser(user, at: document)
-        }
+    func fetchHowCard(id: String) async throws -> HowCardComment {
+        let response: HowCardResponseEnvelope = try await send(
+            path: "how-cards/\(id)",
+            method: "GET"
+        )
+        return response.howCard
     }
 
-    func fetchUser(uid: String) async throws -> FirestoreUser {
-        let snapshot = try await usersCollection.document(uid).getDocument()
-        guard snapshot.exists else {
-            throw FirebaseAPIError.documentNotFound
+    func fetchHowCards(songID: String, limit: Int = 50) async throws -> [HowCardComment] {
+        let response: HowCardsResponseEnvelope = try await send(
+            path: "how-cards",
+            method: "GET",
+            queryItems: [
+                URLQueryItem(name: "song_id", value: songID),
+                URLQueryItem(name: "limit", value: String(limit))
+            ]
+        )
+        return response.howCards
+    }
+
+    func incrementGoods(cardID: String) async throws {
+        let _: LikeResponseEnvelope = try await send(
+            path: "how-cards/\(cardID)/like",
+            method: "POST"
+        )
+    }
+
+    @discardableResult
+    func upsertUser(_ user: UserProfile) async throws -> UserProfile {
+        let response: UserResponseEnvelope = try await send(
+            path: "users/me",
+            method: "PUT",
+            body: UserProfilePayload(email: user.email, displayName: user.displayName)
+        )
+        return response.user
+    }
+
+    func fetchUser(uid: String) async throws -> UserProfile {
+        guard Auth.auth().currentUser?.uid == uid else {
+            throw FirebaseAPIError.notAuthenticated
         }
 
-        return try snapshot.data(as: FirestoreUser.self)
+        let response: UserResponseEnvelope = try await send(
+            path: "users/me",
+            method: "GET"
+        )
+        return response.user
     }
 
     func createUserDocument(from user: User) async throws {
@@ -83,117 +94,121 @@ final class FirebaseAPI {
             throw FirebaseAPIError.missingEmail
         }
 
-        let firestoreUser = FirestoreUser(
-            documentID: user.uid,
+        let profile = UserProfile(
+            id: user.uid,
             userID: user.uid,
             email: email,
             displayName: user.displayName
         )
-        try await upsertUser(firestoreUser)
+        try await upsertUser(profile)
     }
 
-    private var howCardsCollection: CollectionReference {
-        firestore.collection(CollectionName.howCards)
-    }
-
-    private var usersCollection: CollectionReference {
-        firestore.collection(CollectionName.users)
-    }
-
-    private func createUser(_ user: FirestoreUser, at document: DocumentReference) async throws {
-        try await setData(userData(for: user, isCreate: true), at: document, merge: false)
-    }
-
-    private func updateUser(_ user: FirestoreUser, at document: DocumentReference) async throws {
-        try await updateData(userData(for: user, isCreate: false), at: document)
-    }
-
-    private func userData(for user: FirestoreUser, isCreate: Bool) -> [String: Any] {
-        var data: [String: Any] = [
-            FieldKey.userID: user.userID,
-            FieldKey.email: user.email,
-            FieldKey.displayName: user.displayName ?? NSNull(),
-            FieldKey.updatedAt: FieldValue.serverTimestamp()
-        ]
-
-        if isCreate {
-            data[FieldKey.createdAt] = FieldValue.serverTimestamp()
+    private var baseURL: URL? {
+        guard
+            let rawValue = EnvironmentValueProvider.value(forKey: "API_BASE_URL")?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !rawValue.isEmpty
+        else {
+            return nil
         }
 
-        return data
+        return URL(string: rawValue)
     }
 
-    private func setData<T: Encodable>(
-        from value: T,
-        at document: DocumentReference,
-        merge: Bool
-    ) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            do {
-                try document.setData(from: value, merge: merge) { error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume()
-                    }
-                }
-            } catch {
-                continuation.resume(throwing: error)
-            }
+    private func send<Response: Decodable>(
+        path: String,
+        method: String,
+        queryItems: [URLQueryItem] = []
+    ) async throws -> Response {
+        let request = try await makeRequest(path: path, method: method, queryItems: queryItems)
+        return try await perform(request)
+    }
+
+    private func send<Response: Decodable, Body: Encodable>(
+        path: String,
+        method: String,
+        queryItems: [URLQueryItem] = [],
+        body: Body
+    ) async throws -> Response {
+        var request = try await makeRequest(path: path, method: method, queryItems: queryItems)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try encoder.encode(body)
+        return try await perform(request)
+    }
+
+    private func makeRequest(
+        path: String,
+        method: String,
+        queryItems: [URLQueryItem]
+    ) async throws -> URLRequest {
+        let token = try await firebaseIDToken()
+        let url = try makeURL(path: path, queryItems: queryItems)
+        var request = URLRequest(url: url, timeoutInterval: 15)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        return request
+    }
+
+    private func makeURL(path: String, queryItems: [URLQueryItem]) throws -> URL {
+        guard var url = baseURL else {
+            throw FirebaseAPIError.missingBaseURL
         }
+
+        path.split(separator: "/").forEach { component in
+            url.appendPathComponent(String(component))
+        }
+
+        guard !queryItems.isEmpty else {
+            return url
+        }
+
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            throw URLError(.badURL)
+        }
+        components.queryItems = queryItems
+
+        guard let urlWithQuery = components.url else {
+            throw URLError(.badURL)
+        }
+        return urlWithQuery
     }
 
-    private func setData(_ data: [String: Any], at document: DocumentReference, merge: Bool) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            document.setData(data, merge: merge) { error in
+    private func firebaseIDToken() async throws -> String {
+        guard let user = Auth.auth().currentUser else {
+            throw FirebaseAPIError.notAuthenticated
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            user.getIDToken { token, error in
                 if let error {
                     continuation.resume(throwing: error)
+                } else if let token {
+                    continuation.resume(returning: token)
                 } else {
-                    continuation.resume()
+                    continuation.resume(throwing: FirebaseAPIError.notAuthenticated)
                 }
             }
         }
     }
 
-    private func updateData(_ data: [String: Any], at document: DocumentReference) async throws {
-        let firestoreData = Dictionary(uniqueKeysWithValues: data.map { (AnyHashable($0.key), $0.value) })
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            document.updateData(firestoreData) { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
+    private func perform<Response: Decodable>(_ request: URLRequest) async throws -> Response {
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
         }
-    }
 
-    private func getDocuments(for query: Query) async throws -> QuerySnapshot {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<QuerySnapshot, Error>) in
-            query.getDocuments { snapshot, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else if let snapshot {
-                    continuation.resume(returning: snapshot)
-                } else {
-                    continuation.resume(throwing: FirebaseAPIError.documentNotFound)
-                }
-            }
+        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+            throw FirebaseAPIError.notAuthenticated
         }
+
+        if httpResponse.statusCode == 404 {
+            throw FirebaseAPIError.documentNotFound
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw FirebaseAPIError.badServerResponse(statusCode: httpResponse.statusCode)
+        }
+
+        return try decoder.decode(Response.self, from: data)
     }
-}
-
-private enum CollectionName {
-    static let howCards = "how-cards"
-    static let users = "users"
-}
-
-private enum FieldKey {
-    static let createdAt = "created_at"
-    static let displayName = "display_name"
-    static let email = "email"
-    static let goods = "goods"
-    static let songID = "song_id"
-    static let updatedAt = "updated_at"
-    static let userID = "user_id"
 }

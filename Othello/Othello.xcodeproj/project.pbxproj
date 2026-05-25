@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		218F6BC72FC354D50018EB27 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 218F6BC62FC354D50018EB27 /* FirebaseAuth */; };
-		8B3E7A012FC4A9D000F01010 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 8B3E7A002FC4A9D000F01010 /* FirebaseFirestore */; };
+		218F6BC92FC3DD540018EB27 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 218F6BC82FC3DD540018EB27 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,7 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				218F6BC72FC354D50018EB27 /* FirebaseAuth in Frameworks */,
-				8B3E7A012FC4A9D000F01010 /* FirebaseFirestore in Frameworks */,
+				218F6BC92FC3DD540018EB27 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,7 +81,7 @@
 			name = Othello;
 			packageProductDependencies = (
 				218F6BC62FC354D50018EB27 /* FirebaseAuth */,
-				8B3E7A002FC4A9D000F01010 /* FirebaseFirestore */,
+				218F6BC82FC3DD540018EB27 /* FirebaseFirestore */,
 			);
 			productName = Othello;
 			productReference = 21265A542FC2D22F00422222 /* Othello.app */;
@@ -399,7 +399,7 @@
 			package = 215388E42FC3509500D9E496 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAuth;
 		};
-		8B3E7A002FC4A9D000F01010 /* FirebaseFirestore */ = {
+		218F6BC82FC3DD540018EB27 /* FirebaseFirestore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 215388E42FC3509500D9E496 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;

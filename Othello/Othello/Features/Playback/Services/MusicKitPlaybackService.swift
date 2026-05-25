@@ -61,7 +61,7 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
             return []
         }
 
-        var request = MusicCatalogSearchRequest(term: query, types: [Song.self])
+        var request = MusicCatalogSearchRequest(term: query, types: [MusicKit.Song.self])
         request.limit = 20
         let response = try await request.response()
         return response.songs.map { PlaybackTrack(song: $0) }
@@ -75,7 +75,7 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
             return
         }
 
-        var request = MusicCatalogResourceRequest<Song>(matching: \.id, equalTo: track.id)
+        var request = MusicCatalogResourceRequest<MusicKit.Song>(matching: \.id, equalTo: track.id)
         request.limit = 1
         let response = try await request.response()
         guard let song = response.items.first else {

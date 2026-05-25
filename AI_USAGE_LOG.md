@@ -20,7 +20,7 @@
 - **ツール**：（ChatGPT / Claude / Cursor / GitHub Copilot / etc.）
 - **目的**：
 - **プロンプト**：
-  ```
+  ```text
   （実際のプロンプト）
   ```
 - **出力サマリ**：
@@ -33,7 +33,7 @@
 - **ツール**：Codex
 - **目的**：歌詞表示画面の可読性改善、SyncBeat の再生 UI 参照、SwiftUI Preview/ビルド確認
 - **プロンプト**：
-  ```
+  ```text
   歌詞の表示画面などが今うまく表示されないようになっている。previewとかをうまく使って、xcode mcpとかと掛け合わせて歌詞がしっかり表示されることをあなたの方でもチェックしながら、UIをおしゃれに組み直して欲しい。今は文字が見えにくかったり散々です。全然良くない。
   ```
 - **出力サマリ**：
@@ -50,7 +50,7 @@
 - **ツール**：Codex
 - **目的**：不要コード、実行時モック依存、秘匿ファイル管理、backend / iOS の品質改善
 - **プロンプト**：
-  ```
+  ```text
   いったん、全体のコードを読んでリファクタリングしてみて欲しい。不要なコードがあったり、モックだけで動かないコードがあったり、ENVやgoogleservice-infoがgitに上がっていたりしないかどうか。品質の高いコードになっているかどうかをチェックしてください
   ```
 - **出力サマリ**：
@@ -68,7 +68,7 @@
 - **ツール**：Codex
 - **目的**：曲未選択時の冗長なプレイヤー/歌詞UIを削除し、Simulatorで崩れを確認
 - **プロンプト**：
-  ```
+  ```text
   曲を選んでいない時のUIがひどい。真ん中の音楽SFSymbolsやHowTuneの文字は必要ないし、Lyricsをわざわざ四角で囲んだりLYRICSというテキストを表示する必要なんてない。曲が選ばれていない時のUIについても、スケルトンを追加するとかにして欲しい。曲を選んでくださいとあるけど、曲を選ぶUIが一番最初に出てくるのが普通だよね。あと全体が赤いrectangleの背景になってしまっているのはどうして？全体的に無駄が多すぎる。無駄を削って。波形についても曲が流れていない間は表示しなくていいよね。ほんとうにSyncBeatのコードをしっかりと読んだんでしょうか？
   あと「リスニング開始」のUIって何？ここも競合してしまっていると思う。役割をしっかり考えて統一して欲しい。
   ```
@@ -91,7 +91,7 @@
 - **ツール**：Codex
 - **目的**：再生中Home UIの作り直し、SyncBeatの波形/プレイヤー構成の再読、歌詞表示の可読性改善、Simulator確認
 - **プロンプト**：
-  ```
+  ```text
   UIがひどい。歌詞がはみ出ているし、波形がしっかりと動いていない。プレイヤーが消えているから再生中止ができない。[AtsushiHosaka/SyncBeat](https://github.com/AtsushiHosaka/SyncBeat)もう一度sync beatのコードを見て、波形や背景をなるべくsync beatに寄せて欲しい。その上で歌詞をその下にスクロールできる形で入れると言うか。背景のアートワークは削除していい。歌詞のところはもっと大きく。スクロールしたら波形表示なども一緒に上に行くようにしていいと思う。曲名を表示するところがないのはひどい。tabviewのところまでスクロールができないようになっているのもひどい。一から再生画面を作り直すくらいの感じでもいいので、しっかりと作って欲しい。
   ```
 - **出力サマリ**：
@@ -110,7 +110,7 @@
 - **ツール**：Codex
 - **目的**：波形safe area、進捗UI、Howカード/コメント導線、Groove表示、AI深掘り導線の回帰確認
 - **プロンプト**：
-  ```
+  ```text
   結構良くなった。波形が隠れてしまっているからそこだけ空白を増やして。safeareaで隠れちゃってるのが勿体無いのかな。あと曲のタイトルの背景色は透明にすればいいんじゃないかな？
   また、プレイヤーUIの部分、ただのSliderだと勿体無いから色とかつけよう。
 
@@ -137,7 +137,7 @@
 - **ツール**：Codex
 - **目的**：PR #41（AirPods reaction detection）の GitHub コンフリクトを main 優先で解消し、ビルド確認まで行う
 - **プロンプト**：
-  ```
+  ```text
   https://github.com/engineer-guild-hackathon-2026-05/team-10/pull/41 このPRのコンフリクトを直してpushまでやってください。たぶんmainを優先していいです
   ```
 - **出力サマリ**：
@@ -155,7 +155,7 @@
 - **ツール**：Codex
 - **目的**：PR #57（feature/tensorflow）の docs コンフリクトを、現状のiOSアプリ・ai-recognition構成に合わせて自然に統合する
 - **プロンプト**：
-  ```
+  ```text
   今度は https://github.com/engineer-guild-hackathon-2026-05/team-10/pull/57 のPRでコンフリクトしている。docsだから、内容が自然に（現状の内容を）表すように編集して欲しい
   ```
 - **出力サマリ**：
@@ -193,7 +193,7 @@
 - **ツール**：Codex
 - **目的**：main ブランチで playback-ui の Home 画面機能が失われたように見える原因を Git ログから調査する
 - **プロンプト**：
-  ```
+  ```text
   ちゃんとみてみたら、mainブランチでHome画面の機能、歌詞の表示やアートワークの周りの波線などが全部デグレしてしまっています。playback-uiブランチでやってたはずなんだけど、さっきのマージの時に失われてしまったんだと思う。再度さっきのものを取り戻したいから、gitのログをみてほしい
   ```
 - **出力サマリ**：
@@ -211,7 +211,7 @@
 - **ツール**：Codex / Notion MCP / Web search
 - **目的**：Team Notion に、ハッカソン発表で聞かれそうな質問例と返答例を市場・競合・マネタイズ調査込みで作成する
 - **プロンプト**：
-  ```
+  ```text
   https://www.notion.so/Team-36a72123fc438008a80ff226574fce0a?source=copy_link ここに質疑応答ページを作って、このハッカソンの質疑応答で聞かれそうな質問例と返答例を作って欲しい。既存市場とか競合サービスとの差別化、マネタイズなど、いろんなものを調べながらやってほしい
   ```
 - **出力サマリ**：
@@ -228,7 +228,7 @@
 - **ツール**：Codex / Web search / Musixmatch API疎通確認
 - **目的**：Musixmatch Basicプランで時間同期歌詞を取得できるか、MusicKit音源に対してベース/ドラムなどのステム分離を行えるかを規約面込みで調査する
 - **プロンプト**：
-  ```
+  ```text
   相談したい。現在musixmatch APIをつかっていて、Basicプランで契約してるんだけど、リアルタイムで（時間に対応する形で）lyricを取得できる？時間が分かりさえすればいい。いまはstaticになってしまっている。
   あと、MusicKitで取得した音源に対して、ベースの音だけ、ドラムの音だけを切り抜く、みたいなことってできるの？もしできるのならすごい嬉しいんだけど。有料APIでもよく、MusicKitと組み合わせられるか、規約に反さないか、という観点からよく調べてみて欲しい
   ```
@@ -259,7 +259,78 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘4件をすべて反映し、Firestore Rules と iOS 書き込み実装の整合性を保ったままビルド通過できたため。
 
-### #014 AirPods連動ビジュアライザーと3状態分類整理
+### #014 PR #60 Firestoreアクセスのバックエンド経由化
+
+- **時刻**：13:55
+- **ツール**：Codex
+- **目的**：iOS から Firestore を直接呼ばず、既存 backend/functions API 経由で Howカードコメントとユーザー保存を扱う構成へ変更する
+- **プロンプト**：
+  ```text
+  ごめん、現在でているPRをみてみると、バックエンドサーバーを通してFirebaseの色々をいじるような構成になってますよね。それを使えるような繋ぎ込みを先にやった方がいいかもしれない。よくPRの変更を見ながら、直接Firestoreを呼び出さないように変更してもらってもいいですか？
+  ```
+- **出力サマリ**：
+  - `backend/` と `functions/` に `POST/GET/PATCH /how-cards`、`POST /how-cards/:id/goods`、`GET/PUT /users/me` を追加
+  - iOS の `FirebaseAPI` を Firestore SDK 直呼びから Firebase ID トークン付き URLSession API クライアントへ変更
+  - `HowCardComment` / `UserProfile` を backend response/request 用 Codable model に変更し、`FirebaseFirestore` 依存を削除
+  - Firestore Rules を deny-all に戻し、Firestore 書き込みは Admin SDK を持つバックエンドに集約
+  - data model / backend docs / steering docs をバックエンド経由構成に更新
+- **評価**：採用
+- **採用 / 不採用の理由**：既存の backend/functions 構成に合わせ、クライアントがFirestoreに直接触らない境界へ整理できたため。
+
+### #015 Howカードコメントの範囲フィールド追加
+
+- **時刻**：14:09
+- **ツール**：Codex
+- **目的**：Howカードコメント型を `song_start` / `song_end` を含む新スキーマへ更新する
+- **プロンプト**：
+  ```text
+  how_cardについて、今後バックエンド（functions）の中で方が変わることになった：
+  comment, song_start, song_end(rangeが別れた）, song_id, artist_id, user_id, goods
+  そうなるようにiosのドキュメント・実装を変更して欲しい
+  ```
+- **出力サマリ**：
+  - `HowCardComment` と `FirebaseAPI` の Howカードコメント payload に `songStart` / `songEnd` を追加
+  - `backend/` と `functions/` の Howカードコメント API で `song_start` / `song_end` を必須入力として検証・保存・返却するよう更新
+  - `docs/data-model.md`、`docs/backend.md`、`backend/README.md`、steering docs を新スキーマへ更新
+- **評価**：採用
+- **採用 / 不採用の理由**：iOS の Codable model / API payload と backend/functions の入出力スキーマを同じ `song_start` / `song_end` 前提に揃えられたため。
+
+### #016 PR #63 レビュー対応と main conflict 解消
+
+- **時刻**：14:35
+- **ツール**：Codex
+- **目的**：PR #63 のレビューコメント反映、`origin/main` 取り込みによる functions 競合解消、main 側 backend(functions) 機能との整合性確認
+- **プロンプト**：
+  ```text
+  レビューコメントがついているのと、main conflictがあるから、そこをなおして。現状のmainのbackend(functions)の機能と競合していないかどうかについてもチェックして欲しい
+  ```
+- **出力サマリ**：
+  - `origin/main` を取り込み、`functions/README.md` / `functions/repositories/firestore.js` / `functions/routes/how-cards.js` の競合を解消
+  - main 側の `onUserSignup` と冪等な `/how-cards/:id/like` を残しつつ、Howカードコメントの Firestore スキーマを `comment/song_start/song_end/song_id/artist_id/user_id/goods` に統一
+  - `users/me` の email は Firebase ID トークンを正とし、body の email が異なる場合は 400 を返すよう修正
+  - iOS の API クライアントを `/how-cards/:id/like` と 401/403 ハンドリングに合わせ、直接 Firestore 依存が戻っていないことを確認
+  - Markdown fence の言語指定、review nit の route コメント削除、deprecated backend 側の同等修正も反映
+- **評価**：採用
+- **採用 / 不採用の理由**：main 側 functions の Auth トリガーと idempotent like を保持したまま、PR の新スキーマ・レビュー指摘・競合解消を同時に成立させられたため。
+
+### #017 PR #63 再レビュー対応
+
+- **時刻**：14:47
+- **ツール**：Codex
+- **目的**：CodeRabbit の追加レビュー指摘を反映し、再検証して push する
+- **プロンプト**：
+  ```text
+  再度レビューがつけられた。修正してpushして
+  ```
+- **出力サマリ**：
+  - functions の `GET /how-cards?song_id=...` を `created_at` 降順にし、対応する Firestore composite index を追加
+  - `users.created_at` は有効な snake_case Timestamp のみ保持し、legacy `createdAt` を流用しないよう修正
+  - `FirebaseAPI.swift` から `FirebaseAPIError` / Envelope / Payload 型を分割し、Swift の 1ファイル1型ルールへ合わせた
+  - deprecated backend 側も同じ timestamp/order 方針へ合わせた
+- **評価**：採用
+- **採用 / 不採用の理由**：レビューの実指摘を最小差分で解消しつつ、Firestore index とローカル backend の挙動も揃えられたため。
+
+### #018 AirPods連動ビジュアライザーと3状態分類整理
 
 - **時刻**：14:03
 - **ツール**：Codex / Context7 / Web search / xcodebuild
@@ -285,7 +356,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：MusicKit の制約を調査で明確にしたうえで、実機AirPodsモーションと再生時刻ベースのFFT表現を組み合わせ、仕様変更後の3状態分類へコード・ドキュメント・AI認識メタデータをそろえられたため。
 
-### #015 AirPodsモーション取得デバッグログ追加
+### #019 AirPodsモーション取得デバッグログ追加
 
 - **時刻**：14:12
 - **ツール**：Codex / xcodebuild
@@ -303,7 +374,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：反映されない原因が「取得開始に進んでいない」のか「Core Motion サンプルが届いていない」のかを、実機ログで切り分けられる状態にできたため。
 
-### #016 AirPods取得開始条件の修正
+### #020 AirPods取得開始条件の修正
 
 - **時刻**：14:15
 - **ツール**：Codex / xcodebuild
@@ -320,7 +391,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：AirPods マネージャーのログが出なかった直接原因を取り除き、次回実機確認で Core Motion の可否とサンプル取得まで切り分けられるようになったため。
 
-### #017 AirPods一時切断耐性とneutral波形の音量反映
+### #021 AirPods一時切断耐性とneutral波形の音量反映
 
 - **時刻**：14:19
 - **ツール**：Codex / xcodebuild
@@ -345,7 +416,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：ログから見えた一時 disconnect による停止を潰し、AirPods が静止していても音源由来の動きが視覚的に出るようにできたため。
 
-### #018 CoreML判定のHome波形接続と色補間
+### #022 CoreML判定のHome波形接続と色補間
 
 - **時刻**：14:24
 - **ツール**：Codex / xcodebuild
@@ -368,7 +439,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：ユーザーの意図どおり、AirPods モーションの状態判定を CoreML 推論結果に接続し、見た目の色変化も離散的な切替ではなく滑らかにできたため。
 
-### #019 Metal描画化とAirPods/CoreML処理負荷の削減
+### #023 Metal描画化とAirPods/CoreML処理負荷の削減
 
 - **時刻**：14:33
 - **ツール**：Codex / xcodebuild
@@ -386,7 +457,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：AirPods モーションの反応性を残したまま、描画負荷の中心だった SwiftUI path 再生成を Metal に移し、実機での負荷低減が期待できるため。
 
-### #020 Metal setVertexBytes 4KB制限クラッシュ修正
+### #024 Metal setVertexBytes 4KB制限クラッシュ修正
 
 - **時刻**：14:38
 - **ツール**：Codex / xcodebuild
@@ -405,7 +476,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：クラッシュログの直接原因である Metal API のサイズ制限を回避し、パーティクル数が増えても描画を継続できるため。
 
-### #021 波形の有機化とneutral復帰判定の調整
+### #025 波形の有機化とneutral復帰判定の調整
 
 - **時刻**：14:46
 - **ツール**：Codex / xcodebuild
@@ -428,7 +499,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：MusicKit の制約を踏まえて見た目を滑らかにしつつ、モデル不整合があってもアプリ側の特徴量 fallback で neutral に戻りやすくできたため。
 
-### #022 波形スムージングと細粒度Metalパーティクル再調整
+### #026 波形スムージングと細粒度Metalパーティクル再調整
 
 - **時刻**：14:51
 - **ツール**：Codex / xcodebuild
@@ -448,7 +519,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：描画負荷を増やしすぎずに、波形の時間的な滑らかさと AirPods 反応時の細かい視覚フィードバックを強められたため。
 
-### #023 AirPodsモーション時の波形拡大とパーティクル発火強化
+### #027 AirPodsモーション時の波形拡大とパーティクル発火強化
 
 - **時刻**：14:54
 - **ツール**：Codex / xcodebuild
@@ -468,7 +539,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：AirPods モーションに対する視覚反応が弱かった箇所を、発火条件・描画サイズ・波形拡大係数の3点から強められたため。
 
-### #024 パーティクル可視化の再確認と色遷移速度調整
+### #028 パーティクル可視化の再確認と色遷移速度調整
 
 - **時刻**：14:58
 - **ツール**：Codex / xcodebuild
@@ -488,7 +559,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：実装上の発火経路と描画経路を確認したうえで、見えない原因だった motion の弱さ・粒の薄さ・buffer 余裕をまとめて改善できたため。
 
-### #025 AirPods波形サイズの中間調整
+### #029 AirPods波形サイズの中間調整
 
 - **時刻**：15:01
 - **ツール**：Codex / xcodebuild
@@ -505,7 +576,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：パーティクルの見えやすさを保ちながら、AirPods motion で広がりすぎた波形だけを抑えられたため。
 
-### #026 AirPods連動機能PR作成
+### #030 AirPods連動機能PR作成
 
 - **時刻**：15:05
 - **ツール**：Codex / git / gh
@@ -520,6 +591,25 @@
   - commit / push / PR 作成を実施
 - **評価**：採用
 - **採用 / 不採用の理由**：実装・検証済みの AirPods interaction 機能をレビュー可能な単位として提出するため。
+
+### #031 PR #67 レビュー対応と main conflict 解消
+
+- **時刻**：15:55
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #67 の CodeRabbit レビュー指摘を反映し、`origin/main` 取り込みによる conflict を解消する
+- **プロンプト**：
+  ```text
+  feature/airpods-interaction がmainとconflictしているから、レビューを読んで直した上でconflict解消して
+  ```
+- **出力サマリ**：
+  - `AI_USAGE_LOG.md` の競合を、main 側ログと AirPods 側ログを両方残す形で解消
+  - steering docs の描画方針を SwiftUI Canvas ではなく Metal vertex buffer 構成へ統一
+  - `ReactionDetectionViewModel` の時刻基準切替時に throttle/window 状態をリセットするよう修正
+  - Home のトラック切替時に AirPods 収集セッションを明示再起動し、manual mode ではセンサー収集を開始しないよう修正
+  - `ai-recognition` の3状態 seed data 集計と metadata の dataset limitation note を更新
+  - Metal 波形 renderer 周辺を 1ファイル1型へ分割
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘を実装・docs・metadata に反映し、main 取り込み後の PR ブランチを再レビュー可能な状態へ戻せたため。
 
 ---
 

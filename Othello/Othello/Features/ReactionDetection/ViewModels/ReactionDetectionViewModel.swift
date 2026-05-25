@@ -14,6 +14,7 @@ final class ReactionDetectionViewModel: ObservableObject {
     private var isSessionActive = false
     private var lastPredictionTime: TimeInterval?
     private var lastWindowEvaluationTime: TimeInterval?
+    private var currentTimeBasisUsesPlaybackTime: Bool?
     private var activeEvent: PendingReactionEvent?
 
     init(
@@ -31,6 +32,7 @@ final class ReactionDetectionViewModel: ObservableObject {
         activeEvent = nil
         lastPredictionTime = nil
         lastWindowEvaluationTime = nil
+        currentTimeBasisUsesPlaybackTime = nil
         latestActivityLabel = nil
         currentScore = .empty
         isSessionActive = true
@@ -40,6 +42,16 @@ final class ReactionDetectionViewModel: ObservableObject {
 
     func ingest(_ sample: AirPodsMotionSample) {
         guard isSessionActive else { return }
+
+        let sampleUsesPlaybackTime = sample.playbackTime != nil
+        if let currentTimeBasisUsesPlaybackTime,
+           currentTimeBasisUsesPlaybackTime != sampleUsesPlaybackTime {
+            samples.removeAll()
+            activeEvent = nil
+            lastPredictionTime = nil
+            lastWindowEvaluationTime = nil
+        }
+        currentTimeBasisUsesPlaybackTime = sampleUsesPlaybackTime
 
         samples.append(sample)
         if samples.count > 240 {
@@ -94,6 +106,7 @@ final class ReactionDetectionViewModel: ObservableObject {
         samples.removeAll()
         lastPredictionTime = nil
         lastWindowEvaluationTime = nil
+        currentTimeBasisUsesPlaybackTime = nil
         currentScore = .empty
     }
 
