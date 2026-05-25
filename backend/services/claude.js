@@ -6,6 +6,8 @@ const anthropic = new Anthropic({
 });
 
 const MODEL = 'claude-sonnet-4-6';
+// Suppress tiny sensor noise while still preserving weak but meaningful axes.
+const SIX_AXIS_SCORE_THRESHOLD = 0.05;
 
 // --- Chat ---
 
@@ -105,7 +107,7 @@ function buildContextMessage({ startTime, tags, intensity, lyric, scores = {}, d
 
   if (scores && Object.keys(scores).length > 0) {
     const scoreStr = Object.entries(scores)
-      .filter(([, v]) => v > 0.05)
+      .filter(([, v]) => v > SIX_AXIS_SCORE_THRESHOLD)
       .sort(([, a], [, b]) => b - a)
       .map(([k, v]) => `  ${k}: ${Math.round(v * 100)}%`)
       .join('\n');
