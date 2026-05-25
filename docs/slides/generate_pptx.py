@@ -425,9 +425,15 @@ txt(s, "Groove  =  volume × 0.42  +  pulse × 0.58",
 txt(s, "AirPods 不要。iPhone だけで動く。",
     ML, Inches(3.55), CW, Inches(0.5), sz=14, col=GRAY, align=PP_ALIGN.CENTER)
 
-axes = [("groove",BLUE),("hype",LBLUE),("chill",GREEN),
-        ("immersion",PURPLE),("hit",AMBER),("afterglow",PINK)]
-gap = Inches(0.25)
+axes = [
+    ("🎵 ノってる",  RGBColor(0xFF,0x9F,0x0A)),
+    ("🔥 上がった",  RED),
+    ("❄️ チル",      LBLUE),
+    ("🎧 聴き入り",  PURPLE),
+    ("💫 刺さった",  AMBER),
+    ("✨ 余韻",       PINK),
+]
+gap = Inches(0.22)
 pw = (CW - gap*5) / 6
 for i,(name,color) in enumerate(axes):
     pill(s, ML+i*(pw+gap), Inches(4.6), pw, Inches(0.7), name, color)
@@ -461,7 +467,7 @@ txt(s, "このデータ資産が、競合の参入障壁になる。",
     ML, Inches(6.0), CW, Inches(0.5), sz=16, bold=True, col=LBLUE, align=PP_ALIGN.CENTER)
 
 # ═══════════════════════════════════════════════════════════════
-# 11 — TECHNOLOGY (色ドット + 最小テキスト)
+# 11 — TECHNOLOGY (ロゴ画像ベース)
 # ═══════════════════════════════════════════════════════════════
 s = add_slide()
 kicker(s, "TECHNOLOGY")
@@ -469,29 +475,39 @@ txt(s, "Apple Ecosystem × Claude",
     ML, Inches(1.05), CW, Inches(0.9), sz=44, bold=True)
 bar(s, ML+Inches(0.05), Inches(2.1), Inches(3.0))
 
+# (color, label, description, logo_filename or None)
 tech = [
-    (BLUE,   "iOS",     "SwiftUI + MusicKit"),
-    (LBLUE,  "歌詞",     "Musixmatch API"),
-    (GREEN,  "Groove",  "音量 + 本体モーション"),
-    (AMBER,  "AI",      "Claude (backend経由)"),
-    (PURPLE, "ML",      "Create ML → Core ML"),
-    (PINK,   "Backend", "Firestore + Node.js"),
+    (BLUE,   "iOS",     "SwiftUI + MusicKit",       "swift.png"),
+    (LBLUE,  "歌詞",    "Musixmatch API",            "musixmatch.png"),
+    (AMBER,  "AI",      "Claude (backend 経由)",     "anthropic.png"),
+    (GREEN,  "Groove",  "音量 + 本体モーション",       None),
+    (PURPLE, "ML",      "Create ML → Core ML",       "createml.png"),
+    (PINK,   "Backend", "Firestore + Node.js",       "firebase.png"),
 ]
 gap = Inches(0.4)
 cwd = (CW - gap*2) / 3
-chd = Inches(1.7)
-for i, (color, layer, t) in enumerate(tech):
+chd = Inches(1.85)
+logo_s = Inches(0.72)
+for i, (color, layer, desc, logo) in enumerate(tech):
     ci, ri = i % 3, i // 3
     x = ML + ci*(cwd+gap)
-    y = Inches(2.7) + ri*(chd+Inches(0.4))
+    y = Inches(2.65) + ri*(chd + Inches(0.28))
     glass(s, x, y, cwd, chd, fa=40)
-    dot = s.shapes.add_shape(9, x+Inches(0.4), y+Inches(0.4), Inches(0.28), Inches(0.28))
-    dot.fill.solid(); dot.fill.fore_color.rgb = color
-    dot.line.fill.background(); dot.shadow.inherit = False
-    txt(s, layer, x+Inches(0.85), y+Inches(0.32), cwd-Inches(1), Inches(0.5),
-        sz=16, bold=True, col=color)
-    txt(s, t, x+Inches(0.42), y+Inches(0.95), cwd-Inches(0.7), Inches(0.6),
-        sz=16, col=WHITE)
+    cx = x + (cwd - logo_s) / 2
+    if logo:
+        try:
+            pic(s, logo, cx, y + Inches(0.22), logo_s, logo_s)
+        except Exception:
+            pass
+    else:
+        dot = s.shapes.add_shape(9, cx + (logo_s-Inches(0.36))/2, y+Inches(0.4),
+                                  Inches(0.36), Inches(0.36))
+        dot.fill.solid(); dot.fill.fore_color.rgb = color
+        dot.line.fill.background(); dot.shadow.inherit = False
+    txt(s, layer, x, y+Inches(1.08), cwd, Inches(0.38),
+        sz=15, bold=True, col=color, align=PP_ALIGN.CENTER)
+    txt(s, desc, x+Inches(0.2), y+Inches(1.48), cwd-Inches(0.4), Inches(0.36),
+        sz=13, col=LGRAY, align=PP_ALIGN.CENTER)
 
 # ═══════════════════════════════════════════════════════════════
 # 11.5 — AI-DRIVEN DEVELOPMENT (CodeRabbit 顧客事例風)
@@ -539,7 +555,7 @@ txt(s, "CodeRabbit 実績: コードデリバリ 86% 高速化 / レビュー指
     ML, Inches(6.65), CW, Inches(0.45), sz=12, col=GRAY, italic=True)
 
 # ═══════════════════════════════════════════════════════════════
-# 12 — BUSINESS MODEL (大きく・収益を明示)
+# 12 — BUSINESS MODEL
 # ═══════════════════════════════════════════════════════════════
 s = add_slide()
 kicker(s, "BUSINESS MODEL")
@@ -548,30 +564,40 @@ txt(s, "3つの収益エンジン。",
 bar(s, ML+Inches(0.05), Inches(2.15), Inches(2.6))
 
 biz = [
-    (BLUE,   "B2B SaaS",  "アーティスト\nインサイト",
-     "身体反応ヒートマップを提供", "月額サブスク"),
-    (GREEN,  "Premium",   "セレンディピティ\nマッチング",
-     "同じ瞬間に反応した人と出会う", "プレミアム課金"),
-    (AMBER,  "P2P Tips",  "チップ循環",
-     "発見者を可視化し直接還元", "マージン 10%"),
+    (BLUE,   "B2B SaaS",   "アーティストインサイト",
+     "身体反応ヒートマップを\nアーティスト・レーベルに提供", "月額サブスク"),
+    (PURPLE, "Premium",    "セレンディピティマッチング",
+     "同じ曲の同じ瞬間に反応した\n見知らぬ人との出会い", "プレミアム課金"),
+    (AMBER,  "P2P Tips",   "チップ循環",
+     "発見者を可視化し\nアーティストへ直接還元", "マージン 10%"),
 ]
 gap = Inches(0.45)
 cwd = (CW - gap*2) / 3
+ch = Inches(3.9)
+cy = Inches(2.75)
 for i, (color, tag, title, desc, rev) in enumerate(biz):
     x = ML + i*(cwd+gap)
-    glass(s, x, Inches(2.75), cwd, Inches(4.0), fa=45, radius=14000)
-    head = grad_card(s, x, Inches(2.75), cwd, Inches(0.9),
-                     color, RGBColor(max(color[0]-40,0),max(color[1]-40,0),max(color[2]-40,0)),
-                     angle=0, radius=14000)
-    txt(s, tag, x, Inches(2.75), cwd, Inches(0.9), sz=20, bold=True, col=WHITE,
-        align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-    txt(s, title, x+Inches(0.4), Inches(3.95), cwd-Inches(0.8), Inches(1.1),
-        sz=22, bold=True, col=WHITE, spacing=1.1)
-    txt(s, desc, x+Inches(0.4), Inches(5.05), cwd-Inches(0.8), Inches(0.9),
-        sz=15, col=LGRAY, spacing=1.25)
-    bar(s, x+Inches(0.4), Inches(5.95), cwd-Inches(0.8), h=Inches(0.04), c1=color, c2=color)
-    txt(s, rev, x+Inches(0.4), Inches(6.1), cwd-Inches(0.8), Inches(0.5),
-        sz=17, bold=True, col=color)
+    glass(s, x, cy, cwd, ch, fa=42, radius=14000)
+    # 色ドット + タグ
+    dot = s.shapes.add_shape(9, x+Inches(0.38), cy+Inches(0.38), Inches(0.26), Inches(0.26))
+    dot.fill.solid(); dot.fill.fore_color.rgb = color
+    dot.line.fill.background(); dot.shadow.inherit = False
+    txt(s, tag, x+Inches(0.78), cy+Inches(0.3), cwd-Inches(1.0), Inches(0.45),
+        sz=15, bold=True, col=color)
+    # タイトル
+    txt(s, title, x+Inches(0.38), cy+Inches(0.95), cwd-Inches(0.7), Inches(0.7),
+        sz=20, bold=True, col=WHITE)
+    # 区切り線
+    bar(s, x+Inches(0.38), cy+Inches(1.72), cwd-Inches(0.76), h=Inches(0.03), c1=color, c2=color)
+    # 説明
+    txt(s, desc, x+Inches(0.38), cy+Inches(1.85), cwd-Inches(0.7), Inches(1.2),
+        sz=15, col=LGRAY, spacing=1.35)
+    # 収益モデル pill風
+    txt(s, rev, x+Inches(0.38), cy+Inches(3.25), cwd-Inches(0.7), Inches(0.45),
+        sz=16, bold=True, col=color)
+
+txt(s, "アーティスト · リスナー · プラットフォームの三者がともに得るプラスサム設計",
+    ML, Inches(6.85), CW, Inches(0.45), sz=14, col=GRAY, align=PP_ALIGN.CENTER)
 
 # ═══════════════════════════════════════════════════════════════
 # 13 — TEAM + MVP
