@@ -9,6 +9,10 @@ final class ClipCreationViewModel: ObservableObject {
     @Published var clipStart: Double = 5.0
     @Published var clipEnd: Double = 35.0
     @Published var selectedTab: ClipTab = .clip
+    @Published var commentText: String = ""
+    @Published private(set) var isPosting: Bool = false
+    @Published var postErrorMessage: String?
+    @Published private(set) var postedCardID: String?
 
     let totalDuration: Double
     let waveformData: [CGFloat]
@@ -57,6 +61,39 @@ final class ClipCreationViewModel: ObservableObject {
         let e = min(max(endRatio, 0), 1)
         clipStart = min(s, e) * totalDuration
         clipEnd = max(s, e) * totalDuration
+    }
+
+    @discardableResult
+    func postHowCard() async -> Bool {
+        guard !isPosting else { return false }
+
+        let comment = commentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !comment.isEmpty else {
+            postErrorMessage = "コメントを入力してください"
+            return false
+        }
+
+        isPosting = true
+        postErrorMessage = nil
+        postedCardID = nil
+        defer { isPosting = false }
+
+        do {
+            let howCard = HowCardComment(
+                comment: comment,
+                songStart: clipStart,
+                songEnd: clipEnd,
+                songID: song.firestoreSongID,
+                artistID: song.firestoreArtistID,
+                userID: "me"
+            )
+            postedCardID = try await FirebaseAPI.shared.createHowCard(howCard)
+            return true
+        } catch {
+            postedCardID = nil
+            postErrorMessage = "Howカードを投稿できませんでした"
+            return false
+        }
     }
 
     var clipDurationSeconds: Int {

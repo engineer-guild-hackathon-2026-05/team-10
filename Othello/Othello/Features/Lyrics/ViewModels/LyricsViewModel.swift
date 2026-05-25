@@ -15,6 +15,7 @@ final class LyricsViewModel: ObservableObject {
 
     func loadLyrics(for query: LyricsTrackQuery) async {
         state = .loading
+        lyrics = nil
         selectedReactionLine = nil
 
         do {

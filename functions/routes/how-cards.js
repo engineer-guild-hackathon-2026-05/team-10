@@ -88,12 +88,12 @@ router.patch('/:id', auth, async (req, res) => {
 
 router.post('/:id/like', auth, async (req, res) => {
   try {
-    const likes = await likeHowCard({ cardId: req.params.id, uid: req.uid });
-    if (likes === null) {
+    const goods = await likeHowCard({ cardId: req.params.id, uid: req.uid });
+    if (goods === null) {
       return res.status(404).json({ error: 'Howカードが見つかりません' });
     }
 
-    res.json({ likes });
+    res.json({ goods, likes: goods });
   } catch (err) {
     console.error(err?.message ?? err);
     res.status(500).json({ error: 'Howカードのいいね更新に失敗しました' });
@@ -134,7 +134,7 @@ function normalizeRangePoint(value) {
 function parseLimit(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 50;
-  return Math.min(100, Math.max(1, Math.floor(number)));
+  return Math.min(250, Math.max(1, Math.floor(number)));
 }
 
 module.exports = router;
