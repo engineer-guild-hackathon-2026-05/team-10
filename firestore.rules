@@ -52,6 +52,34 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 共鳴マッチング（ADR-0006）: 認証済みユーザーは how-cards を read 可（リアルタイム購読用）。
+    // 書き込みは従来どおり Functions(admin) のみ＝クライアント write は不可。
+    match /how-cards/{cardId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // リアルタイム DM（ADR-0006）: conversationId = ソート済み uid を "__" で連結。
+    // 参加者（uid が cid に含まれる）だけが read/write 可。
+    function isConversationParticipant(cid) {
+      return isSignedIn() && request.auth.uid in cid.split('__');
+    }
+
+    match /conversations/{cid} {
+      allow read, write: if isConversationParticipant(cid);
+
+      match /messages/{messageId} {
+        allow read: if isConversationParticipant(cid);
+        allow create: if isConversationParticipant(cid)
+          && request.resource.data.sender_id == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.created_at is timestamp;
+        allow update, delete: if false;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
