@@ -52,6 +52,13 @@ final class MusicFeedViewModel: ObservableObject {
         }
     }
 
+    func updateReplyCount(cardID: String, replyCount: Int) {
+        posts = posts.map { post in
+            guard post.cardID == cardID else { return post }
+            return post.replacingCommentCount(replyCount)
+        }
+    }
+
     private func profilesByID(_ profiles: [UserProfile]) -> [String: UserProfile] {
         Dictionary(uniqueKeysWithValues: profiles.map { ($0.userID, $0) })
     }

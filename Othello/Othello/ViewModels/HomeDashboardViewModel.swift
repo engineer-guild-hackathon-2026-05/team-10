@@ -201,7 +201,13 @@ final class HomeDashboardViewModel: ObservableObject {
     }
 
     private func artistGroupingKey(for artist: Artist) -> String {
-        artist.name
+        let idKey = artist.id.uuidString
+            .lowercased()
+        if !idKey.isEmpty {
+            return "id:\(idKey)"
+        }
+
+        return "name:" + artist.name
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
     }

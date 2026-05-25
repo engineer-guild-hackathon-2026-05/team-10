@@ -7,6 +7,7 @@ struct ForYouView: View {
     @State private var searchQuery = ""
     @State private var selectedArtist: Artist?
     @State private var selectedComment: HomeDashboardComment?
+    @State private var dashboardReloadNonce = 0
 
     var body: some View {
         NavigationStack {
@@ -42,11 +43,11 @@ struct ForYouView: View {
             }
             .preferredColorScheme(.dark)
         }
-        .task {
+        .task(id: dashboardReloadNonce) {
             await dashboard.load(force: true)
         }
         .onReceive(NotificationCenter.default.publisher(for: .howCardDidChange)) { _ in
-            Task { await dashboard.load(force: true) }
+            dashboardReloadNonce &+= 1
         }
     }
 
