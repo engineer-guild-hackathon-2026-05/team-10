@@ -1,6 +1,6 @@
 # バックエンド設計書
 
-> スタック: **Node.js + Express**、**Firestore**（Admin SDK）、**Firebase Auth**、**Anthropic SDK（Claude）**
+> スタック: **Node.js + Express**、**Firestore**（Admin SDK）、**Firebase Auth（Email/Password）**、**Anthropic SDK（Claude）**
 
 ---
 
@@ -8,19 +8,18 @@
 
 ```
 backend/
-├── src/
-│   ├── index.js                  # Express アプリのエントリーポイント
-│   ├── middleware/
-│   │   └── auth.js               # Firebase ID トークン検証
-│   ├── routes/
-│   │   ├── sessions.js           # POST /sessions、POST /sessions/:id/chat、POST /sessions/:id/how-card
-│   │   └── how-cards.js          # GET /how-cards
-│   ├── services/
-│   │   └── claude.js             # Anthropic SDK ラッパー（対話・Howカード生成）
-│   └── repositories/
-│       └── firestore.js          # Firestore の読み書きをまとめる
-├── .env                          # gitignore 対象
-├── serviceAccountKey.json        # gitignore 対象
+├── index.js                  # Express アプリのエントリーポイント
+├── middleware/
+│   └── auth.js               # Firebase ID トークン検証 → req.uid / email / displayName をセット
+├── routes/
+│   ├── sessions.js           # POST /sessions、POST /sessions/:id/chat、POST /sessions/:id/how-card
+│   └── how-cards.js          # GET /how-cards
+├── services/
+│   └── claude.js             # Anthropic SDK ラッパー（対話・Howカード生成）
+├── repositories/
+│   └── firestore.js          # Firestore の読み書きをまとめる
+├── .env                      # gitignore 対象
+├── serviceAccountKey.json    # gitignore 対象
 └── package.json
 ```
 
@@ -30,9 +29,11 @@ backend/
 
 ```
 ANTHROPIC_API_KEY=
-GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json
 PORT=3000
 ```
+
+サービスアカウントキーは `backend/serviceAccountKey.json` に置く（gitignore 対象）。
+本番では `GOOGLE_APPLICATION_CREDENTIALS` 環境変数でパスを指定可能。
 
 ---
 
@@ -40,7 +41,7 @@ PORT=3000
 
 1. Firebase コンソールでプロジェクトを作成
 2. Firestore を有効化（クライアント直接アクセス禁止前提。テストモードは使わない）
-3. Authentication → Sign in with Apple を有効化
+3. Authentication → Sign-in method → **Email/Password を有効化**（メール確認は無効のまま）
 4. サービスアカウントキーを生成 → `backend/serviceAccountKey.json` として保存（gitignore 対象）
 5. `GoogleService-Info.plist` をダウンロード → `Othello/Othello/` に追加（iOS 側のみ）
 6. リポジトリルートで `firebase init` を実行 → Firestore のみ選択 → `firestore.rules` と `firestore.indexes.json` を生成し、ルールは `allow read, write: if false;` に設定
@@ -53,9 +54,10 @@ PORT=3000
 
 ```
 users/{uid}
-  displayName: string
-  howTags: string[]
-  createdAt: timestamp
+  email: string            ← トークンから自動取得
+  displayName: string      ← トークンから自動取得（iOS で profile に設定したもの）
+  howTags: string[]        ← HowCard 生成時に追記される
+  updatedAt: timestamp
 
 sessions/{sessionId}
   userId: string
@@ -68,6 +70,7 @@ sessions/{sessionId}
 
 how-cards/{cardId}
   userId: string
+  displayName: string      ← 非正規化（コミュニティ表示用に user 参照不要）
   sessionId: string
   songTitle: string
   howTags: string[]
@@ -104,15 +107,28 @@ service cloud.firestore {
 
 ---
 
-## 認証フロー
+## 認証フロー（Email/Password）
 
-1. iOS が Firebase Auth（Sign in with Apple）でサインイン
-2. iOS はすべてのリクエストに Firebase ID トークンを付与:
+### 全体像
+
+1. iOS が Firebase Auth で Email/Password サインアップまたはサインイン
+2. iOS は Firebase user の displayName を設定（推奨）
+3. iOS はすべてのリクエストに Firebase ID トークンを付与:
    ```
    Authorization: Bearer <firebase-id-token>
    ```
-3. `middleware/auth.js` が Admin SDK でトークンを検証 → `req.uid` をセット
-4. すべてのルートがこのミドルウェアで保護される
+4. `middleware/auth.js` が Admin SDK でトークンを検証 → `req.uid` / `req.email` / `req.displayName` をセット
+5. **`users/{uid}` ドキュメントは初回 HowCard 生成時に自動作成される**（明示的な登録 API は不要）
+
+### 認証が必要なエンドポイント
+
+| エンドポイント | 認証 |
+|---|---|
+| `POST /sessions` | ✅ 必須 |
+| `POST /sessions/:id/chat` | ✅ 必須 |
+| `POST /sessions/:id/how-card` | ✅ 必須 |
+| `GET /how-cards` | ✅ 必須 |
+| `GET /health` | ❌ 不要 |
 
 ---
 
@@ -142,39 +158,51 @@ Core ML がオンデバイスで計算した反応区間を受け取り、セッ
 { "sessionId": "abc123" }
 ```
 
-**Firestore 書き込み**: `sessions/{sessionId}` を作成。`userId = req.uid`、`status = "analyzing"`、`chatHistory = []`。
-
 ---
 
 ### POST /sessions/:id/chat
 
-1ターン分の対話を Claude に中継し、レスポンスを SSE でストリームする。ストリーム完了後、ユーザーメッセージと Claude の返答を Firestore の `chatHistory` に追記する。
+1ターン分の対話を Claude に中継する。iOS 側が `history[]` を管理し、毎回リクエストに含める（ステートレス）。
 
 **リクエスト**
 ```json
-{ "message": "ベースが入った瞬間が好きだった" }
+{
+  "startTime": 78,
+  "tags": ["groove", "hit"],
+  "intensity": 0.82,
+  "lyric": "歌詞行",
+  "history": [
+    { "role": "user", "content": "対話を開始してください" },
+    { "role": "assistant", "content": "..." }
+  ]
+}
 ```
 
-**レスポンス**: SSE ストリーム
+**レスポンス**
+```json
+{
+  "question": "ベースが入った瞬間に何か感じましたか？",
+  "choices": ["体が動いた", "テンションが上がった", "鳥肌が立った", "言葉にできない"]
+}
 ```
-data: {"delta": "そう"}
-data: {"delta": "でしたか"}
-data: [DONE]
-```
-
-**Claude に渡すコンテキスト**:
-- セッションの `reactions[]` — どこで身体が反応したかを伝える
-- セッションの `chatHistory[]` — 複数ターンにわたる会話状態を維持する
-
-**Firestore 書き込み**: ストリーム終了後、`{ role: "user" }` と `{ role: "assistant" }` を `chatHistory` に追記。
 
 ---
 
 ### POST /sessions/:id/how-card
 
-Firestore からセッション（reactions + chatHistory）を読み込み、Claude に Howカードを JSON で生成させ、保存して返す。
+セッションが `req.uid` 所有であることを検証してから Howカードを生成・保存する。
 
-**リクエスト**: ボディ不要（Firestore から読み込む）
+**リクエスト**
+```json
+{
+  "songTitle": "Blinding Lights",
+  "reactions": [...],
+  "chatHistory": [
+    { "role": "user", "content": "体が動いた" },
+    { "role": "assistant", "content": "リズムに乗っていたんですね。" }
+  ]
+}
+```
 
 **レスポンス**
 ```json
@@ -189,20 +217,20 @@ Firestore からセッション（reactions + chatHistory）を読み込み、Cl
 }
 ```
 
-**Claude プロンプト**: reactions + chatHistory 全体を渡し、JSON のみ返すよう指示する。
-
-**Firestore 書き込み**:
-- `how-cards/{cardId}` を作成
+**Firestore 書き込み（batch）**
+- `how-cards/{cardId}` を作成（`displayName` を非正規化）
 - `sessions/{sessionId}` の status を `"done"` に更新
-- 主要な `howTags` を `users/{uid}/howTags` に追記
+- `users/{uid}` に email / displayName / howTags をマージ（auto-create）
+
+**エラー**
+- `403`: セッションが他ユーザーのもの
+- `404`: セッションが存在しない
 
 ---
 
-### GET /how-cards
+### GET /how-cards?tag=groove
 
-タグで絞り込んだ Howカード一覧を返す。コミュニティ画面で使用する。
-
-**クエリパラメータ**: `?tag=groove`
+タグで絞り込んだ Howカード一覧。`displayName` が含まれるので、コミュニティ画面でそのまま表示できる（追加の user 参照不要）。
 
 **レスポンス**
 ```json
@@ -211,6 +239,7 @@ Firestore からセッション（reactions + chatHistory）を読み込み、Cl
     {
       "id": "card456",
       "userId": "uid123",
+      "displayName": "ノリ太郎",
       "songTitle": "Blinding Lights",
       "howTags": ["groove", "bass-driven"],
       "tagLabel": "ベースの入りに反応する人",
@@ -221,33 +250,100 @@ Firestore からセッション（reactions + chatHistory）を読み込み、Cl
 }
 ```
 
-**Firestore クエリ**: `how-cards` コレクションで `howTags` 配列に `tag` が含まれるドキュメントを取得。
+最大50件、`createdAt` 降順。
 
 ---
 
-## Claude 連携（`services/claude.js`）
+## iOS 実装ガイド
 
-### `streamChat(reactions, chatHistory, userMessage, onDelta)`
-- reactions を含むシステムプロンプトを構築
-- chatHistory + 新しいユーザーメッセージを Claude に送信
-- トークンごとに `onDelta(chunk)` を呼び出してストリーム
-- ストリーム完了後、全文を返す
-- モデル: `claude-sonnet-4-6`
+iOS チームがこのバックエンドと連携するための最小実装メモ。
 
-### `generateHowCard(reactions, chatHistory)`
-- reactions + chatHistory 全体を Claude に送信
-- JSON のみ返すよう指示し、Howカードのスキーマに沿った構造体を取得
-- パースして返す
-- モデル: `claude-sonnet-4-6`
+### Firebase SDK セットアップ
+
+```swift
+// AppDelegate or App
+import FirebaseCore
+import FirebaseAuth
+
+FirebaseApp.configure()
+```
+
+### サインアップ（初回ユーザー）
+
+```swift
+// 1. ユーザー作成
+let result = try await Auth.auth().createUser(withEmail: email, password: password)
+
+// 2. displayName を設定（重要：これをやらないと token に name claim が入らない）
+let changeRequest = result.user.createProfileChangeRequest()
+changeRequest.displayName = displayName
+try await changeRequest.commitChanges()
+
+// 3. プロファイル更新を token に反映させるために強制リフレッシュ
+let token = try await result.user.getIDToken(forcingRefresh: true)
+```
+
+### サインイン（既存ユーザー）
+
+```swift
+let result = try await Auth.auth().signIn(withEmail: email, password: password)
+let token = try await result.user.getIDToken()
+```
+
+### アプリ起動時の状態チェック
+
+Firebase Auth は Keychain にセッションを保持するので、再ログイン不要。
+
+```swift
+if let user = Auth.auth().currentUser {
+    let token = try await user.getIDToken()  // 自動リフレッシュされる
+    // ログイン済み → メイン画面
+} else {
+    // 未ログイン → ログイン画面
+}
+```
+
+### リクエストへのトークン付与
+
+```swift
+var request = URLRequest(url: url)
+request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+```
+
+### 401 ハンドリング
+
+トークンは1時間で失効する。`getIDToken()` は自動リフレッシュするが、ネットワーク状況やサインアウトで失敗することがある。
+
+```swift
+if response.statusCode == 401 {
+    try? Auth.auth().signOut()
+    // ログイン画面へ遷移
+}
+```
+
+### よくある落とし穴
+
+1. **displayName を設定した直後の token に name claim が入らない**
+   → `getIDToken(forcingRefresh: true)` で強制リフレッシュする
+2. **シミュレータでネットワーク権限ダイアログが出ない**
+   → 実機で確認
+3. **`GoogleService-Info.plist` を Xcode の "Copy items if needed" で追加していない**
+   → ビルドエラーになる
+4. **iOS 側で Firestore に直接書き込もうとする**
+   → Firestore rules で全拒否しているので必ず backend 経由
 
 ---
 
-## 実装順序
+## エラーレスポンス
 
-1. `package.json` — 依存パッケージ追加（`express`、`firebase-admin`、`@anthropic-ai/sdk`、`dotenv`）
-2. `src/repositories/firestore.js` — Firestore の読み書きを一箇所にまとめる
-3. `src/middleware/auth.js` — トークン検証
-4. `src/services/claude.js` — Claude API ラッパー
-5. `src/routes/sessions.js` — セッション関連の3エンドポイント
-6. `src/routes/how-cards.js` — GET エンドポイント
-7. `src/index.js` — すべてを組み合わせる
+```json
+{ "error": "エラーメッセージ" }
+```
+
+| HTTP | 意味 |
+|------|------|
+| 400 | リクエスト不正（パラメータ不足など） |
+| 401 | 認証失敗（トークンなし・無効・期限切れ） |
+| 403 | アクセス権なし（他ユーザーのリソース） |
+| 404 | リソースが見つからない |
+| 500 | サーバーエラー（Claude API / Firestore 障害） |
