@@ -51,10 +51,10 @@ final class AirPodsMotionViewModel: ObservableObject {
         }
     }
 
-    func start() {
+    func start(playbackPositionProvider: PlaybackPositionProviding? = nil) {
         samples.removeAll()
         latestSample = nil
-        let provider = SessionElapsedPlaybackPositionProvider(startedAt: Date())
+        let provider = playbackPositionProvider ?? SessionElapsedPlaybackPositionProvider(startedAt: Date())
         manager.start(playbackPositionProvider: provider)
     }
 

@@ -64,7 +64,7 @@ footer { color: #a1a1aa; font-size: 14px; }
 
 # HowTune
 
-### 何を聴くかではなく、**どう聴いているか**でつながる
+### 音楽は、どう聴くかだ。
 
 <br>
 
@@ -200,14 +200,14 @@ footer { color: #a1a1aa; font-size: 14px; }
 
 <br>
 
-### 1️⃣ 聴く × 感じ取る
-スマホの加速度センサーが、曲中の身体反応を自動検出
+### 1️⃣ 動く
+ただ音楽を聴くだけ。センサーが身体の反応・モメンタムを記録し、波形として可視化する。
 
-### 2️⃣ AI と言語化する
-Claude が反応地点に問いかけ、楽しみ方を言葉にする
+### 2️⃣ 問いかける
+AIが波形を見て問いかける。「1:18、ここで何か感じましたか？」言語はその後についてくる。
 
-### 3️⃣ How でつながる
-生成された **Howカード** で、同じ聴き方の人と出会う
+### 3️⃣ つながる
+同じ波形を持つ見知らぬ人と出会う。What ではなく、身体の共鳴でつながる。
 
 ---
 
@@ -220,17 +220,22 @@ Claude が反応地点に問いかけ、楽しみ方を言葉にする
 ## 体験フロー
 
 ```
-🎵 曲を再生        スマホで音楽を聴く
+🎵 聴く              ただ音楽を聴くだけ
    ↓
-📲 センサー取得    DeviceMotionEvent で身体反応を記録
+📲 動く              センサーが身体の反応・モメンタムを自動記録
    ↓
-🧠 反応区間検出    3状態スコアを推定
+🧠 スコア推定        3状態ML候補を起点に、6軸スコアへ展開
+                      ※ groove / chill / neutral → groove / hype / chill …
    ↓
-💬 AI 対話        「1:18でノってましたか？」
+🌊 見る              モメンタム波形が眼前に現れる（驚き）
    ↓
-🪪 Howカード生成   「ベースの入りに反応する人」
+💬 問いかけられる    AIがスコアと波形を読んで問いかける（発見）
    ↓
-🤝 同じHowの人へ   価値観の近いリスナーとつながる
+🗣️ 答える           選択肢・自由入力・音声で答える
+   ↓
+🪪 言葉になる        「ベースの入りに反応する人」（Howカード）
+   ↓
+🤝 つながる          同じ波形を持つ見知らぬ人と出会う（共鳴）
 ```
 
 ---
@@ -280,7 +285,7 @@ Claude が反応地点に問いかけ、楽しみ方を言葉にする
 
 ---
 
-## Howカード
+## 聴き方が、あなたを語る。
 
 > 🎵 **Blinding Lights**
 > ─────────────────────
@@ -308,37 +313,39 @@ Claude が反応地点に問いかけ、楽しみ方を言葉にする
 
 | レイヤー | 技術 |
 |---|---|
-| フロントエンド | **Next.js 15** (App Router) + Tailwind CSS |
-| バックエンド | **Node.js / Express** on Cloud Run |
-| ML | **TensorFlow.js**（MotionReactionClassifier） |
+| iOSアプリ | **SwiftUI** + MusicKit + Core Motion |
+| バックエンド | **Express**（backend / Firebase Functions） |
+| ML | **Core ML** + TensorFlow.js / Create ML（ai-recognition） |
 | LLM | **Claude API**（claude-sonnet-4-6） |
-| データベース | **Firestore** / Cloud Storage |
-| 認証 | **Firebase Auth**（Google OAuth） |
+| データベース | **Firestore** |
+| 認証 | **Firebase Auth** / Sign in with Apple |
 
 ---
 
 ## システム構成
 
 ```
-   📱 スマホ (Next.js)
-   SensorRecorder / ReactionTimeline / HowChat
+   📱 iOSアプリ (SwiftUI)
+   Home / ReactionTimeline / HowChat
         │  HTTPS / SSE
         ▼
-   ☁️ Cloud Run (Express)
+   ☁️ backend / Firebase Functions (Express)
    ┌─────────────┬──────────────────┐
-   │ MotionAnalyzer │ HowDialogOrchestrator │
-   │   (TF.js)      │    (Claude API)        │
+   │ HowCard API │ HowDialogOrchestrator │
+   │ Firestore   │ Claude API proxy      │
    └─────────────┴──────────────────┘
         │
         ▼
-   🔥 Firestore / Cloud Storage
+   🔥 Firestore
+
+   ai-recognition ── Core ML model ──▶ iOSアプリ
 ```
 
 ---
 
 ## センサー解析アルゴリズム
 
-5秒の時間窓ごとに特徴量を抽出 → 3状態スコアを推定
+5秒の時間窓ごとに特徴量を抽出 → 3状態候補を推定し、6軸スコアに展開
 
 <div class="cols">
 <div>
@@ -457,12 +464,25 @@ pnpm workspace + Turborepo
 ### 🚫 作らない
 - DM・フォロー
 - 完全SNSタイムライン
-- Spotify/Apple Music連携
-- 歌詞API
+- Spotify連携
+- 独自歌詞DB
 - 本格的な音源解析
 
 </div>
 </div>
+
+---
+
+## モデルの進化ロードマップ
+
+| フェーズ | モデル | 必要データ | 状態 |
+|---|---|---|---|
+| **MVP（今）** | 3状態収集 + ルールベース6軸 | seed / 実機サンプル | ✅ 実装中 |
+| **β版** | 学習モデル 16〜32次元 | 〜1,000セッション | 📅 〜6ヶ月 |
+| **スケール** | 高次元埋め込み 128次元 | 10,000セッション〜 | 📅 1年〜 |
+
+> 3状態は学習データを集めるための入口。6軸は「人間用のビューア」で、表示時に身体反応を解釈しやすい言葉へ射影する。
+> **使えば使うほど賢くなる** — AI対話の回答が暗黙のラベルになる。
 
 ---
 
@@ -471,15 +491,15 @@ pnpm workspace + Turborepo
 - 📊 **How別レコメンド** — 同じ聴き方の人が好む曲を推薦
 - 🎤 **ライブ会場での反応共有** — 同じ空間の熱狂を可視化
 - 🎼 **アーティスト向けファンインサイト** — ファンの聴き方を分析
-- 📚 **音楽教育・鑑賞支援** — 新しい聴き方の発見を促す
+- 🧠 **高次元Howマッチング** — 6軸を超えた潜在空間で「本当に同じ聴き方」の人と繋がる
 
 ---
 
 <!-- _class: lead -->
 
-# 何を聴くかではなく、
+# 音楽は、どう聴くかだ。
 
-# **どう聴いているか**でつながる。
+### 聴き方が、あなたを語る。
 
 <br>
 

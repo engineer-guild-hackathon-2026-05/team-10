@@ -92,7 +92,7 @@
 - **FR-PLAY-02** *While* 再生中, システムは現在の曲中時刻（再生位置）を継続的に取得・表示 *shall*。
 - **FR-PLAY-03** システムは再生位置をセンサー記録および反応検出の基準時刻として供給 *shall*。
 - **FR-PLAY-04** *If* 再生位置の取得手段が利用できない場合, *then* システムはユーザーにその旨を通知し、当該セッションの反応同期を無効化 *shall*。
-  > 注: 具体的な音源（MusicKit / AVFoundation 等）は plan.md の決定事項。本仕様は「再生位置が取得可能」であることのみを要求する。MusicKit が有力候補（DECISION-01）。
+  > 注: MVP の音源・再生位置取得は MusicKit を使う（DECISION-01）。
 
 ### 6.3 SENS — 本体モーション取得（iPhone）
 
@@ -206,7 +206,7 @@
 
 > SDD では未決事項を仕様段階で明示し、設計段階で解消する。
 
-- **[DECISION-01] 音源と再生位置の取得手段。** ⏳ 保留中（**MusicKit を予定**。要 entitlement・再生位置取得の検証。デモ確実性の代替として AVFoundation + ローカル音源あり）。**MVP の成否を最も左右する決定。**
+- **[DECISION-01] 音源と再生位置の取得手段。** ✅ **MusicKit で進める。** Spotify / AVFoundation は MVP では使用しない。
 - **[DECISION-02] 6 軸推論の実行位置。** ✅ **DEC-C で解決**: 端末上、ルールベース主体 + Core ML 並行。
 - **[DECISION-03] データ永続化先。** Firestore（iOS SDK）/ CloudKit / Supabase / その他。
 - **[DECISION-04] LLM 連携経路。** `backend/` プロキシ経由を前提。既存プロキシ流用可否。

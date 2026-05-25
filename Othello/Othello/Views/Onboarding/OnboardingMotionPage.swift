@@ -5,107 +5,92 @@ struct OnboardingMotionPage: View {
     @State private var isRequesting = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            progressIndicator(current: 1, total: 2)
-                .padding(.top, 60)
-                .padding(.horizontal, 32)
+        ZStack {
+            HowTuneDesign.background.ignoresSafeArea()
 
-            Spacer()
+            VStack(spacing: 0) {
+                progressIndicator(current: 1, total: 2)
+                    .padding(.top, 60)
+                    .padding(.horizontal, 32)
 
-            VStack(spacing: 32) {
-                Image(systemName: "figure.walk.motion")
-                    .font(.system(size: 72))
-                    .foregroundStyle(Color(.systemIndigo))
+                Spacer()
 
-                VStack(spacing: 12) {
-                    Text("モーションセンサーの使用")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("音楽を聴いているときの身体の動きを検知します。この情報はあなたの「聴き方」の特徴を分析するためだけに使用します。")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, 32)
+                VStack(spacing: 28) {
+                    ZStack {
+                        Circle()
+                            .fill(HowTuneDesign.accent.opacity(0.15))
+                            .frame(width: 100, height: 100)
+                        Image(systemName: "airpods")
+                            .font(.system(size: 48))
+                            .foregroundStyle(HowTuneDesign.accent)
+                    }
 
-                purposeCard(
-                    icon: "lock.shield.fill",
-                    title: "プライバシーについて",
-                    body: "モーションデータはデバイス上でのみ処理されます。外部サーバーに送信されることはありません。"
-                )
-                .padding(.horizontal, 24)
+                    VStack(spacing: 10) {
+                        Text("AirPods 頭部モーションの使用")
+                            .font(.title2.bold())
+                            .foregroundStyle(.white)
+                        Text("音楽を聴いているときの頭の動きを検知します。あなたの「聴き方」の特徴を分析するためだけに使用します。")
+                            .font(.body)
+                            .foregroundStyle(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 32)
 
-                if !viewModel.permissionState.airPodsAvailable {
-                    airPodsUnavailableNote
-                        .padding(.horizontal, 24)
-                }
-            }
-
-            Spacer()
-
-            VStack(spacing: 16) {
-                if viewModel.permissionState.motion == .authorized {
-                    authorizedBadge(label: "モーションが許可されました")
-                    nextButton
-                } else {
-                    Button {
-                        isRequesting = true
-                        Task {
-                            await viewModel.requestMotionPermission()
-                            isRequesting = false
-                        }
-                    } label: {
-                        Label(
-                            isRequesting ? "確認中…" : "モーションを許可する",
-                            systemImage: "figure.walk"
+                    VStack(spacing: 10) {
+                        purposeCard(
+                            icon: "lock.shield.fill",
+                            title: "端末内処理・外部送信なし",
+                            body: "モーションデータはデバイス上でのみ処理されます。"
                         )
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color(.systemIndigo))
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                    }
-                    .disabled(isRequesting)
 
-                    skipButton(label: "スキップして手動モードへ進む") {
-                        viewModel.proceedToManualMode()
+                        if !viewModel.permissionState.airPodsAvailable {
+                            purposeCard(
+                                icon: "airpods",
+                                title: "AirPods 未接続",
+                                body: "対応AirPodsがない場合は、曲中の反応を手動で記録できます。"
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+
+                Spacer()
+
+                VStack(spacing: 14) {
+                    if viewModel.permissionState.motion == .authorized {
+                        authorizedBadge(label: "AirPods 頭部モーションが利用できます")
+                        nextButton
+                    } else {
+                        primaryButton(
+                            label: "AirPods を確認する",
+                            icon: "airpods",
+                            isLoading: isRequesting
+                        ) {
+                            isRequesting = true
+                            Task {
+                                await viewModel.requestMotionPermission()
+                                isRequesting = false
+                            }
+                        }
+
+                        skipButton(label: "スキップして手動モードへ進む") {
+                            viewModel.proceedToManualMode()
+                        }
                     }
                 }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 48)
             }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 48)
         }
+        .preferredColorScheme(.dark)
     }
 
     private var nextButton: some View {
-        Button {
+        primaryButton(label: "次へ", icon: "arrow.right") {
             withAnimation { viewModel.currentPage = 2 }
-        } label: {
-            Text("次へ")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color(.systemIndigo))
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
         }
-    }
-
-    private var airPodsUnavailableNote: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "airpods")
-                .foregroundStyle(Color(.systemOrange))
-            Text("AirPods が未接続か非対応のため、iPhone 本体のモーションセンサーを使用します")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(12)
-        .background(Color(.systemOrange).opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
-
 
 #Preview {
     OnboardingMotionPage(viewModel: OnboardingViewModel())

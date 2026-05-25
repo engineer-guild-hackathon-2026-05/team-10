@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "how-cards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "howTags", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
