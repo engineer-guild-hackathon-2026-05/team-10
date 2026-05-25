@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ForYouView: View {
-    @Binding var nowPlayingSong: Song?
+    @Binding var nowPlayingContext: NowPlayingContext?
     @ObservedObject var playback: PlaybackViewModel
     @StateObject private var dashboard = HomeDashboardViewModel()
     @State private var searchQuery = ""
@@ -32,9 +32,9 @@ struct ForYouView: View {
                 MusicFeedView(
                     artist: artist,
                     highlightedComment: selectedComment,
-                    onSongTap: { song in
+                    onPlaybackContext: { context in
                         withAnimation(.easeInOut(duration: 0.3)) {
-                            nowPlayingSong = song
+                            nowPlayingContext = context
                         }
                     },
                     playback: playback
@@ -435,5 +435,5 @@ private struct ArtworkThumb: View {
 }
 
 #Preview {
-    ForYouView(nowPlayingSong: .constant(nil), playback: PlaybackViewModel())
+    ForYouView(nowPlayingContext: .constant(nil), playback: PlaybackViewModel())
 }

@@ -1299,6 +1299,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：秘匿設定ファイルを削除せず、今後 `git add` されない状態に戻せたため。
 
+### #051 PR #91 main merge とレビュー対応
+
+- **時刻**：22:34
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #91 に最新 `main` を merge し、CodeRabbit のハイライト幅とタップ二重実行指摘を修正して push する
+- **プロンプト**：
+  ```text
+  pr 91で、main mergeしてレビュー修正してpushして
+  ```
+- **出力サマリ**：
+  - PR #91 の head が `issue-79-how-card-playback-start`、base が `main` であることと、CodeRabbit 指摘 2 件を確認
+  - 最新 `origin/main` を merge し、`ForYouView.swift` / `MusicFeedView.swift` の conflict を解消
+  - main 側の Home dashboard / 分割済み MusicFeed component 構成を残しつつ、PR 側の `NowPlayingContext` と `song_start` からの再生開始を統合
+  - `MiniSongCard` はカード全体を 1 つの `Button` にして、親 gesture と子 Button の二重発火リスクを解消
+  - `NowPlayingView` のハイライトバー幅を残り track 幅以内に clamp
+  - `git diff --check`、`git diff --cached --check`、iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：最新 main の Home dashboard と PR #91 の NowPlayingContext 再生範囲指定を両立し、レビュー指摘を最小差分で解消できたため。
 ### #059 PR #86 main merge とレビュー再対応
 
 - **時刻**：22:32
