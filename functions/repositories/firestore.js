@@ -3,18 +3,21 @@ const admin = require('firebase-admin');
 const db = () => admin.firestore();
 const { FieldValue } = admin.firestore;
 
-async function createHowCard({ uid, comment, songStart, songEnd, songId, artistId }) {
+async function createHowCard({ uid, comment, songStart, songEnd, songId, artistId, itunesId, songSlug }) {
   const ref = db().collection('how-cards').doc();
   const data = {
     comment,
     song_start: songStart,
     song_end: songEnd,
     song_id: songId,
+    itunes_id: itunesId ?? songId,
     artist_id: artistId,
     user_id: uid,
     likes: 0,
     created_at: FieldValue.serverTimestamp(),
   };
+
+  if (songSlug) data.song_slug = songSlug;
 
   await ref.set(data);
   return serializeHowCard(ref.id, { ...data, created_at: null });
@@ -41,7 +44,7 @@ async function getHowCard(cardId) {
   return serializeHowCard(doc.id, doc.data());
 }
 
-async function updateHowCard({ uid, cardId, comment, songStart, songEnd, songId, artistId }) {
+async function updateHowCard({ uid, cardId, comment, songStart, songEnd, songId, artistId, itunesId, songSlug }) {
   const ref = db().collection('how-cards').doc(cardId);
 
   await db().runTransaction(async transaction => {
@@ -59,14 +62,22 @@ async function updateHowCard({ uid, cardId, comment, songStart, songEnd, songId,
       throwFirestoreError('このHowカードへのアクセス権がありません', 'permission-denied');
     }
 
-    transaction.update(ref, {
+    const patch = {
       comment,
       song_start: songStart,
       song_end: songEnd,
       song_id: songId,
+      itunes_id: itunesId ?? songId,
       artist_id: artistId,
       updated_at: FieldValue.serverTimestamp(),
-    });
+    };
+    if (songSlug) {
+      patch.song_slug = songSlug;
+    } else {
+      patch.song_slug = FieldValue.delete();
+    }
+
+    transaction.update(ref, patch);
   });
 
   return getHowCard(cardId);
@@ -132,13 +143,20 @@ async function getUserProfile(uid) {
 
 function serializeHowCard(id, data) {
   if (!isHowCardComment(data)) return null;
+  const songId = canonicalMusicSongID(data);
+  if (!songId) return null;
+
+  const songSlug = normalizeString(data.song_slug)
+    ?? (isMusicSongID(data.song_id) ? null : normalizeString(data.song_id));
 
   return {
     id,
     comment: data.comment,
     song_start: Number.isFinite(data.song_start) ? data.song_start : 0,
     song_end: Number.isFinite(data.song_end) ? data.song_end : 0,
-    song_id: data.song_id,
+    song_id: songId,
+    itunes_id: songId,
+    ...(songSlug ? { song_slug: songSlug } : {}),
     artist_id: data.artist_id,
     user_id: data.user_id,
     likes: Number.isInteger(data.likes) ? data.likes : 0,
@@ -166,6 +184,28 @@ function isHowCardComment(data) {
       typeof data.artist_id === 'string' &&
       typeof data.user_id === 'string'
   );
+}
+
+function canonicalMusicSongID(data) {
+  return normalizeMusicSongID(data.itunes_id)
+    ?? normalizeMusicSongID(data.music_kit_id)
+    ?? normalizeMusicSongID(data.song_id);
+}
+
+function normalizeMusicSongID(value) {
+  const text = normalizeString(value);
+  if (!text || !isMusicSongID(text)) return null;
+  return text;
+}
+
+function isMusicSongID(value) {
+  return typeof value === 'string' && /^\d{5,}$/.test(value);
+}
+
+function normalizeString(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed || null;
 }
 
 function timestampToISOString(value) {

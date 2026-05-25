@@ -288,11 +288,12 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
   "song_start": 78.4,
   "song_end": 84.2,
   "song_id": "1704093812",
+  "song_slug": "ado-show",
   "artist_id": "ado"
 }
 ```
 
-バックエンドは `user_id` をトークンから補完し、`goods: 0` で保存する。
+`song_id` は MusicKit / Apple Music / iTunes の曲 ID として扱う。slug や表示用文字列は `song_slug` / `song_title` など別フィールドに分離する。バックエンドは `user_id` をトークンから補完し、`likes: 0` で保存する。
 
 `GET /how-cards?song_id=1704093812` は `{ "howCards": [...] }`、`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` は `{ "howCard": ... }` を返す。
 
@@ -304,14 +305,15 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
     "song_start": 78.4,
     "song_end": 84.2,
     "song_id": "1704093812",
+    "itunes_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
-    "goods": 0
+    "likes": 0
   }
 }
 ```
 
-`POST /how-cards/:id/like` は同じユーザーの二重いいねを防ぎ、`{ "goods": 4, "likes": 4 }` を返す。
+`POST /how-cards/:id/like` は同じユーザーの二重いいねを防ぎ、`{ "likes": 4 }` を返す。
 
 ---
 

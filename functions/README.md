@@ -139,6 +139,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
   "song_start": 78.4,
   "song_end": 84.2,
   "song_id": "1704093812",
+  "song_slug": "ado-show",
   "artist_id": "ado"
 }
 ```
@@ -148,8 +149,12 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | `comment` | string | ユーザー記入のコメント（空文字不可） |
 | `song_start` | number | 区間開始（秒、0 以上） |
 | `song_end` | number | 区間終了（秒、`song_start` より大きい） |
-| `song_id` | string | 曲 ID |
+| `song_id` | string | MusicKit / Apple Music / iTunes の曲 ID |
+| `itunes_id` | string | 任意。`song_id` が legacy slug の場合に canonical 曲 ID として使う |
+| `song_slug` | string | 任意。表示・移行用の曲 slug。`song_id` には入れない |
 | `artist_id` | string | アーティスト ID |
+
+`song_id` は client が MusicKit metadata lookup に使う canonical ID とする。slug や曲名由来の値は `song_slug` など別フィールドで送る。
 
 **レスポンス**
 
@@ -161,6 +166,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
     "song_start": 78.4,
     "song_end": 84.2,
     "song_id": "1704093812",
+    "itunes_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
     "likes": 0
@@ -184,6 +190,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "song_start": 78.4,
       "song_end": 84.2,
       "song_id": "1704093812",
+      "itunes_id": "1704093812",
       "artist_id": "ado",
       "user_id": "uid123",
       "likes": 3

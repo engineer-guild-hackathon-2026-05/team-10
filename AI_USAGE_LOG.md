@@ -611,6 +611,52 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘を実装・docs・metadata に反映し、main 取り込み後の PR ブランチを再レビュー可能な状態へ戻せたため。
 
+### #032 UI改善issue作成
+
+- **時刻**：20:46
+- **ツール**：Codex / GitHub CLI
+- **目的**：Howカード再生開始位置、NowPlaying遷移、表示文言、歌詞UI、切り抜きUIの改善点をコード確認後に GitHub issue 化する
+- **プロンプト**：
+  ```text
+  githubにissueを立てたい。
+  - 現在、howカード（投稿コメント）をタップしても曲が最初から始まるから、song_startから始まるようにしたい
+  - アーティストviewで曲の再生ボタンをタップしたらplayback view二千位してしまうのをやめたい
+  - 曲のタイトルが英語なのを日本語にしたい
+  - 歌詞の表示がダサい。もっとapple musicに寄せたい
+  - 切り抜きのUIがダサい。上のバーと中央の範囲選択で機能がかぶっている。
+
+  これらを、該当箇所調べた上でgithubにissueとして立てておいて欲しい
+  ```
+- **出力サマリ**：
+  - `ContentView` / `ForYouView` / `MusicFeedView` / `NowPlayingView` / `ClipCreationView` / `ClipCreationInlineView` / `Artist` / `HomeDashboardViewModel` を確認
+  - Howカードコメント再生が `song_start` を渡していない箇所を特定し、Issue #79 を作成
+  - MusicFeed の再生ボタンが `nowPlayingSong` 変更経由で自動フルスクリーン遷移する箇所を特定し、Issue #81 を作成
+  - デモ用英語タイトル/タグ/fallback文言を特定し、Issue #84 を作成
+  - NowPlaying の歌詞カードUIと mock 歌詞を確認し、Issue #82 を作成
+  - 切り抜き範囲選択が上部バーと中央波形で重複している箇所を確認し、Issue #83 を作成
+- **評価**：採用
+- **採用 / 不採用の理由**：要望を一括issueではなく実装箇所ごとの独立issueに分け、担当・修正範囲・受け入れ条件が明確な形にできたため。
+
+### #033 how-cards song_id契約修正
+
+- **時刻**：20:49
+- **ツール**：Codex / GitHub CLI / node / Firebase CLI
+- **目的**：Issue #78 の `song_id` に MusicKit ID 以外が入る問題を Functions 側で修正し、可能ならデプロイする
+- **プロンプト**：
+  ```text
+  では、このブランチのプルリクエストを出して、そのあとで立てたissueを直すブランチに切り替えて（main pullの後ですよ、もちろん）実装を始め、firebase functionsにデプロイできればして欲しいです。miseを使って環境構築しているのでそこが汚れないことを祈っています
+  ```
+- **出力サマリ**：
+  - `update/home` を commit / push し、PR #80 を作成
+  - `main` を最新化して `fix/how-cards-song-id-contract` ブランチを作成
+  - Functions の `POST /how-cards` / `PATCH /how-cards/:id` で `song_id` を MusicKit / Apple Music / iTunes の曲IDとして検証するよう変更
+  - 既存 Firestore document に `song_id` slug と `itunes_id` がある場合は、response の `song_id` を `itunes_id` に正規化し、元 slug を `song_slug` として返すようにした
+  - API docs / data model docs を `song_id`, `itunes_id`, `song_slug`, `likes` の実装に合わせて更新
+  - `node --check` と `git diff --check` で検証
+  - `npx --yes firebase-tools deploy --only functions` を試行したが、Firebase CLI 認証がなく `firebase login` が必要なため deploy は未完了
+- **評価**：採用
+- **採用 / 不採用の理由**：client 側の workaround ではなく、Functions の read/write contract と docs を揃える修正にできた。deploy は認証情報不足で未完了だが、repo 内を汚さずに失敗を確認できたため。
+
 ---
 
 ## Day 3（2026-05-26）
