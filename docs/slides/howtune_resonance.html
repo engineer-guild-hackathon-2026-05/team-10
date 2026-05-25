@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HowTune — How Resonance</title>
+<style>
+  :root{
+    --bg:#05060a; --ink:#fff; --gray:#8e8e93; --lgray:#b8b8be;
+    --blue:#0a84ff; --lblue:#64d2ff; --green:#30d158; --amber:#ff9f0a;
+    --orange:#ff6a1a; --pink:#ff375f; --purple:#bf5af2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Inter','Hiragino Sans','Yu Gothic',-apple-system,sans-serif;
+    background:var(--bg); color:var(--ink);
+    scroll-snap-type:y mandatory; overflow-y:scroll; height:100vh;
+  }
+  section{
+    height:100vh; width:100%; scroll-snap-align:start; position:relative;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:6vh 9vw; overflow:hidden;
+  }
+  .grad-blue{background:radial-gradient(120% 120% at 20% 0%, #061224 0%, #05060a 60%)}
+  .grad-red{background:radial-gradient(120% 120% at 20% 0%, #2a0806 0%, #05060a 60%)}
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.18em;color:var(--orange);margin-bottom:18px;text-transform:uppercase}
+  h1{font-size:clamp(40px,7vw,84px);font-weight:800;line-height:1.05;letter-spacing:-.02em}
+  h2{font-size:clamp(30px,5vw,52px);font-weight:800;line-height:1.1;margin-bottom:14px}
+  .bar{height:6px;width:140px;border-radius:99px;background:linear-gradient(90deg,var(--orange),var(--pink));margin:14px 0 22px}
+  .lead{font-size:clamp(18px,2.4vw,26px);color:var(--lgray);line-height:1.5;max-width:60ch}
+  .muted{color:var(--gray);font-size:15px;margin-top:auto}
+  .foot{position:absolute;bottom:4vh;left:9vw;color:var(--gray);font-size:13px}
+  .cards{display:flex;gap:18px;margin-top:34px;flex-wrap:wrap}
+  .card{flex:1;min-width:220px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+    border-radius:20px;padding:26px}
+  .card .n{font-size:13px;font-weight:700;letter-spacing:.1em}
+  .card h3{font-size:22px;font-weight:800;margin:8px 0}
+  .card p{color:var(--lgray);font-size:15px;line-height:1.5}
+  .formula{background:linear-gradient(90deg,#061a36,#06122480);border-radius:20px;padding:30px;
+    text-align:center;font-size:clamp(18px,2.6vw,28px);font-weight:800;color:var(--lblue);margin-top:26px}
+  .row{display:flex;gap:22px;flex-wrap:wrap;margin-top:28px}
+  .row .half{flex:1;min-width:260px;border-radius:22px;padding:28px}
+  .fire{background:linear-gradient(135deg,#2a1006,#2a0806);border:1px solid rgba(255,106,26,.25)}
+  .glass{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+  .half h3{font-size:20px;margin-bottom:12px}
+  .half li{list-style:none;color:var(--lgray);font-size:16px;margin:8px 0;padding-left:4px}
+  .hero{position:absolute;inset:0;z-index:0}
+  .heroText{position:relative;z-index:1}
+  .pill{display:inline-block;background:rgba(255,106,26,.15);color:var(--orange);border:1px solid rgba(255,106,26,.4);
+    border-radius:99px;padding:6px 16px;font-size:14px;font-weight:700;margin-top:8px}
+  .hint{position:fixed;right:18px;bottom:14px;color:#555;font-size:12px;z-index:10}
+</style>
+</head>
+<body>
+
+<!-- 1 TITLE -->
+<section class="grad-red">
+  <div class="kicker">HowTune · Team Othello</div>
+  <h1>How Resonance</h1>
+  <div class="bar"></div>
+  <p class="lead">同じ瞬間に、火がつく。<br>曲の「この一点」で反応した人と、リアルタイムにつながる。</p>
+  <div class="foot">HowTune · Team Othello · 2026</div>
+</section>
+
+<!-- 2 THE MOMENT -->
+<section class="grad-blue">
+  <div class="kicker">The Moment</div>
+  <h2>一番動いた瞬間を、捉える。</h2>
+  <div class="bar"></div>
+  <p class="lead">AirPods の頭部モーションから、再生中に最も大きく動いた瞬間を記録。機械学習は回さない。</p>
+  <div class="formula">peak = max(interactionIntensity) → その playbackTime</div>
+  <p class="muted">1回目は決めうちで「ここ、どうでしたか？」。スケール時に分類モデルへ寄せる前提。</p>
+</section>
+
+<!-- 3 ASK -->
+<section class="grad-blue">
+  <div class="kicker">Ask → Deepen</div>
+  <h2>決めうち → AIで深掘り。</h2>
+  <div class="bar"></div>
+  <div class="cards">
+    <div class="card"><div class="n" style="color:var(--blue)">01</div><h3>ピーク地点を提示</h3><p>「M:SS で一番動いていました」固定文で問う</p></div>
+    <div class="card"><div class="n" style="color:var(--purple)">02</div><h3>AIが深掘り</h3><p>Claude が文脈を踏まえて詳細に問いかける</p></div>
+    <div class="card"><div class="n" style="color:var(--orange)">03</div><h3>Howカード化</h3><p>コメント + タグで投稿</p></div>
+  </div>
+</section>
+
+<!-- 4 RESONANCE (showpiece) -->
+<section class="grad-red">
+  <canvas class="hero" id="ignite"></canvas>
+  <div class="heroText">
+    <div class="kicker">Resonance</div>
+    <h2>同じ瞬間に、誰かが現れる。</h2>
+    <div class="bar"></div>
+    <p class="lead">分子がふわっと現れ、摩擦で熱を帯び、発火する——</p>
+    <div style="margin-top:18px">
+      <span class="pill">🔥 同じ瞬間に反応した人がリアルタイムに出現</span><br>
+      <span class="pill" style="background:rgba(100,210,255,.12);color:var(--lblue);border-color:rgba(100,210,255,.4)">✦ 別の場所で反応した人 = 違う解釈との出会い</span>
+    </div>
+  </div>
+  <div class="foot">Firestore リアルタイム購読（ADR-0006）· how-cards を song_id で購読し ±2.5秒で同地点判定</div>
+</section>
+
+<!-- 5 CONNECT -->
+<section class="grad-blue">
+  <div class="kicker">Connect</div>
+  <h2>熱量が、つながる。</h2>
+  <div class="bar"></div>
+  <div class="row">
+    <div class="half fire">
+      <h3 style="color:var(--orange)">🔥 同地点マッチ</h3>
+      <ul>
+        <li>同じ瞬間に火がついた相手とそのまま DM</li>
+        <li>リアルタイムに会話が同期</li>
+        <li>通常画面でも🔥マークで再会</li>
+      </ul>
+    </div>
+    <div class="half glass">
+      <h3 style="color:var(--lblue)">速さへのこだわり</h3>
+      <ul>
+        <li>楽観的更新（送信即反映）</li>
+        <li>Firestore スナップショット購読</li>
+        <li>参加者のみ read/write（rules）</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 6 ENGINEERING -->
+<section class="grad-blue">
+  <div class="kicker">Engineering</div>
+  <h2>壊さず、足す。</h2>
+  <div class="bar"></div>
+  <div class="cards">
+    <div class="card"><h3 style="color:var(--blue)">Peak Motion</h3><p>interactionIntensity ピーク（ML不使用）</p></div>
+    <div class="card"><h3 style="color:var(--purple)">LLM 深掘り</h3><p>既存 Claude 経路を2回目に活用</p></div>
+  </div>
+  <div class="cards" style="margin-top:18px">
+    <div class="card"><h3 style="color:var(--orange)">Realtime</h3><p>Firestore 購読 + 楽観的DM（ADR-0006）</p></div>
+    <div class="card"><h3 style="color:var(--green)">非破壊統合</h3><p>optional 引数で既存挙動を不変に</p></div>
+  </div>
+</section>
+
+<!-- 7 CLOSING -->
+<section class="grad-red">
+  <h1>同じ瞬間に、<br>火がつく。</h1>
+  <div class="bar"></div>
+  <p class="lead">What ではなく How。曲のこの一点で、人とつながる。</p>
+  <div class="foot">HowTune · Team Othello</div>
+</section>
+
+<div class="hint">↑ / ↓ でスライド移動</div>
+
+<script>
+// --- キーボードナビ ---
+const sections = [...document.querySelectorAll('section')];
+let idx = 0;
+function go(n){ idx = Math.max(0, Math.min(sections.length-1, n)); sections[idx].scrollIntoView({behavior:'smooth'}); }
+addEventListener('keydown', e=>{
+  if(['ArrowDown','ArrowRight',' ','PageDown'].includes(e.key)){ e.preventDefault(); go(idx+1); }
+  if(['ArrowUp','ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); go(idx-1); }
+});
+// スクロール位置から idx 同期
+const io = new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting) idx = sections.indexOf(en.target); }),{threshold:.6});
+sections.forEach(s=>io.observe(s));
+
+// --- 量子→摩擦→発火アニメ（Resonance スライド hero） ---
+const cv = document.getElementById('ignite');
+const ctx = cv.getContext('2d');
+function resize(){ cv.width = cv.clientWidth; cv.height = cv.clientHeight; }
+addEventListener('resize', resize); resize();
+
+const N = 120, EMB = 80;
+function rnd(seed){ let s=seed||1; return ()=>{ s^=s<<13; s^=s>>17; s^=s<<5; return ((s>>>0)%1e6)/1e6; }; }
+const R = rnd(20260526);
+const parts = Array.from({length:N}, ()=>({ang:R()*6.283, rad:.25+R()*.75, size:3+R()*5, ph:R()*6.283, w:1.5+R()*3, spin:R()*2-1}));
+const embers = Array.from({length:EMB}, ()=>({ang:R()*6.283, dist:.4+R()*.6, size:2+R()*4, ph:R()*6.283, lift:.5+R()}));
+const CYCLE = 2.6;
+const smooth = (x,a,b)=>{ if(b<=a) return x>=b?1:0; const t=Math.min(1,Math.max(0,(x-a)/(b-a))); return t*t*(3-2*t); };
+function blend(c1,c2,t){ t=Math.min(1,Math.max(0,t)); return `rgb(${c1.map((v,i)=>Math.round(v+(c2[i]-v)*t)).join(',')})`; }
+const start = performance.now();
+function frame(now){
+  const el = ((now-start)/1000)%CYCLE; const p = el/CYCLE;
+  const w=cv.width, h=cv.height; ctx.clearRect(0,0,w,h);
+  const cx=w*0.72, cy=h*0.42, maxR=Math.min(w,h)*0.34;
+  const appear=smooth(p,0,.35), conv=smooth(p,.30,.62), heat=smooth(p,.58,.80), ign=smooth(p,.78,1);
+  ctx.globalCompositeOperation='lighter';
+  for(const q of parts){
+    const jit=Math.sin(el*q.w+q.ph)*(1-conv)*6;
+    const baseR=maxR*q.rad, r=baseR*(1-conv)+maxR*0.06*conv, ang=q.ang+el*q.spin*0.3;
+    const x=cx+Math.cos(ang)*(r+jit), y=cy+Math.sin(ang)*(r+jit);
+    const col=blend([140,200,255],[255,184,82],heat);
+    const a=appear*(0.35+0.5*conv)*(1-ign*0.4);
+    const g=ctx.createRadialGradient(x,y,0,x,y,q.size); g.addColorStop(0,col.replace('rgb','rgba').replace(')',`,${a})`)); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,q.size,0,6.283); ctx.fill();
+  }
+  const coreA=conv*0.5+heat*0.5;
+  if(coreA>0.01){ const cr=maxR*(0.1+heat*0.22+ign*0.2); const col=blend([153,217,255],[255,140,46],Math.max(heat,ign));
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,cr); g.addColorStop(0,col.replace('rgb','rgba').replace(')',`,${coreA})`)); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,cr,0,6.283); ctx.fill(); }
+  if(ign>0.01){ for(const e of embers){ const t=ign, d=maxR*e.dist*t, rise=-maxR*0.5*t*e.lift;
+    const x=cx+Math.cos(e.ang)*d+Math.sin(el*3+e.ph)*4, y=cy+Math.sin(e.ang)*d+rise;
+    const col=`rgba(255,${Math.round(127-76*t)},30,${(1-t)*0.9})`; const sz=e.size*(1.1-t*0.5);
+    const g=ctx.createRadialGradient(x,y,0,x,y,sz); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,sz,0,6.283); ctx.fill(); } }
+  ctx.globalCompositeOperation='source-over';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

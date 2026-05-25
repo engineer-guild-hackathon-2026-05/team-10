@@ -8,6 +8,8 @@ struct MusicFeedView: View {
     @StateObject private var viewModel: MusicFeedViewModel
     @State private var selectedPlaybackCardID: String?
     @Environment(\.dismiss) private var dismiss
+    @State private var replyTarget: FeedPost?
+    @State private var replyCountsByCardID: [String: Int] = [:]
 
     init(
         artist: Artist,
@@ -104,10 +106,15 @@ struct MusicFeedView: View {
                 if let highlightedComment {
                     HighlightedHowCardCommentCard(
                         item: highlightedComment,
-                        isSelected: selectedPlaybackCardID == highlightedSelectionID(for: highlightedComment)
-                    ) {
-                        play(comment: highlightedComment)
-                    }
+                        isSelected: selectedPlaybackCardID == highlightedSelectionID(for: highlightedComment),
+                        replyCount: currentReplyCount(for: highlightedComment.howCard),
+                        onSongTap: {
+                            play(comment: highlightedComment)
+                        },
+                        onReply: {
+                            replyTarget = FeedPost(howCard: highlightedComment.howCard, song: highlightedComment.song)
+                        }
+                    )
                 }
 
                 if viewModel.isLoading {
@@ -129,12 +136,24 @@ struct MusicFeedView: View {
                         },
                         onLike: {
                             like(post: post)
+                        },
+                        onReply: {
+                            replyTarget = post
                         }
                     )
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+        }
+        .sheet(item: $replyTarget) { post in
+            HowCardRepliesView(post: post) { replyCount in
+                if let cardID = post.cardID {
+                    updateReplyCount(cardID: cardID, replyCount: replyCount)
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -190,6 +209,18 @@ struct MusicFeedView: View {
         Task {
             try? await FirebaseAPI.shared.incrementGoods(cardID: cardID)
         }
+    }
+
+    private func currentReplyCount(for howCard: HowCardComment) -> Int {
+        guard let cardID = howCard.documentID else {
+            return howCard.replyCount
+        }
+        return replyCountsByCardID[cardID] ?? howCard.replyCount
+    }
+
+    private func updateReplyCount(cardID: String, replyCount: Int) {
+        viewModel.updateReplyCount(cardID: cardID, replyCount: replyCount)
+        replyCountsByCardID[cardID] = replyCount
     }
 }
 

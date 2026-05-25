@@ -5,6 +5,7 @@ struct FeedPostCard: View {
     let isSelected: Bool
     let onSongTap: () -> Void
     let onLike: () -> Void
+    let onReply: () -> Void
     @State private var isLiked: Bool = false
 
     var body: some View {
@@ -71,12 +72,14 @@ struct FeedPostCard: View {
                             .foregroundStyle(.white)
                     }
                 }
-                HStack(spacing: 6) {
-                    Image(systemName: "bubble.left")
-                        .foregroundStyle(.white)
-                    Text("\(post.commentCount)")
-                        .font(.subheadline)
-                        .foregroundStyle(.white)
+                Button(action: onReply) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bubble.left")
+                            .foregroundStyle(.white)
+                        Text("\(post.commentCount)")
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                    }
                 }
                 Spacer()
                 Image(systemName: "paperplane")

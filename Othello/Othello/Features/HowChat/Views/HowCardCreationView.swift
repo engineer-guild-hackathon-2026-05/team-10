@@ -4,18 +4,21 @@ struct HowCardCreationView: View {
     let event: ReactionEvent
     let messages: [HowChatMessage]
     let sessionID: String
+    let songId: String
 
     @State private var selectedTags: Set<HowTag>
     @State private var commentText = ""
     @State private var posted = false
     @State private var isPosting = false
     @State private var generatedCard: HowCardResponse?
+    @State private var showResonance = false
     @Environment(\.dismiss) private var dismiss
 
-    init(event: ReactionEvent, messages: [HowChatMessage] = [], sessionID: String? = nil) {
+    init(event: ReactionEvent, messages: [HowChatMessage] = [], sessionID: String? = nil, songId: String = ResonanceDemo.songId) {
         self.event = event
         self.messages = messages
         self.sessionID = sessionID ?? event.id.uuidString
+        self.songId = songId
         _selectedTags = State(initialValue: Set(event.tags))
     }
 
@@ -45,6 +48,13 @@ struct HowCardCreationView: View {
         .navigationTitle("Howカードを作る")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .fullScreenCover(isPresented: $showResonance) {
+            ResonanceMatchView(
+                songId: songId,
+                songTitle: event.lyricLine,
+                myInterval: (event.startTime, max(event.endTime, event.startTime + 1))
+            )
+        }
     }
 
     // MARK: - 歌詞カード
@@ -208,8 +218,6 @@ struct HowCardCreationView: View {
                     isPosting = false
                     posted = true
                 }
-                try? await Task.sleep(for: .seconds(2.2))
-                dismiss()
             }
         } label: {
             HStack(spacing: 8) {
@@ -279,6 +287,34 @@ struct HowCardCreationView: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                VStack(spacing: 10) {
+                    Button {
+                        showResonance = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text("🔥")
+                            Text("同じ瞬間に反応した人を見る")
+                                .font(.subheadline.bold())
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.5, blue: 0.2), Color(red: 0.95, green: 0.2, blue: 0.15)],
+                                startPoint: .leading, endPoint: .trailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: 14)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button("閉じる") { dismiss() }
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                .padding(.top, 8)
             }
             .padding(32)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 24))
