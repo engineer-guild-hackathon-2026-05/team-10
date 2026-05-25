@@ -12,6 +12,7 @@ final class HowChatViewModel: ObservableObject {
     enum ChatState { case idle, loading, waitingReply, done, error }
 
     let event: ReactionEvent
+    private let maximumDialogueTurns = 2
 
     init(event: ReactionEvent) {
         self.event = event
@@ -37,7 +38,7 @@ final class HowChatViewModel: ObservableObject {
         choices = []
         messages.append(HowChatMessage(sender: .user, text: text))
         turnCount += 1
-        guard turnCount < 2 else {
+        guard turnCount < maximumDialogueTurns else {
             state = .done
             return
         }

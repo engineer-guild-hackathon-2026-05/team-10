@@ -92,6 +92,9 @@ struct HomeView: View {
         .onReceive(volumeTimer) { _ in
             outputVolume = AVAudioSession.sharedInstance().outputVolume
         }
+        .onAppear {
+            syncAirPodsMotionCapture()
+        }
         .onChange(of: displayIsPlaying) { _, _ in
             syncAirPodsMotionCapture()
         }
@@ -758,8 +761,11 @@ struct HomeView: View {
         let startTime = line.startTime
         let endTime = line.endTime ?? min(startTime + 6, displayTrack?.duration ?? startTime + 6)
 
-        let detectorScore = reactionDetector.currentScore
-        let sampleScore = airPodsMotion.latestSample.map { MotionReactionScoreEstimator.score(from: $0) }
+        let canUseSensorScore = !viewModel.useManualMode && displayIsPlaying && airPodsMotion.isRecording
+        let detectorScore = canUseSensorScore ? reactionDetector.currentScore : .empty
+        let sampleScore = canUseSensorScore
+            ? airPodsMotion.latestSample.map { MotionReactionScoreEstimator.score(from: $0) }
+            : nil
         let score = detectorScore.intensity > 0 ? detectorScore : (sampleScore ?? .empty)
         let intensity = min(max(max(score.intensity, reactionLevel), 0.28), 1.0)
         let activeTags = score.activeTags(threshold: 0.35)
