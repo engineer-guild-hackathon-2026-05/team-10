@@ -61,7 +61,12 @@ final class HomeDashboardViewModel: ObservableObject {
                 metadata = nil
             }
 
-            let artistName = nonEmpty(metadata?.artistName) ?? readableIdentifier(card.artistID, fallback: "Unknown Artist")
+            let artistName = nonEmpty(metadata?.artistName)
+                ?? readableIdentifier(
+                    card.artistID,
+                    fallback: "不明なアーティスト",
+                    numericIDPrefix: "アーティストID"
+                )
             let songTitle = nonEmpty(metadata?.title) ?? fallbackSongTitle(for: card)
             let colors = gradientColors(for: artistName + songTitle)
 
@@ -192,18 +197,22 @@ final class HomeDashboardViewModel: ObservableObject {
         return trimmed
     }
 
-    private func readableIdentifier(_ value: String, fallback: String) -> String {
+    private func readableIdentifier(
+        _ value: String,
+        fallback: String,
+        numericIDPrefix: String = "ID"
+    ) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return fallback }
         if trimmed.count > 18, trimmed.allSatisfy({ $0.isNumber || $0 == "-" }) {
-            return "Track \(trimmed.prefix(8))"
+            return "\(numericIDPrefix) \(trimmed.prefix(8))"
         }
         return normalizedIdentifier(trimmed)
     }
 
     private func fallbackSongTitle(for card: HowCardComment) -> String {
         let songText = normalizedIdentifier(card.songID)
-        guard !songText.isEmpty else { return "Unknown Track" }
+        guard !songText.isEmpty else { return "不明な曲" }
 
         let artistText = normalizedIdentifier(card.artistID)
         let lowerSong = songText.lowercased()
@@ -216,7 +225,7 @@ final class HomeDashboardViewModel: ObservableObject {
             }
         }
 
-        return readableIdentifier(card.songID, fallback: "Unknown Track")
+        return readableIdentifier(card.songID, fallback: "不明な曲", numericIDPrefix: "曲ID")
     }
 
     private func musicSearchTerm(songID: String, artistID: String) -> String {
