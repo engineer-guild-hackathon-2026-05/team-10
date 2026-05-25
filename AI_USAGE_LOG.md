@@ -1151,6 +1151,22 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #80 の Home dashboard 差分を残しながら、最新 main の review fix 済み UI コンポーネントとログを統合できたため。
 
+### #050 GoogleService-Info.plist の ignore 修正
+
+- **時刻**：22:24
+- **ツール**：Codex / git
+- **目的**：`GoogleService-Info.plist` が `git status` で added になる状態を直し、ローカルファイルを残したまま ignore 対象にする
+- **プロンプト**：
+  ```text
+  googleserviceinfo.plistがgitでaddedになるのがおかしくて、正しくgitignoreしてくれない？
+  ```
+- **出力サマリ**：
+  - `Othello/Othello/GoogleService-Info.plist` が index に載っていたため、ローカルファイルは残したまま `git rm --cached` で追跡対象から外した
+  - `.gitignore` に `GoogleService-Info.plist` / `**/GoogleService-Info.plist` / 表記ゆれ用パターンを追加・整理
+  - `git check-ignore -v --no-index` で対象ファイルが `.gitignore` により ignore されることを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：秘匿設定ファイルを削除せず、今後 `git add` されない状態に戻せたため。
+
 ---
 
 ## Day 3（2026-05-26）
