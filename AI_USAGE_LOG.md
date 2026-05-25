@@ -887,7 +887,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘のうち現在も有効な不具合を、表示・投稿・再生・データ同期の各境界で最小差分に分けて解消できたため。
 
-### #032 PR #73 main conflict 解消
+### #044 PR #73 main conflict 解消
 
 - **時刻**：21:10
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -906,7 +906,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #73 の主目的である6軸 HowChat 深掘りを失わず、main 側で入った AirPods / Metal / 3状態波形制御ともコンパイル可能な形で統合できたため。
 
-### #033 PR #73 再レビュー対応
+### #045 PR #73 再レビュー対応
 
 - **時刻**：21:23
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -942,6 +942,23 @@
   - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
 - **評価**：採用
 - **採用 / 不採用の理由**：CodeRabbit 指摘の認証契約・データ保持問題を解消しつつ、main 側の HowChat 深掘りと 6軸スコア文脈を落とさず統合できたため。
+### #046 PR #77 main merge とレビュー対応
+
+- **時刻**：22:06
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #77 に最新 `main` を merge し、CodeRabbit のタップ衝突・1ファイル1型レビューを修正して push する
+- **プロンプト**：
+  ```text
+  pr #77をmain mergeしてレビュー修正してpushして
+  ```
+- **出力サマリ**：
+  - PR #77 の head `feat/feed-play-to-nowplaying` を確認し、最新 `origin/main` を merge
+  - `ContentView` / `GlobalMiniPlayerView` / `MusicFeedView` の conflict を main の playback / MusicKit / Functions 連携を優先して解消
+  - `FeedPostCard` と `MiniSongCard` を `Views/MusicFeed/` 配下の別ファイルへ分割
+  - `MiniSongCard` のネスト Button を廃止し、カード全体は `onTapGesture`、再生アイコンは `highPriorityGesture` で扱う構成に変更
+  - `GlobalMiniPlayerView` は非 Button コンテナ + 内側再生 Button の構成を維持し、forward の無効ボタンを削除
+- **評価**：採用
+- **採用 / 不採用の理由**：最新 main の実装を壊さず、PR #77 のレビュー指摘を UI 構造とファイル分割の両面で解消できたため。
 
 ---
 
