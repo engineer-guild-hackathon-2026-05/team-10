@@ -27,20 +27,6 @@ graph TB
 
 ---
 
-## 技術スタック
-
-| 分類 | 技術 | 選定理由 |
-|------|------|----------|
-| アプリ | Swift / SwiftUI（`Othello/`） | iOS ネイティブ標準 |
-| 本体モーション | Core Motion | 加速度・ジャイロの標準 API |
-| 頭部モーション | CMHeadphoneMotionManager | AirPods の姿勢・加速度を取得 |
-| 心拍 | HealthKit | 対応 AirPods の心拍を取得 |
-| 再生 | MusicKit / AVFoundation | 再生位置の正確な取得 |
-| 推論 | Core ML | 端末上で6軸スコア推論 |
-| LLM | Claude API（backend 経由） | 問いかけ型の対話生成 |
-| DB | Firestore / CloudKit | iOS SDK あり |
-| 学習 | TensorFlow（`ai-recognition/`） | モデル学習 → Core ML 変換 |
-
 ---
 
 ## データモデル定義（Swift）

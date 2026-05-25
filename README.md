@@ -77,24 +77,19 @@
 
 ## 技術スタック
 
-- **iOS アプリ（`Othello/`）**：Swift / SwiftUI（Xcode）
-- **センサー**：Core Motion（本体）/ CMHeadphoneMotionManager（AirPods 頭部）/ HealthKit（心拍）
-- **音楽再生**：MusicKit / AVFoundation
-- **ML（`ai-recognition/`）**：TensorFlow で学習 → Core ML に変換し端末推論
-- **バックエンド（`backend/`）**：LLM プロキシ・データ API
-- **LLM**：Claude API（`claude-sonnet-4-6`、バックエンド経由でキーを秘匿）
-- **データ**：Firestore / CloudKit
-- **利用 AI ツール**：Claude Code
+詳細は **[`docs/architecture.md`](./docs/architecture.md)** を参照。
 
-### 使用した外部 API / サービス
-
-| サービス名 | 用途 | プラン | 備考 |
-|---|---|---|---|
-| Anthropic Claude API | 問いかけ生成・Howカード生成 | Pay-as-you-go | バックエンド経由 |
-| Apple MusicKit | 楽曲再生・再生位置取得 | — | DECISION-01（要検討） |
-| 歌詞 API | 反応地点の歌詞表示 | — | DECISION-08（未確定） |
-
-→ API キー・秘匿情報は `.env`（`.gitignore` 対象）で管理。クライアントには置かない。
+| 分類 | 技術 |
+|---|---|
+| iOS | Swift / SwiftUI |
+| センサー | Core Motion / CMHeadphoneMotionManager / HealthKit |
+| 音楽再生 | MusicKit / AVFoundation |
+| 歌詞 | Musixmatch API |
+| ML | TensorFlow → Core ML（端末推論） |
+| バックエンド | Node.js + Express |
+| LLM | Claude API `claude-sonnet-4-6`（バックエンド経由） |
+| DB | Firestore |
+| AI ツール | Claude Code |
 
 ## リポジトリ構成
 
