@@ -36,9 +36,12 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if nowPlayingSong != nil {
-                GlobalMiniPlayerView(song: nowPlayingSong, onTap: {
-                    showNowPlaying = true
-                }, isPlaying: $miniPlayerIsPlaying)
+                GlobalMiniPlayerView(
+                    song: nowPlayingSong,
+                    onTap: { showNowPlaying = true },
+                    onPlayPause: {},
+                    isPlaying: $miniPlayerIsPlaying
+                )
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
             }

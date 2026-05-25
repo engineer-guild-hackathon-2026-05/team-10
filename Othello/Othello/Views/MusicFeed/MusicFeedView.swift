@@ -5,6 +5,7 @@ struct MusicFeedView: View {
     let onSongTap: (Song) -> Void
     @StateObject private var viewModel: MusicFeedViewModel
     @State private var clipSong: Song?
+    @State private var nowPlayingSong: Song?
     @Environment(\.dismiss) private var dismiss
 
     init(artist: Artist, onSongTap: @escaping (Song) -> Void) {
@@ -25,6 +26,9 @@ struct MusicFeedView: View {
         .navigationBarHidden(true)
         .sheet(item: $clipSong) { song in
             ClipCreationView(song: song)
+        }
+        .fullScreenCover(item: $nowPlayingSong) { song in
+            NowPlayingView(song: song)
         }
         .preferredColorScheme(.dark)
     }
@@ -91,6 +95,7 @@ struct MusicFeedView: View {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.posts) { post in
                     FeedPostCard(post: post, onSongTap: {
+                        nowPlayingSong = post.song
                         onSongTap(post.song)
                     })
                 }
@@ -186,33 +191,37 @@ private struct MiniSongCard: View {
     @State private var isPlaying: Bool = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 52, height: 52)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(song.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                Text(song.artistName)
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-            }
-            Spacer()
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isPlaying.toggle()
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 52, height: 52)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(song.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                    Text(song.artistName)
+                        .font(.caption)
+                        .foregroundStyle(.gray)
                 }
-                onTap()
-            } label: {
-                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isPlaying.toggle()
+                    }
+                    onTap()
+                } label: {
+                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                }
+                .buttonStyle(.plain)
             }
+            .padding(12)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
         }
-        .padding(12)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
     }
 }
 
