@@ -48,14 +48,16 @@ final class FirebaseAPI {
         return response.howCard
     }
 
-    func fetchHowCards(songID: String, limit: Int = 50) async throws -> [HowCardComment] {
+    func fetchHowCards(songID: String? = nil, limit: Int = 50) async throws -> [HowCardComment] {
+        var queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+        if let songID, !songID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            queryItems.insert(URLQueryItem(name: "song_id", value: songID), at: 0)
+        }
+
         let response: HowCardsResponseEnvelope = try await send(
             path: "how-cards",
             method: "GET",
-            queryItems: [
-                URLQueryItem(name: "song_id", value: songID),
-                URLQueryItem(name: "limit", value: String(limit))
-            ]
+            queryItems: queryItems
         )
         return response.howCards
     }

@@ -43,5 +43,32 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         case artistID = "artist_id"
         case userID = "user_id"
         case goods
+        case likes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.documentID = try container.decodeIfPresent(String.self, forKey: .documentID)
+        self.comment = try container.decode(String.self, forKey: .comment)
+        self.songStart = try container.decodeIfPresent(TimeInterval.self, forKey: .songStart) ?? 0
+        self.songEnd = try container.decodeIfPresent(TimeInterval.self, forKey: .songEnd) ?? 0
+        self.songID = try container.decode(String.self, forKey: .songID)
+        self.artistID = try container.decode(String.self, forKey: .artistID)
+        self.userID = try container.decode(String.self, forKey: .userID)
+        self.goods = try container.decodeIfPresent(Int.self, forKey: .goods)
+            ?? container.decodeIfPresent(Int.self, forKey: .likes)
+            ?? 0
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(documentID, forKey: .documentID)
+        try container.encode(comment, forKey: .comment)
+        try container.encode(songStart, forKey: .songStart)
+        try container.encode(songEnd, forKey: .songEnd)
+        try container.encode(songID, forKey: .songID)
+        try container.encode(artistID, forKey: .artistID)
+        try container.encode(userID, forKey: .userID)
+        try container.encode(goods, forKey: .goods)
     }
 }

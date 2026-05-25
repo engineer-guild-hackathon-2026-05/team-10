@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct Artist: Identifiable {
@@ -6,7 +7,26 @@ struct Artist: Identifiable {
     let listeningCount: String
     let tag: String
     let gradientColors: [Color]
+    let artworkURL: URL?
     let songs: [Song]
+
+    init(
+        id: UUID,
+        name: String,
+        listeningCount: String,
+        tag: String,
+        gradientColors: [Color],
+        artworkURL: URL? = nil,
+        songs: [Song]
+    ) {
+        self.id = id
+        self.name = name
+        self.listeningCount = listeningCount
+        self.tag = tag
+        self.gradientColors = gradientColors
+        self.artworkURL = artworkURL
+        self.songs = songs
+    }
 }
 
 extension Artist: Hashable {

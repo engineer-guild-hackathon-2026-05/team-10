@@ -611,6 +611,131 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘を実装・docs・metadata に反映し、main 取り込み後の PR ブランチを再レビュー可能な状態へ戻せたため。
 
+### #032 発表台本ページ作成
+
+- **時刻**：15:27
+- **ツール**：Codex / Notion MCP
+- **目的**：HowTune の6分発表に向けて、冒頭の語り口を活かした台本を Notion に作成する
+- **プロンプト**：
+  ```text
+  プレゼンを考えている。
+  みなさんは、「この曲のギターソロ、かっこいいよね」「この曲のこの歌詞、すごく感動する」といった会話で盛り上がったことありませんか？
+  一つの曲の深い理解同士が出会うと、そこに熱狂が生まれます。偏愛が出会い、熱狂が生まれる瞬間です。
+  しかし、SNS上で同じような曲の楽しみ方をしている人を見つけるのは、至難の業です。なぜなら、どんな曲が好き、What　を共有することは簡単でも、How、どのように楽しんでいるか、を共有するのは、言葉のみの現在のプラットフォームでは難しいためです。
+
+  ここからどのように続けたらいいだろうか？途中で2分くらいでもが挟まる想定で、マネタイズとかまで行きたい。口調は私のものを真似して欲しい。
+
+  notionに「台本」ページを作って、そこに仮のものを書き込んで欲しい。全体で6分、上のもので1分くらいかかる想定です
+  ```
+- **出力サマリ**：
+  - Team Notion 配下に「台本」ページを作成
+  - 6分構成を、導入1分・プロダクト説明1分・デモ2分・技術/AI 1分・マネタイズ/締め1分に分解
+  - ユーザーの冒頭文体を保ちつつ、HowTune の身体反応、AIの問いかけ、Howカード、アーティスト向けインサイトまで自然につながる台本を作成
+- **評価**：採用
+- **採用 / 不採用の理由**：発表の制限時間に合わせて、課題提起からデモ、技術思想、収益化まで一貫して話せるドラフトにできたため。
+
+### #033 発表台本のコンセプト再整理
+
+- **時刻**：15:35
+- **ツール**：Codex / Notion MCP / GitHub CLI
+- **目的**：HowTune の主軸を「身体反応の言語化」から「曲の一部分の深い聴き方でつながるコミュニティ」へ修正し、台本を一から書き直す
+- **プロンプト**：
+  ```text
+  1. 「深く聴いている人が、同じ/違う聴き方の仲間を見つけて語れる」 が一番。コミュニティのさらなる活性化が行いたいこと。
+  2. 単にインタラクション要素。今出ているPRとかをみて欲しいんだけど、airpodsの動きで波形表示が変わるようになっている。体を動かしながら音楽を聴くのって楽しいよね、って言うところから、曲をより楽しむ導入にしたい。
+  3. Bです。複数の利き方が見えるとかではない。これも今出ているPRでコミュニティ機能を改善するPRがあります
+  4. マネタイズは、コミュニティ機能に出す広告、グッズ・チケット販売、アーティストへのスーパーチャットでこのアプリにアーティストが出てくる　とかにしましょう
+  ```
+- **出力サマリ**：
+  - オープンPR #67（AirPods reactive waveform）と #68（ForYou / MusicFeed / ClipCreation UI）を確認
+  - AirPods 波形を「感情推定」ではなく「身体で曲に入るインタラクション」として位置づけ直した
+  - Notion の「台本」ページを v2 として全面更新し、深く聴いている人が曲の一部分への聴き方を投稿し、コミュニティ内で同じ/違う聴き方の仲間を見つける構成に変更
+- **評価**：採用
+- **採用 / 不採用の理由**：ユーザーが定義したプロダクトの主目的に合わせ、発表の中心を自己理解からコミュニティ活性化へ戻せたため。
+
+### #034 Home dashboard の Firebase コメント接続
+
+- **時刻**：18:23
+- **ツール**：Codex / xcodebuild
+- **目的**：Home 画面をアーティストカードとおすすめコメント dashboard に刷新し、Firebase Functions の実データを表示する
+- **プロンプト**：
+  ```text
+  update/homeとかでブランチ切って、ホーム画面を開発し直したい：
+
+  上の方には今みたいにアーティストのカード出しておくのでいいんだけど、下の方にはおすすめコメントをいくつか出すようなdashboardにしてほしい。コメントのviewは普通のコメントの画面でいい。コメントクリックされたらそのコメントが表示されているアーティストの画面に遷移して、コメントが出てくる感じに。
+
+  実際にfirebase functionを呼び出してfetchした上で、アーティストカードの背景は今の感じじゃなくてアーティストのジャケ写を使えるようにして欲しい。おしゃれなデザインで実装してください
+  ```
+- **出力サマリ**：
+  - `update/home` ブランチで、ログイン後 main screen の `ForYouView` を Home dashboard として再構成
+  - 既存の `FirebaseAPI.fetchHowCards` を `song_id` なしでも呼べるようにし、`/how-cards?limit=...` を実際に呼ぶおすすめコメント取得を実装
+  - `HomeDashboardViewModel` で Firebase コメントを取得し、MusicKit で `song_id` から曲名・アーティスト名・ジャケット画像を解決する流れを追加
+  - アーティストカードをジャケット画像背景に変更し、コメントカードタップで `MusicFeedView` に遷移して対象コメントを先頭に強調表示するようにした
+  - Functions が返す `likes` と iOS 側の `goods` のデコード互換を追加
+  - steering docs を追加し、xcodebuild と `git diff --check` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：既存の main screen 構成に合わせて実データ取得、ジャケット背景、コメントからアーティスト画面への導線をまとめて接続できたため。
+
+### #035 おすすめコメント取得の既存API統合
+
+- **時刻**：18:33
+- **ツール**：Codex / xcodebuild
+- **目的**：おすすめコメント取得を新規 client helper ではなく、既存 `/how-cards` API と `fetchHowCards` に統合する
+- **プロンプト**：
+  ```text
+  おすすめコメントを取得する、という機能を、既存APIで実装して欲しいなと思っています
+  ```
+- **出力サマリ**：
+  - `fetchRecommendedHowCards` をやめ、既存の `fetchHowCards(songID:limit:)` を `songID` optional に変更
+  - `songID` ありなら曲別コメント、なしなら既存 `GET /how-cards` の最新コメント一覧を取得する形に統一
+  - Home dashboard のおすすめコメント取得を `api.fetchHowCards(limit: 12)` に差し替え
+  - steering docs を既存 API 利用方針に更新
+- **評価**：採用
+- **採用 / 不採用の理由**：Functions の既存仕様をそのまま使い、iOS 側でもコメント一覧取得 API を1つに統一できたため。
+
+### #036 MusicKit メタデータ解決の slug 対応
+
+- **時刻**：20:32
+- **ツール**：Codex / xcodebuild
+- **目的**：Firestore の `song_id` が Apple Music catalog ID ではなく slug の場合でも、ジャケット画像と曲情報を取得できるようにする
+- **プロンプト**：
+  ```text
+  [HomeDashboard] MusicKit metadata lookup failed songID=radwimps-愛にできることはまだあるかい error=MusicDataRequest.Error(
+    status: 404,
+    code: 40400,
+    title: "Resource Not Found",
+    detailText: "Resource with requested id was not found",
+    id: "JB3ZVPRWGNSUETKWDOHBRIDOVQ",
+    originalResponse: MusicDataResponse(
+      data: 159 bytes,
+      urlResponse: <NSHTTPURLResponse: 0x0000000126716380>
+    )
+  )
+  ```
+- **出力サマリ**：
+  - `song_id` が数値の Apple Music catalog ID に見える場合だけ ID 直引きを試すよう変更
+  - `radwimps-愛にできることはまだあるかい` のような slug は `radwimps 愛にできることはまだあるかい` に正規化して MusicKit 検索へフォールバック
+  - 検索結果はアーティスト名と曲名の一致度で優先し、見つからない場合のみ既存のテキスト fallback を使うようにした
+  - 404 を通常の fallback 対象として扱い、debug log が大量に出ないようにした
+- **評価**：採用
+- **採用 / 不採用の理由**：Firestore の実データ形式を壊さず、Apple Music ID と内部 slug の両方で dashboard のジャケット補完を試せるようになったため。
+
+### #037 how-cards song_id 契約不整合の issue 化
+
+- **時刻**：20:40
+- **ツール**：Codex / GitHub CLI
+- **目的**：`song_id` に MusicKit ID 以外の値が入っている backend データ契約問題を GitHub issue として記録する
+- **プロンプト**：
+  ```text
+  これってfunctions側のミスですよね。issueを立てておいてください
+  ```
+- **出力サマリ**：
+  - GitHub issue #78「fix: how-cards の song_id に MusicKit ID 以外の値が入る問題を修正する」を作成
+  - `song_id` は MusicKit / Apple Music / iTunes の曲 ID として扱うべきで、slug は `song_slug` / `song_title` など別フィールドに分離すべきと記録
+  - Firestore 既存データの migration / seed data 修正、Functions validation、API docs 更新を修正候補として整理
+- **評価**：採用
+- **採用 / 不採用の理由**：client 側の fallback ではなく backend のデータ契約問題として追跡できる状態にできたため。
+
 ---
 
 ## Day 3（2026-05-26）
