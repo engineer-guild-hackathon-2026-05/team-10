@@ -48,7 +48,10 @@ struct WaveformView: View {
             .gesture(
                 DragGesture()
                     .onChanged { value in
-                        let ratio = Double(value.location.x / width).clamped(to: 0...1)
+                        guard width > 0 else { return }
+                        let rawRatio = Double(value.location.x / width)
+                        guard rawRatio.isFinite else { return }
+                        let ratio = rawRatio.clamped(to: 0...1)
                         let startRatio = clipStart / safeDuration
                         let endRatio = clipEnd / safeDuration
                         if value.translation == .zero {

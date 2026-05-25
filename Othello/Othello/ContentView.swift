@@ -5,6 +5,7 @@ struct ContentView: View {
     @StateObject private var onboardingVM = OnboardingViewModel()
     @State private var nowPlayingSong: Song?
     @State private var showNowPlaying: Bool = false
+    @State private var miniPlayerIsPlaying: Bool = true
 
     var body: some View {
         if !authVM.isLoggedIn {
@@ -35,9 +36,9 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if nowPlayingSong != nil {
-                GlobalMiniPlayerView(song: nowPlayingSong) {
+                GlobalMiniPlayerView(song: nowPlayingSong, onTap: {
                     showNowPlaying = true
-                }
+                }, isPlaying: $miniPlayerIsPlaying)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
             }

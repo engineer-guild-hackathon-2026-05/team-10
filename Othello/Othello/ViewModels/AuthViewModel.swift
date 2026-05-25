@@ -1,6 +1,5 @@
 import Combine
 import FirebaseAuth
-import FirebaseFirestore
 import Foundation
 
 @MainActor
@@ -10,7 +9,6 @@ final class AuthViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private var authStateHandler: AuthStateDidChangeListenerHandle?
-    private let db = Firestore.firestore()
 
     init() {
         isLoggedIn = Auth.auth().currentUser != nil
@@ -66,15 +64,6 @@ final class AuthViewModel: ObservableObject {
         } catch {
             errorMessage = localizedError(error)
         }
-    }
-
-    private func saveUserToFirestore(user: User) async throws {
-        let data: [String: Any] = [
-            "uid": user.uid,
-            "email": user.email ?? "",
-            "createdAt": FieldValue.serverTimestamp()
-        ]
-        try await db.collection("users").document(user.uid).setData(data)
     }
 
     private func localizedError(_ error: Error) -> String {

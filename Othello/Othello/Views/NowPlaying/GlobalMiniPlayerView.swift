@@ -3,7 +3,7 @@ import SwiftUI
 struct GlobalMiniPlayerView: View {
     let song: Song?
     let onTap: () -> Void
-    @State private var isPlaying: Bool = true
+    @Binding var isPlaying: Bool
 
     var body: some View {
         if let song {

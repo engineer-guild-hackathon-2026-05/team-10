@@ -41,7 +41,7 @@ final class ClipCreationViewModel: ObservableObject {
                 .sink { [weak self] _ in
                     guard let self else { return }
                     if self.currentTime < self.totalDuration {
-                        self.currentTime += 0.1
+                        self.currentTime = min(self.currentTime + 0.1, self.totalDuration)
                     } else {
                         self.isPlaying = false
                         self.timerCancellable = nil

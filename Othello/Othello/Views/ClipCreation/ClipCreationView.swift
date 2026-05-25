@@ -32,12 +32,11 @@ struct ClipCreationView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {} label: {
-                        Image(systemName: "music.note")
-                            .foregroundStyle(.white)
-                            .padding(8)
-                            .background(Color.white.opacity(0.12), in: Circle())
-                    }
+                    Image(systemName: "music.note")
+                        .foregroundStyle(.white)
+                        .padding(8)
+                        .background(Color.white.opacity(0.12), in: Circle())
+                        .accessibilityHidden(true)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完了") { dismiss() }
