@@ -31,14 +31,7 @@ struct GlobalMiniPlayerView: View {
                     .foregroundStyle(.primary)
                     .frame(width: 36, height: 36)
             }
-
-            Button {} label: {
-                Image(systemName: "forward.fill")
-                    .font(.title3)
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 36, height: 36)
-            }
-            .disabled(true)
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
