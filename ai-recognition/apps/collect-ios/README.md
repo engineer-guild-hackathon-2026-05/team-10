@@ -2,10 +2,6 @@
 
 SwiftUI版の学習データ収集アプリです。AirPodsの頭部モーションを `CMHeadphoneMotionManager` で直接読み、セッション終了時に以下をアプリのDocumentsへ保存します。AirPodsが未接続または非対応の場合はiPhone本体モーションへフォールバックします。
 
-- `<sessionId>_raw.json`
-- `<sessionId>_training_examples.jsonl`
-- `<sessionId>_recording.csv`
-- `annotations.csv`
 - `CreateMLActivityData/<label>/<sessionId>_<label>_*.csv`
 
 ## 開き方
@@ -21,12 +17,20 @@ SwiftUI版の学習データ収集アプリです。AirPodsの頭部モーショ
 
 1. AirPodsを接続し、曲を選ぶ
 2. セッション開始
-3. 音を聴きながら `ノってる` / `上がった` / `刺さった` などを押す
+3. 音を聴きながら `ノってる` / `チルい` / `neutral` のいずれかを押す
 4. 終了
 5. レビュー画面でラベルを確認
-6. `Raw共有` または `JSONL共有` でAirDropやFilesへ渡す
+6. `GUI用フォルダ共有` でAirDropやFilesへ渡す
 
 保存済みファイルはアプリDocumentsの `HowTuneExports` に入ります。`UIFileSharingEnabled` と `LSSupportsOpeningDocumentsInPlace` を有効にしているため、FinderやFiles経由でも取り出せます。Create ML GUIでActivity Classificationを学習する場合は、`HowTuneExports/CreateMLActivityData` フォルダをTraining Dataに指定します。
+
+MVPの収集精度を上げるため、曲パターンもラベルと同じ3種類に絞っています。
+
+| 曲パターン | 目的 |
+|---|---|
+| Groove Track | `ノってる` を集める |
+| Neutral Track | 大きな反応がない `neutral` を集める |
+| Chill Track | `チルい` を集める |
 
 ## 収集データ
 
@@ -37,16 +41,16 @@ SwiftUI版の学習データ収集アプリです。AirPodsの頭部モーショ
 - 曲中時刻 `t`
 - 押したラベルと前後window
 
-Create ML向けCSVでは、recording CSVに `t,ax,ay,az,gx,gy,gz,pitch,roll,yaw` を出力し、`annotations.csv` に `recording,label,start,end,motionSource` を累積します。
-
-Create ML GUI向けには、押したラベル区間を切り出して以下のフォルダ構成も生成します。
+Create ML GUI向けには、押したラベル区間から5秒の固定長windowを切り出して以下のフォルダ構成も生成します。5秒未満の短い断片は学習に使わないため出力しません。
 
 ```text
 CreateMLActivityData/
   groove/
     session_..._groove_start12300_001.csv
-  hype/
-    session_..._hype_start22000_001.csv
+  chill/
+    session_..._chill_start22000_001.csv
+  neutral/
+    session_..._neutral_start30000_001.csv
 ```
 
 GUIでは `CreateMLActivityData` を選び、Featuresに `ax,ay,az,gx,gy,gz,pitch,roll,yaw` を指定します。

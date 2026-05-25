@@ -1,17 +1,11 @@
 export const LISTENING_LABELS = [
   "groove",
-  "hype",
   "chill",
-  "immersion",
-  "hit",
-  "afterglow"
+  "neutral"
 ] as const;
 
 export const COLLECTION_LABELS = [
-  ...LISTENING_LABELS,
-  "unknown",
-  "noise",
-  "phone_on_table"
+  ...LISTENING_LABELS
 ] as const;
 
 export const FEATURE_KEYS = [
@@ -99,11 +93,8 @@ export type ReactionCandidate = {
 export function emptyListeningLabels(): ListeningLabels {
   return {
     groove: 0,
-    hype: 0,
     chill: 0,
-    immersion: 0,
-    hit: 0,
-    afterglow: 0
+    neutral: 0
   };
 }
 

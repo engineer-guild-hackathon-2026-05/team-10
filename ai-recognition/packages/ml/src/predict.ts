@@ -83,6 +83,11 @@ async function predictScores(
     const xs = tf.tensor2d(featureWindows.map((window) => window.features));
     const predictionTensor = model.predict(xs) as tf.Tensor;
     const predictionRows = (await predictionTensor.array()) as number[][];
+    if (predictionRows.some((row) => row.length !== LISTENING_LABELS.length)) {
+      throw new Error(
+        `Model output width ${predictionRows[0]?.length ?? 0} does not match labels ${LISTENING_LABELS.length}`
+      );
+    }
     const result = predictionRows.map((row) => vectorToScores(row)) as ListeningStateScores[] & {
       modelVersion?: string;
     };
@@ -162,22 +167,17 @@ export function buildReactionCandidates(
 }
 
 function heuristicScoresFromFeatures(window: FeatureWindow): ListeningStateScores {
-  const stdMagnitude = window.features[1] ?? 0;
   const meanDelta = window.features[2] ?? 0;
   const maxDelta = window.features[3] ?? 0;
   const energy = window.features[4] ?? 0;
   const peakCount = window.features[5] ?? 0;
   const rhythmRegularity = window.features[6] ?? 0;
   const stillness = window.features[7] ?? 0;
-  const previousEnergyDiff = window.features[8] ?? 0;
 
   return {
     groove: sigmoid(0.8 * rhythmRegularity + 0.35 * peakCount + 0.25 * energy - 0.2 * maxDelta),
-    hype: sigmoid(0.75 * energy + 0.7 * maxDelta + 0.4 * stdMagnitude + 0.55 * previousEnergyDiff),
     chill: sigmoid(0.7 * rhythmRegularity + 0.3 * stillness - 0.45 * maxDelta - 0.25 * energy),
-    immersion: sigmoid(1.1 * stillness - 0.5 * meanDelta - 0.45 * peakCount),
-    hit: sigmoid(1.0 * maxDelta + 0.75 * previousEnergyDiff - 0.35 * peakCount),
-    afterglow: sigmoid(1.0 * stillness - 0.85 * energy - 0.8 * previousEnergyDiff)
+    neutral: sigmoid(0.9 * stillness - 0.35 * rhythmRegularity - 0.4 * energy - 0.3 * meanDelta)
   };
 }
 

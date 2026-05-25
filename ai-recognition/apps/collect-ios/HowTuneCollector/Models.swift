@@ -3,89 +3,51 @@ import SwiftUI
 
 enum ListeningLabel: String, CaseIterable, Codable, Identifiable {
     case groove
-    case hype
     case chill
-    case immersion
-    case hit
-    case afterglow
-    case unknown
-    case noise
+    case neutral
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
         case .groove: "ノってる"
-        case .hype: "上がった"
         case .chill: "チルい"
-        case .immersion: "聴き入ってる"
-        case .hit: "刺さった"
-        case .afterglow: "余韻"
-        case .unknown: "わからない"
-        case .noise: "ノイズ"
+        case .neutral: "neutral"
         }
     }
 
     var hint: String {
         switch self {
         case .groove: "リズムに身体が合っている"
-        case .hype: "展開やサビで反応した"
         case .chill: "ゆるく心地よく聴いている"
-        case .immersion: "静かに集中している"
-        case .hit: "一瞬の音・歌詞・展開"
-        case .afterglow: "反応後に味わっている"
-        case .unknown: "判断できない"
-        case .noise: "操作ミスや揺れノイズ"
-        }
-    }
-
-    var trainingLabel: Bool {
-        switch self {
-        case .groove, .hype, .chill, .immersion, .hit, .afterglow: true
-        case .unknown, .noise: false
+        case .neutral: "大きな反応がない"
         }
     }
 
     var color: Color {
         switch self {
         case .groove: Color(red: 0.06, green: 0.55, blue: 0.55)
-        case .hype: Color(red: 0.86, green: 0.33, blue: 0.25)
         case .chill: Color(red: 0.29, green: 0.56, blue: 0.34)
-        case .immersion: Color(red: 0.30, green: 0.46, blue: 0.68)
-        case .hit: Color(red: 0.80, green: 0.58, blue: 0.10)
-        case .afterglow: Color(red: 0.44, green: 0.42, blue: 0.25)
-        case .unknown: .gray
-        case .noise: .red.opacity(0.75)
+        case .neutral: Color(red: 0.37, green: 0.42, blue: 0.40)
         }
     }
 
     var defaultBeforeSec: TimeInterval {
-        switch self {
-        case .hit: 1.5
-        case .hype, .afterglow: 2.0
-        case .immersion: 1.0
-        default: 5.0
-        }
+        5.0
     }
 
     var defaultAfterSec: TimeInterval {
-        switch self {
-        case .hit: 1.5
-        case .hype: 5.0
-        case .afterglow: 6.0
-        case .immersion: 4.0
-        default: 5.0
-        }
+        5.0
     }
 
-    static let primaryCases: [ListeningLabel] = [.groove, .hype, .chill, .immersion, .hit, .afterglow]
+    static let primaryCases: [ListeningLabel] = [.groove, .chill, .neutral]
 }
 
 struct DemoSong: Identifiable, Codable, Equatable {
     enum Pattern: String, Codable {
         case groove
-        case hype
         case chill
+        case neutral
     }
 
     let id: String
@@ -105,17 +67,17 @@ struct DemoSong: Identifiable, Codable, Equatable {
             pattern: .groove
         ),
         DemoSong(
-            id: "hype-demo",
-            title: "Hype Drop Track",
-            description: "BPM 126 / 展開変化と刺さり",
-            bpm: 126,
+            id: "neutral-demo",
+            title: "Neutral Track",
+            description: "BPM 92 / 大きな反応なしを集める",
+            bpm: 92,
             durationSec: 60,
-            pattern: .hype
+            pattern: .neutral
         ),
         DemoSong(
             id: "chill-demo",
-            title: "Chill Afterglow Track",
-            description: "BPM 76 / チル、没入、余韻",
+            title: "Chill Track",
+            description: "BPM 76 / 小さく心地よい揺れを集める",
             bpm: 76,
             durationSec: 60,
             pattern: .chill

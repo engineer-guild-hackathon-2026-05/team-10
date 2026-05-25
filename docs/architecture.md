@@ -14,7 +14,7 @@
 | HealthKit | 心拍取得 | 対応 AirPods の心拍をヘルスデータ経由で取得 |
 | MusicKit | 楽曲再生・再生位置取得 | Apple Music の曲を再生位置付きで再生（DECISION-01） |
 | AVFoundation | ローカル音源再生（代替） | MusicKit 不可時のフォールバック |
-| Core ML | 端末上の6軸スコア推論 | TF 学習モデルを変換して端末推論（DECISION-02） |
+| Core ML | 端末上の3状態スコア推論 | 学習モデルを変換して端末推論（DECISION-02） |
 | Keychain Services | 認証トークン保持 | 機微情報の安全な保存 |
 
 ### バックエンド（`backend/`）
@@ -30,7 +30,7 @@
 
 | 技術 | 用途 | 選定理由 |
 |------|------|----------|
-| TensorFlow / Keras (Python) | モーション+心拍からの6軸スコア学習 | `ai-recognition/` の指定。学習はサーバー/ローカル |
+| TensorFlow / Keras (Python) / Create ML | モーション+心拍からの3状態スコア学習 | `ai-recognition/` の指定。学習はサーバー/ローカル |
 | coremltools | TF → Core ML 変換 | 学習済みモデルを iOS に組み込み |
 
 ### 開発ツール
@@ -96,7 +96,7 @@
 #### Service レイヤー
 - **HeadphoneMotionService / DeviceMotionService / HeartRateService**: センサー取得・時刻同期
 - **PlayerService**: 再生・再生位置供給
-- **ReactionClassifier**: Core ML 推論（特徴量 → 6軸スコア）
+- **ReactionClassifier**: Core ML 推論（特徴量 → 3状態スコア）
 - **APIClient**: backend との HTTP/SSE 通信
 
 #### バックエンド

@@ -311,20 +311,15 @@ function scheduleDemoTrack(context: AudioContext, song: DemoSong) {
     const time = startAt + beat * beatSec;
     const isDownbeat = beat % 4 === 0;
     const isBackbeat = beat % 4 === 2;
-    const intensity =
-      song.pattern === "hype" && beat * beatSec > 20 && beat * beatSec < 42 ? 1.35 : 1;
+    const intensity = song.pattern === "groove" ? 1 : song.pattern === "chill" ? 0.72 : 0.48;
 
     pulse(context, time, isDownbeat ? 88 : 132, 0.08, 0.13 * intensity);
-    if (isBackbeat) {
+    if (isBackbeat && song.pattern !== "neutral") {
       pulse(context, time + 0.02, 220, 0.05, 0.06 * intensity);
     }
 
-    if (song.pattern !== "chill") {
+    if (song.pattern === "groove") {
       pulse(context, time + beatSec / 2, 420, 0.035, 0.035 * intensity);
-    }
-
-    if (song.pattern === "hype" && beat % 16 === 15) {
-      pulse(context, time + beatSec * 0.75, 720, 0.16, 0.08);
     }
   }
 }

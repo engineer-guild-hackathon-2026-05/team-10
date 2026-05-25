@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Download, Music2, Save, Trash2 } from "lucide-react";
+import { Music2, Save, Trash2 } from "lucide-react";
 import type { LabelEvent, MotionSample } from "@howtune/ml/schema";
-import { AUX_LABELS, getLabelConfig, LABEL_CONFIGS } from "@/lib/labels";
+import { getLabelConfig, LABEL_CONFIGS } from "@/lib/labels";
 import { getDemoSong } from "@/lib/songs";
 
 type Bundle = {
@@ -46,23 +46,6 @@ export default function ReviewPage() {
     setLabels(data.labels ?? []);
   }
 
-  function downloadRawJson() {
-    if (!bundle) {
-      return;
-    }
-
-    downloadBlob(
-      `${sessionId}_raw.json`,
-      "application/json",
-      JSON.stringify({ ...bundle, labels }, null, 2)
-    );
-  }
-
-  async function downloadJsonl() {
-    const response = await fetch(`/api/admin/export?format=jsonl&sessionId=${sessionId}`);
-    downloadBlob(`${sessionId}_training_examples.jsonl`, "application/x-ndjson", await response.text());
-  }
-
   function updateLabel(id: string, patch: Partial<LabelEvent>) {
     setLabels((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }
@@ -88,21 +71,13 @@ export default function ReviewPage() {
 
       <section className="screenHeader">
         <h1>レビュー</h1>
-        <p>ラベル区間を確認して、学習データとして使えない区間はノイズにできます。</p>
+        <p>ラベル区間を確認して、必要なら3状態の範囲を直せます。</p>
       </section>
 
       <section className="panel">
         <div className="panelHeader">
           <h2>{song.title}</h2>
           <div className="statusRow">
-            <button className="secondaryButton" onClick={downloadRawJson} type="button">
-              <Download size={18} />
-              Raw JSON
-            </button>
-            <button className="secondaryButton" onClick={downloadJsonl} type="button">
-              <Download size={18} />
-              JSONL
-            </button>
             <button className="primaryButton" onClick={saveLabels} type="button">
               <Save size={18} />
               保存
@@ -117,7 +92,7 @@ export default function ReviewPage() {
               const width = Math.max(2, ((label.endedAtSec - label.startedAtSec) / duration) * 100);
               return (
                 <div
-                  className={`timelineBar ${config?.className ?? "labelAfterglow"}`}
+                  className={`timelineBar ${config?.className ?? "labelNeutral"}`}
                   key={label.id}
                   style={{ left: `${left}%`, width: `${width}%` }}
                 >
@@ -147,11 +122,6 @@ export default function ReviewPage() {
                   {LABEL_CONFIGS.map((config) => (
                     <option key={config.label} value={config.label}>
                       {config.name}
-                    </option>
-                  ))}
-                  {AUX_LABELS.map((aux) => (
-                    <option key={aux.label} value={aux.label}>
-                      {aux.name}
                     </option>
                   ))}
                 </select>
@@ -216,13 +186,3 @@ function SensorGraph({ samples }: { samples: MotionSample[] }) {
     </svg>
   );
 }
-
-function downloadBlob(filename: string, type: string, content: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-

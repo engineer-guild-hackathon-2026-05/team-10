@@ -4,7 +4,7 @@ export type DemoSong = {
   description: string;
   bpm: number;
   durationSec: number;
-  pattern: "groove" | "hype" | "chill";
+  pattern: "groove" | "chill" | "neutral";
 };
 
 export const DEMO_SONGS: DemoSong[] = [
@@ -17,17 +17,17 @@ export const DEMO_SONGS: DemoSong[] = [
     pattern: "groove"
   },
   {
-    id: "hype-demo",
-    title: "Hype Drop Track",
-    description: "BPM 126 / 展開変化、ドロップ、刺さりを集める",
-    bpm: 126,
+    id: "neutral-demo",
+    title: "Neutral Track",
+    description: "BPM 92 / 大きな反応がない聴き方を集める",
+    bpm: 92,
     durationSec: 60,
-    pattern: "hype"
+    pattern: "neutral"
   },
   {
     id: "chill-demo",
-    title: "Chill Afterglow Track",
-    description: "BPM 76 / チル、没入、余韻を集める",
+    title: "Chill Track",
+    description: "BPM 76 / 小さく心地よい揺れを集める",
     bpm: 76,
     durationSec: 60,
     pattern: "chill"

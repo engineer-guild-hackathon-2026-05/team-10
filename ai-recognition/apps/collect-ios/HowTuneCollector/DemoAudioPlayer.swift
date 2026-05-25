@@ -69,7 +69,15 @@ final class DemoAudioPlayer: ObservableObject {
             var sample: Float = 0
             let beatPhase = t.truncatingRemainder(dividingBy: beatSec)
             let beatIndex = Int(t / beatSec)
-            let intensity = song.pattern == .hype && t > 20 && t < 42 ? 1.35 : 1.0
+            let intensity: Double
+            switch song.pattern {
+            case .groove:
+                intensity = 1.0
+            case .chill:
+                intensity = 0.72
+            case .neutral:
+                intensity = 0.48
+            }
 
             sample += tonePulse(
                 t: t,
@@ -79,7 +87,7 @@ final class DemoAudioPlayer: ObservableObject {
                 gain: 0.20 * intensity
             )
 
-            if beatIndex % 4 == 2 {
+            if beatIndex % 4 == 2 && song.pattern != .neutral {
                 sample += tonePulse(
                     t: t,
                     phase: max(0, beatPhase - 0.02),
@@ -89,7 +97,7 @@ final class DemoAudioPlayer: ObservableObject {
                 )
             }
 
-            if song.pattern != .chill {
+            if song.pattern == .groove {
                 sample += tonePulse(
                     t: t,
                     phase: abs(beatPhase - beatSec / 2),

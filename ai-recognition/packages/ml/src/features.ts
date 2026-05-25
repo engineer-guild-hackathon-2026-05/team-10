@@ -136,7 +136,6 @@ export function createTrainingExamplesFromSession(input: {
   });
 
   return windows
-    .filter((window) => !isNoiseWindow(window, input.labels))
     .map((window) => {
       const labels = emptyListeningLabels();
 
@@ -148,9 +147,8 @@ export function createTrainingExamplesFromSession(input: {
         const overlapRatio =
           overlapDuration(window.start, window.end, event.startedAtSec, event.endedAtSec) /
           (window.end - window.start);
-        const threshold = event.label === "hit" ? 0.3 : 0.5;
 
-        if (overlapRatio >= threshold) {
+        if (overlapRatio >= 0.5) {
           labels[event.label as keyof typeof labels] = 1;
         }
       }
@@ -226,19 +224,6 @@ function calculateRhythmRegularity(peakIntervals: number[]): number {
   const intervalMean = mean(peakIntervals);
   const intervalVariance = variance(peakIntervals, intervalMean);
   return clamp01(1 - intervalVariance / (intervalMean * intervalMean + EPSILON));
-}
-
-function isNoiseWindow(window: Pick<FeatureWindow, "start" | "end">, labels: LabelEvent[]): boolean {
-  return labels.some((event) => {
-    if (event.label !== "noise" && event.label !== "phone_on_table") {
-      return false;
-    }
-
-    const ratio =
-      overlapDuration(window.start, window.end, event.startedAtSec, event.endedAtSec) /
-      (window.end - window.start);
-    return ratio >= 0.5;
-  });
 }
 
 function overlapDuration(aStart: number, aEnd: number, bStart: number, bEnd: number): number {

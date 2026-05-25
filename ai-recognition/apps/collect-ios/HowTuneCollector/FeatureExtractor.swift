@@ -31,11 +31,8 @@ struct MotionFeatures: Codable {
 struct TrainingExample: Codable {
     struct Labels: Codable {
         var groove: Int
-        var hype: Int
         var chill: Int
-        var immersion: Int
-        var hit: Int
-        var afterglow: Int
+        var neutral: Int
     }
 
     struct Meta: Codable {
@@ -67,7 +64,6 @@ enum FeatureExtractor {
         )
 
         return windows
-            .filter { !isNoiseWindow($0, labels: collected.labels) }
             .map { window in
                 let labels = labelsForWindow(
                     start: window.start,
@@ -223,39 +219,23 @@ enum FeatureExtractor {
     ) -> TrainingExample.Labels {
         var result = TrainingExample.Labels(
             groove: 0,
-            hype: 0,
             chill: 0,
-            immersion: 0,
-            hit: 0,
-            afterglow: 0
+            neutral: 0
         )
         let duration = end - start
 
-        for event in labelEvents where event.label.trainingLabel {
+        for event in labelEvents {
             let ratio = overlap(start, end, event.startedAtSec, event.endedAtSec) / max(duration, 0.0001)
-            let threshold = event.label == .hit ? 0.3 : 0.5
-            guard ratio >= threshold else { continue }
+            guard ratio >= 0.5 else { continue }
 
             switch event.label {
             case .groove: result.groove = 1
-            case .hype: result.hype = 1
             case .chill: result.chill = 1
-            case .immersion: result.immersion = 1
-            case .hit: result.hit = 1
-            case .afterglow: result.afterglow = 1
-            default: break
+            case .neutral: result.neutral = 1
             }
         }
 
         return result
-    }
-
-    private static func isNoiseWindow(_ window: FeatureWindow, labels: [LabelEvent]) -> Bool {
-        labels.contains { event in
-            guard event.label == .noise else { return false }
-            let ratio = overlap(window.start, window.end, event.startedAtSec, event.endedAtSec) / max(window.end - window.start, 0.0001)
-            return ratio >= 0.5
-        }
     }
 
     private static func dominantMotionSource(_ samples: [MotionSample]) -> MotionSensorSource {
