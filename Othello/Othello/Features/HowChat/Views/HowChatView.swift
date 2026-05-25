@@ -34,7 +34,7 @@ struct HowChatView: View {
                 }
             }
             .navigationDestination(isPresented: $navigateToHowCard) {
-                HowCardCreationView(event: vm.event, messages: vm.messages)
+                HowCardCreationView(event: vm.event, messages: vm.messages, sessionID: vm.sessionID)
             }
         }
         .presentationDetents([.large])

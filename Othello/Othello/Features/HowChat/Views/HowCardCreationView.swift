@@ -3,6 +3,7 @@ import SwiftUI
 struct HowCardCreationView: View {
     let event: ReactionEvent
     let messages: [HowChatMessage]
+    let sessionID: String
 
     @State private var selectedTags: Set<HowTag>
     @State private var commentText = ""
@@ -11,9 +12,10 @@ struct HowCardCreationView: View {
     @State private var generatedCard: HowCardResponse?
     @Environment(\.dismiss) private var dismiss
 
-    init(event: ReactionEvent, messages: [HowChatMessage] = []) {
+    init(event: ReactionEvent, messages: [HowChatMessage] = [], sessionID: String? = nil) {
         self.event = event
         self.messages = messages
+        self.sessionID = sessionID ?? event.id.uuidString
         _selectedTags = State(initialValue: Set(event.tags))
     }
 
@@ -196,6 +198,7 @@ struct HowCardCreationView: View {
             isPosting = true
             Task {
                 let card = try? await ChatAPIClient.shared.postHowCard(
+                    sessionID: sessionID,
                     event: event,
                     messages: messages,
                     selectedTags: Array(selectedTags)

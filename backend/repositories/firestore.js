@@ -23,6 +23,39 @@ async function getSession(sessionId) {
   return { id: doc.id, ...doc.data() };
 }
 
+async function upsertChatSession({ sessionId, uid, startTime, tags, intensity, lyric, history }) {
+  const sessionRef = db().collection('sessions').doc(sessionId);
+  const now = FieldValue.serverTimestamp();
+
+  await db().runTransaction(async transaction => {
+    const snapshot = await transaction.get(sessionRef);
+    const existingData = snapshot.exists ? snapshot.data() : {};
+
+    if (snapshot.exists && existingData.userId !== uid) {
+      const error = new Error('このセッションへのアクセス権がありません');
+      error.code = 'session-forbidden';
+      throw error;
+    }
+
+    const data = {
+      userId: uid,
+      reactionStartTime: startTime,
+      reactionTags: tags,
+      reactionIntensity: intensity,
+      lyric: lyric ?? null,
+      chatHistory: history,
+      status: existingData.status === 'done' ? 'done' : 'chatting',
+      updatedAt: now,
+    };
+
+    if (!snapshot.exists || !isFirestoreTimestamp(existingData.createdAt)) {
+      data.createdAt = now;
+    }
+
+    transaction.set(sessionRef, data, { merge: true });
+  });
+}
+
 async function saveHowCard({
   uid,
   email,
@@ -261,6 +294,7 @@ function isFirestoreTimestamp(value) {
 module.exports = {
   createSession,
   getSession,
+  upsertChatSession,
   saveHowCard,
   upsertUserProfile,
   getUserProfile,
