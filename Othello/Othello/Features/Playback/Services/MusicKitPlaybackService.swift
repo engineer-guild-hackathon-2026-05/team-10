@@ -17,7 +17,8 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
     private var playerStateCancellable: AnyCancellable?
 
     init() {
-        observePlayerState()
+        // メインスレッドをブロックしないよう非同期で遅延初期化
+        Task { @MainActor in self.observePlayerState() }
     }
 
     // MARK: - PlaybackPositionProviding

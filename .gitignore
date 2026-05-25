@@ -15,6 +15,9 @@ Thumbs.db
 .env.*.local
 *.pem
 
+# Firebase
+backend/serviceAccountKey.json
+
 # Node
 node_modules/
 npm-debug.log*

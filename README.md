@@ -116,6 +116,27 @@ team-10/
 
 ## セットアップ手順
 
+### 1. バックエンドを起動する（必須）
+
+> ⚠️ **iOS アプリを動かす前に、必ずバックエンドを起動してください。**
+> バックエンドが起動していないと、AI 対話・Howカード生成・Firestore 保存がすべて動作しません。
+
+```bash
+cd backend
+cp .env.example .env          # .env を作成し API キーを記入
+npm install
+npm start                      # localhost:3000 で起動
+```
+
+`.env` に必要なキー：
+
+| 変数名 | 説明 |
+|---|---|
+| `ANTHROPIC_API_KEY` | Claude API キー |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Firebase Admin SDK サービスアカウント JSON のパス |
+
+### 2. iOS アプリを起動する
+
 ```bash
 # リポジトリのクローン
 git clone https://github.com/engineer-guild-hackathon-2026-05/team-10.git

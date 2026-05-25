@@ -2,14 +2,18 @@ import SwiftUI
 
 struct HowCardCreationView: View {
     let event: ReactionEvent
+    let messages: [HowChatMessage]
 
     @State private var selectedTags: Set<HowTag>
     @State private var commentText = ""
     @State private var posted = false
+    @State private var isPosting = false
+    @State private var generatedCard: HowCardResponse?
     @Environment(\.dismiss) private var dismiss
 
-    init(event: ReactionEvent) {
+    init(event: ReactionEvent, messages: [HowChatMessage] = []) {
         self.event = event
+        self.messages = messages
         _selectedTags = State(initialValue: Set(event.tags))
     }
 
@@ -188,16 +192,31 @@ struct HowCardCreationView: View {
 
     private var postButton: some View {
         Button {
-            withAnimation(.spring(duration: 0.4)) { posted = true }
+            guard !isPosting else { return }
+            isPosting = true
             Task {
-                try? await Task.sleep(for: .seconds(1.8))
+                let card = try? await ChatAPIClient.shared.postHowCard(
+                    event: event,
+                    messages: messages,
+                    selectedTags: Array(selectedTags)
+                )
+                generatedCard = card
+                withAnimation(.spring(duration: 0.4)) {
+                    isPosting = false
+                    posted = true
+                }
+                try? await Task.sleep(for: .seconds(2.2))
                 dismiss()
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "paperplane.fill")
-                Text("Howカードを投稿")
-                    .font(.subheadline.bold())
+                if isPosting {
+                    ProgressView().tint(.white).scaleEffect(0.8)
+                    Text("生成中…").font(.subheadline.bold())
+                } else {
+                    Image(systemName: "paperplane.fill")
+                    Text("Howカードを投稿").font(.subheadline.bold())
+                }
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
@@ -219,22 +238,35 @@ struct HowCardCreationView: View {
 
     private var postedOverlay: some View {
         ZStack {
-            Color.black.opacity(0.75).ignoresSafeArea()
+            Color.black.opacity(0.82).ignoresSafeArea()
             VStack(spacing: 16) {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 64))
+                    .font(.system(size: 56))
                     .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
                 Text("Howカードを投稿しました")
                     .font(.title3.bold())
                     .foregroundStyle(.white)
-                HStack(spacing: 6) {
-                    ForEach(Array(selectedTags), id: \.self) { tag in
-                        Text(tag.label)
-                            .font(.caption.bold())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(tag.color.opacity(0.8), in: Capsule())
+                if let card = generatedCard {
+                    VStack(spacing: 8) {
+                        Text(card.tagLabel)
+                            .font(.headline)
+                            .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.45))
+                        Text(card.description)
+                            .font(.subheadline)
+                            .foregroundStyle(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 8)
+                } else {
+                    HStack(spacing: 6) {
+                        ForEach(Array(selectedTags), id: \.self) { tag in
+                            Text(tag.label)
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(tag.color.opacity(0.8), in: Capsule())
+                        }
                     }
                 }
                 if !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -247,6 +279,7 @@ struct HowCardCreationView: View {
             }
             .padding(32)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 24))
+            .padding(.horizontal, 24)
         }
         .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }

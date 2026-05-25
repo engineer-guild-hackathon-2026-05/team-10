@@ -26,6 +26,8 @@ final class PlaybackViewModel: ObservableObject {
     // MARK: - Public API
 
     func onAppear() async {
+        // 起動直後のwatchdogタイムアウトを避けるため少し遅延してから認証
+        try? await Task.sleep(for: .milliseconds(500))
         await service.requestAuthorization()
     }
 
