@@ -11,7 +11,13 @@ const {
 
 router.get('/', auth, async (req, res) => {
   try {
-    const songId = normalizeOptionalString(req.query.song_id, 120);
+    const songId = normalizeOptionalMusicSongID(req.query.song_id);
+    if (req.query.song_id != null && !songId) {
+      return res.status(400).json({
+        error: 'song_id は MusicKit / Apple Music / iTunes の曲 ID を指定してください',
+      });
+    }
+
     const howCards = await getHowCards({
       songId,
       limit: parseLimit(req.query.limit),
@@ -41,7 +47,7 @@ router.post('/', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
     return res.status(400).json({
-      error: 'comment, song_start, song_end, song_id, artist_id が必要です',
+      error: 'comment, song_start, song_end, artist_id と MusicKit / Apple Music / iTunes の song_id が必要です',
     });
   }
 
@@ -58,7 +64,7 @@ router.patch('/:id', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
     return res.status(400).json({
-      error: 'comment, song_start, song_end, song_id, artist_id が必要です',
+      error: 'comment, song_start, song_end, artist_id と MusicKit / Apple Music / iTunes の song_id が必要です',
     });
   }
 
@@ -80,12 +86,12 @@ router.patch('/:id', auth, async (req, res) => {
 
 router.post('/:id/like', auth, async (req, res) => {
   try {
-    const goods = await likeHowCard({ cardId: req.params.id, uid: req.uid });
-    if (goods === null) {
+    const likes = await likeHowCard({ cardId: req.params.id, uid: req.uid });
+    if (likes === null) {
       return res.status(404).json({ error: 'Howカードが見つかりません' });
     }
 
-    res.json({ goods, likes: goods });
+    res.json({ likes });
   } catch (err) {
     console.error(err?.message ?? err);
     res.status(500).json({ error: 'Howカードのいいね更新に失敗しました' });
@@ -98,13 +104,27 @@ function normalizeCommentPayload(body) {
   const comment = normalizeRequiredString(body.comment, 140);
   const songStart = normalizeRangePoint(body.song_start);
   const songEnd = normalizeRangePoint(body.song_end);
-  const songId = normalizeRequiredString(body.song_id, 120);
+  const rawSongId = normalizeRequiredString(body.song_id, 120);
+  const bodyItunesId = normalizeOptionalMusicSongID(body.itunes_id);
+  const bodyMusicKitId = normalizeOptionalMusicSongID(body.music_kit_id);
+  const canonicalSongId = normalizeOptionalMusicSongID(rawSongId) ?? bodyItunesId ?? bodyMusicKitId;
   const artistId = normalizeRequiredString(body.artist_id, 120);
-  if (!comment || songStart == null || songEnd == null || songEnd <= songStart || !songId || !artistId) {
+  if (!comment || songStart == null || songEnd == null || songEnd <= songStart || !canonicalSongId || !artistId) {
     return null;
   }
 
-  return { comment, songStart, songEnd, songId, artistId };
+  const explicitSongSlug = normalizeOptionalString(body.song_slug, 120);
+  const songSlug = explicitSongSlug ?? (rawSongId !== canonicalSongId ? rawSongId : null);
+
+  return {
+    comment,
+    songStart,
+    songEnd,
+    songId: canonicalSongId,
+    artistId,
+    itunesId: bodyItunesId ?? bodyMusicKitId ?? canonicalSongId,
+    songSlug,
+  };
 }
 
 function normalizeOptionalString(value, maxLength) {
@@ -116,6 +136,12 @@ function normalizeOptionalString(value, maxLength) {
 
 function normalizeRequiredString(value, maxLength) {
   return normalizeOptionalString(value, maxLength);
+}
+
+function normalizeOptionalMusicSongID(value) {
+  const trimmed = normalizeOptionalString(value, 64);
+  if (!trimmed || !/^\d+$/.test(trimmed)) return null;
+  return trimmed;
 }
 
 function normalizeRangePoint(value) {

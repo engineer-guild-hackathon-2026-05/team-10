@@ -1046,7 +1046,138 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #73 の主目的である6軸 HowChat 深掘りを失わず、main 側で入った AirPods / Metal / 3状態波形制御ともコンパイル可能な形で統合できたため。
 
-### #044 現行実装に合わせたドキュメント同期
+### #045 UI改善issue作成
+
+- **時刻**：20:46
+- **ツール**：Codex / GitHub CLI
+- **目的**：Howカード再生開始位置、NowPlaying遷移、表示文言、歌詞UI、切り抜きUIの改善点をコード確認後に GitHub issue 化する
+- **プロンプト**：
+  ```text
+  githubにissueを立てたい。
+  - 現在、howカード（投稿コメント）をタップしても曲が最初から始まるから、song_startから始まるようにしたい
+  - アーティストviewで曲の再生ボタンをタップしたらplayback view二千位してしまうのをやめたい
+  - 曲のタイトルが英語なのを日本語にしたい
+  - 歌詞の表示がダサい。もっとapple musicに寄せたい
+  - 切り抜きのUIがダサい。上のバーと中央の範囲選択で機能がかぶっている。
+
+  これらを、該当箇所調べた上でgithubにissueとして立てておいて欲しい
+  ```
+- **出力サマリ**：
+  - `ContentView` / `ForYouView` / `MusicFeedView` / `NowPlayingView` / `ClipCreationView` / `ClipCreationInlineView` / `Artist` / `HomeDashboardViewModel` を確認
+  - Howカードコメント再生が `song_start` を渡していない箇所を特定し、Issue #79 を作成
+  - MusicFeed の再生ボタンが `nowPlayingSong` 変更経由で自動フルスクリーン遷移する箇所を特定し、Issue #81 を作成
+  - デモ用英語タイトル/タグ/fallback文言を特定し、Issue #84 を作成
+  - NowPlaying の歌詞カードUIと mock 歌詞を確認し、Issue #82 を作成
+  - 切り抜き範囲選択が上部バーと中央波形で重複している箇所を確認し、Issue #83 を作成
+- **評価**：採用
+- **採用 / 不採用の理由**：要望を一括issueではなく実装箇所ごとの独立issueに分け、担当・修正範囲・受け入れ条件が明確な形にできたため。
+
+### #046 how-cards song_id契約修正
+
+- **時刻**：20:49
+- **ツール**：Codex / GitHub CLI / node / Firebase CLI
+- **目的**：Issue #78 の `song_id` に MusicKit ID 以外が入る問題を Functions 側で修正し、可能ならデプロイする
+- **プロンプト**：
+  ```text
+  では、このブランチのプルリクエストを出して、そのあとで立てたissueを直すブランチに切り替えて（main pullの後ですよ、もちろん）実装を始め、firebase functionsにデプロイできればして欲しいです。miseを使って環境構築しているのでそこが汚れないことを祈っています
+  ```
+- **出力サマリ**：
+  - `update/home` を commit / push し、PR #80 を作成
+  - `main` を最新化して `fix/how-cards-song-id-contract` ブランチを作成
+  - Functions の `POST /how-cards` / `PATCH /how-cards/:id` で `song_id` を MusicKit / Apple Music / iTunes の曲IDとして検証するよう変更
+  - 既存 Firestore document に `song_id` slug と `itunes_id` がある場合は、response の `song_id` を `itunes_id` に正規化し、元 slug を `song_slug` として返すようにした
+  - API docs / data model docs を `song_id`, `itunes_id`, `song_slug`, `likes` の実装に合わせて更新
+  - `node --check` と `git diff --check` で検証
+  - Firebase login 後に `npx --yes firebase-tools deploy --only functions` を再実行し、`api` と `onUserSignup` の deploy 完了を確認
+- **評価**：採用
+- **採用 / 不採用の理由**：client 側の workaround ではなく、Functions の read/write contract と docs を揃える修正にし、Firebase Functions まで反映できたため。
+
+### #047 おすすめコメント取得Function issue作成
+
+- **時刻**：20:59
+- **ツール**：Codex / GitHub CLI
+- **目的**：おすすめコメント一覧を取得する Firebase Function 追加を GitHub issue 化する
+- **プロンプト**：
+  ```text
+  おすすめコメント一覧を取得するfirebase functionも追加したい。issueたてておいて
+  ```
+- **出力サマリ**：
+  - `functions/app.js`、`functions/routes/how-cards.js`、`functions/repositories/firestore.js`、iOS の `FirebaseAPI` / `HomeDashboardViewModel` を確認
+  - 既存 `GET /how-cards` は最新/曲別一覧であり、「おすすめコメント一覧」としての意味・並び替えが未分離であることを整理
+  - `GET /recommended-comments` または `GET /home/recommended-comments` を追加する Issue #85 を作成
+- **評価**：採用
+- **採用 / 不採用の理由**：既存APIとの重複を避け、おすすめ表示専用Functionとして責務・返却形式・初期おすすめロジック・受け入れ条件を明確化できたため。
+
+### #048 おすすめコメント取得Function実装
+
+- **時刻**：21:10
+- **ツール**：Codex / Firebase CLI / node
+- **目的**：Home dashboard 向けにおすすめコメント一覧を返す Firebase Function を追加してデプロイする
+- **プロンプト**：
+  ```text
+  firebase cliが繋がったので、おすすめコメントを取得 というfunctionを追加してデプロイしてしまっていい。いい感じに新しかったり、いいね数が多かったりする物をピックアップすると良い。
+  ```
+- **出力サマリ**：
+  - `GET /recommended-comments` を追加し、Firebase ID token 認証付きで `{ comments: [...] }` を返すようにした
+  - Firestore の `created_at desc` と `likes desc` の候補を merge し、recency と likes を合わせたスコアで並び替える実装にした
+  - 既存 `serializeHowCard` を使い、`song_id` contract 修正を維持したままおすすめ一覧に反映
+  - Functions docs と steering docs を更新
+  - Firebase Functions deploy を実行し、`api(asia-northeast1)` / `onUserSignup(asia-northeast1)` の更新完了と `/health` の 200、未認証 `/recommended-comments` の 401 を確認
+- **評価**：採用
+- **採用 / 不採用の理由**：追加 index に依存せず、最新コメントと人気コメントを混ぜた dashboard 用 API を小さな Functions 差分で追加できたため。
+
+### #049 PR #86 レビュー対応と main conflict 解消
+
+- **時刻**：21:34
+- **ツール**：Codex / GitHub CLI / node
+- **目的**：PR #86 の CodeRabbit レビュー指摘を反映し、`origin/main` 取り込みによる conflict を解消する
+- **プロンプト**：
+  ```text
+  pr #86のレビューを修正し、mainとconflictしているから解消して
+  ```
+- **出力サマリ**：
+  - PR #86 が `fix/how-cards-song-id-contract` → `main` で `DIRTY` 状態であることを確認
+  - `origin/main` を merge し、`AI_USAGE_LOG.md` の conflict を main 側ログと PR #86 側ログを両方残して解消
+  - CodeRabbit の song_id canonicalization / likes 表記 / MusicKit ID validation 指摘を現在の Functions 実装と docs に反映
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：PR #86 の MusicKit song_id 契約を維持しつつ、main 側の HowChat 変更とログを失わず統合できたため。
+
+### #050 PR #86 再レビュー対応と main 再merge
+
+- **時刻**：21:48
+- **ツール**：Codex / GitHub CLI / node / xcodebuild
+- **目的**：PR #86 に再度付いたレビューと最新 `main` の conflict を、Functions の現行実装と競合しない形で解消する
+- **プロンプト**：
+  ```text
+  レビューがついているから、mainをmergeしたのちで解決して
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` を `fix/how-cards-song-id-contract` に merge し、`docs/backend.md` と `functions/repositories/firestore.js` の conflict を確認
+  - main 側で追加された `users/{user_id}.display_name` 由来の `user_name` 付与を残しつつ、PR #86 の `itunes_id` 主軸 + `song_id` fallback 検索を統合
+  - Functions の公開レスポンスと docs のカウンタ表記を `likes` に統一し、既存 `goods` データは読み取り互換として扱うよう調整
+  - functions README / backend docs / steering tasklist をレビュー指摘に合わせて更新
+- **評価**：採用
+- **採用 / 不採用の理由**：最新 main のユーザー名連携を落とさず、PR #86 の song_id contract とレビュー指摘の likes 表記を両立できたため。
+
+### #051 PR #87 conflict 解消
+
+- **時刻**：22:06
+- **ツール**：Codex / GitHub CLI / node / xcodebuild
+- **目的**：PR #87（おすすめコメントFunction）の base branch conflict を解消する
+- **プロンプト**：
+  ```text
+  pr #87のコンフリクトを直しておいて
+  ```
+- **出力サマリ**：
+  - PR #87 が `feat/recommended-comments-function` → `fix/how-cards-song-id-contract` で `CONFLICTING` 状態であることを確認
+  - `origin/fix/how-cards-song-id-contract` を merge し、`AI_USAGE_LOG.md` と `functions/README.md` の conflict を両方の内容を残して解消
+  - `/recommended-comments` の README に `user_name` 返却を追記し、repository 側でも `attachUserNames` を通すよう調整
+  - Functions の `node --check`、`git diff --check`、iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：おすすめコメントFunctionの追加と base 側の song_id / user_name 契約を両立し、GitHub上の conflict を解消できる状態にしたため。
+
+### #052 現行実装に合わせたドキュメント同期
 
 - **時刻**：21:45
 - **ツール**：Codex / GitHub CLI
@@ -1062,7 +1193,8 @@
   - Musixmatch は同期歌詞を試して静的歌詞へ fallback する実装に合わせて更新
 - **評価**：採用
 - **採用 / 不採用の理由**：実装の正しい contract をドキュメント側に反映し、デモ・開発時の参照先を `functions/` と現行 iOS 実装へ揃えたため。
-### #045 PR #73 再レビュー対応
+
+### #053 PR #73 再レビュー対応
 
 - **時刻**：21:23
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1080,7 +1212,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：CodeRabbit の未解決指摘を現在のコードに照合し、実装・ドキュメント・lint の差分を最小範囲で解消できたため。
 
-### #046 PR #80レビュー対応と main merge
+### #054 PR #80レビュー対応と main merge
 
 - **時刻**：22:05
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1097,7 +1229,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘を解消し、最新 main の再生・波形・Functions 接続と Home dashboard 差分を同居させたため。
 
-### #047 PR #89レビュー対応とmainマージ
+### #055 PR #89レビュー対応とmainマージ
 
 - **時刻**：22:10
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1116,7 +1248,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：CodeRabbit 指摘の認証契約・データ保持問題を解消しつつ、main 側の HowChat 深掘りと 6軸スコア文脈を落とさず統合できたため。
 
-### #048 PR #77 main merge とレビュー対応
+### #056 PR #77 main merge とレビュー対応
 
 - **時刻**：22:06
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1134,7 +1266,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：最新 main の実装を壊さず、PR #77 のレビュー指摘を UI 構造とファイル分割の両面で解消できたため。
 
-### #049 PR #80 conflict 解消
+### #057 PR #80 conflict 解消
 
 - **時刻**：22:18
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1151,7 +1283,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #80 の Home dashboard 差分を残しながら、最新 main の review fix 済み UI コンポーネントとログを統合できたため。
 
-### #050 GoogleService-Info.plist の ignore 修正
+### #058 GoogleService-Info.plist の ignore 修正
 
 - **時刻**：22:24
 - **ツール**：Codex / git
@@ -1185,6 +1317,21 @@
   - `git diff --check`、`git diff --cached --check`、iOS Simulator 向け `xcodebuild` で検証
 - **評価**：採用
 - **採用 / 不採用の理由**：最新 main の Home dashboard と PR #91 の NowPlayingContext 再生範囲指定を両立し、レビュー指摘を最小差分で解消できたため。
+### #059 PR #86 main merge とレビュー再対応
+
+- **時刻**：22:32
+- **ツール**：Codex / GitHub CLI / node / xcodebuild
+- **目的**：PR #86 に最新 `main` を merge し、再レビュー指摘と conflict を解消して push する
+- **プロンプト**：
+  ```text
+  pr 86で、merge mainしてレビューを直してpushして
+  ```
+- **出力サマリ**：
+  - `fix/how-cards-song-id-contract` に `origin/main` を merge し、`AI_USAGE_LOG.md` / `docs/backend.md` / `docs/data-model.md` の conflict を解消
+  - `isMusicSongID` に 64 文字上限を追加し、Firestore 上の異常に長い numeric ID を API に返さないよう修正
+  - backend / data-model docs を `song_id` / `itunes_id` / `song_slug` / `likes` 契約へ統一
+- **評価**：採用
+- **採用 / 不採用の理由**：最新 main のドキュメント更新を残しつつ、PR #86 の canonical song ID 契約とレビュー指摘を最小差分で反映できたため。
 
 ---
 

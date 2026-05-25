@@ -7,6 +7,14 @@
         { "fieldPath": "song_id", "order": "ASCENDING" },
         { "fieldPath": "created_at", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "how-cards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "itunes_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
