@@ -3,7 +3,7 @@ import Foundation
 struct UserProfile: Codable, Equatable, Identifiable {
     var id: String?
     var userID: String
-    var email: String
+    var email: String?
     var displayName: String?
     var createdAt: String?
     var updatedAt: String?
@@ -11,7 +11,7 @@ struct UserProfile: Codable, Equatable, Identifiable {
     init(
         id: String? = nil,
         userID: String,
-        email: String,
+        email: String? = nil,
         displayName: String? = nil,
         createdAt: String? = nil,
         updatedAt: String? = nil

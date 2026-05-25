@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ForYouView: View {
     @Binding var nowPlayingContext: NowPlayingContext?
+    @ObservedObject var playback: PlaybackViewModel
     @StateObject private var viewModel = ForYouViewModel()
     @State private var selectedArtist: Artist?
 
@@ -25,7 +26,7 @@ struct ForYouView: View {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         nowPlayingContext = context
                     }
-                })
+                }, playback: playback)
             }
             .preferredColorScheme(.dark)
         }
@@ -188,5 +189,5 @@ private struct TagChip: View {
 }
 
 #Preview {
-    ForYouView(nowPlayingContext: .constant(nil))
+    ForYouView(nowPlayingContext: .constant(nil), playback: PlaybackViewModel())
 }

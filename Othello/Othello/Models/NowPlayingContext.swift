@@ -40,6 +40,16 @@ struct NowPlayingContext: Identifiable, Equatable {
         highlightStart != nil || highlightEnd != nil
     }
 
+    func replacingSong(_ song: Song) -> NowPlayingContext {
+        NowPlayingContext(
+            song: song,
+            initialPlaybackTime: initialPlaybackTime,
+            highlightStart: highlightStart,
+            highlightEnd: highlightEnd,
+            sourceHowCardID: sourceHowCardID
+        )
+    }
+
     private static func clamp(_ value: TimeInterval, duration: TimeInterval) -> TimeInterval {
         guard value.isFinite else { return 0 }
         return min(max(value, 0), max(duration, 0))
@@ -48,11 +58,5 @@ struct NowPlayingContext: Identifiable, Equatable {
     private static func clampedOptional(_ value: TimeInterval?, duration: TimeInterval) -> TimeInterval? {
         guard let value else { return nil }
         return clamp(value, duration: duration)
-    }
-}
-
-private extension Song {
-    var duration: TimeInterval {
-        TimeInterval(max(durationSeconds, 0))
     }
 }

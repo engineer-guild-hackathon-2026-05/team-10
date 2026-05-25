@@ -69,7 +69,7 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
 
     // MARK: - Playback control
 
-    func play(track: PlaybackTrack) async throws {
+    func play(track: PlaybackTrack, startingAt startTime: TimeInterval = 0) async throws {
         guard authorizationStatus == .authorized else {
             notifyPositionUnavailable("Apple Music の認証が許可されていません。")
             return
@@ -83,10 +83,14 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
             return
         }
 
+        let boundedStartTime = boundedPlaybackTime(startTime, duration: song.duration)
         player.queue = [song]
         try await player.prepareToPlay()
+        player.playbackTime = boundedStartTime
         try await player.play()
+        player.playbackTime = boundedStartTime
         currentTrack = PlaybackTrack(song: song)
+        playbackTime = boundedStartTime
         unavailableReason = nil
         isPositionAvailable = true
         isPlaying = true
@@ -149,5 +153,13 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
     private func notifyPositionUnavailable(_ reason: String) {
         unavailableReason = reason
         isPositionAvailable = false
+    }
+
+    private func boundedPlaybackTime(_ value: TimeInterval, duration: TimeInterval?) -> TimeInterval {
+        guard value.isFinite else { return 0 }
+        guard let duration, duration > 0 else {
+            return max(value, 0)
+        }
+        return min(max(value, 0), duration)
     }
 }

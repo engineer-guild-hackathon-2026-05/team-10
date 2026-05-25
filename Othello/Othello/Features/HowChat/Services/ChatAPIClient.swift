@@ -72,7 +72,10 @@ final class ChatAPIClient {
                 highlightSec: event.startTime
             )
         }
-        let url = URL(string: "\(baseURL)/sessions/demo/how-card")!
+        guard let baseURL,
+              let url = URL(string: "/sessions/demo/how-card", relativeTo: baseURL)?.absoluteURL else {
+            throw URLError(.badURL)
+        }
         var req = URLRequest(url: url, timeoutInterval: 15)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")

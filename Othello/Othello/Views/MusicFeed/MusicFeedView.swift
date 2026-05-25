@@ -3,13 +3,14 @@ import SwiftUI
 struct MusicFeedView: View {
     let artist: Artist
     let onPlaybackContext: (NowPlayingContext) -> Void
+    @ObservedObject private var playback: PlaybackViewModel
     @StateObject private var viewModel: MusicFeedViewModel
-    @State private var clipSong: Song?
     @Environment(\.dismiss) private var dismiss
 
-    init(artist: Artist, onPlaybackContext: @escaping (NowPlayingContext) -> Void) {
+    init(artist: Artist, onPlaybackContext: @escaping (NowPlayingContext) -> Void, playback: PlaybackViewModel) {
         self.artist = artist
         self.onPlaybackContext = onPlaybackContext
+        self.playback = playback
         self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
     }
 
@@ -23,8 +24,8 @@ struct MusicFeedView: View {
             }
         }
         .navigationBarHidden(true)
-        .sheet(item: $clipSong) { song in
-            ClipCreationView(song: song)
+        .task(id: viewModel.selectedSong?.firestoreSongID) {
+            await viewModel.loadPosts()
         }
         .preferredColorScheme(.dark)
     }
@@ -89,14 +90,55 @@ struct MusicFeedView: View {
     private var feedList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                        .padding(.vertical, 24)
+                } else if let errorMessage = viewModel.errorMessage {
+                    feedStatusMessage(errorMessage, systemImage: "wifi.exclamationmark")
+                } else if viewModel.posts.isEmpty {
+                    feedStatusMessage("この曲のHowカードはまだありません", systemImage: "music.note.list")
+                }
+
                 ForEach(viewModel.posts) { post in
-                    FeedPostCard(post: post, onPlay: { context in
-                        onPlaybackContext(context)
+                    FeedPostCard(post: post, onSongTap: {
+                        play(post: post)
+                    }, onLike: {
+                        like(post: post)
                     })
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+        }
+    }
+
+    private func feedStatusMessage(_ message: String, systemImage: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.title2)
+                .foregroundStyle(.gray)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.gray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+    }
+
+    private func play(post: FeedPost) {
+        Task {
+            let context = post.playbackContext
+            guard let track = await playback.select(song: post.song, initialPlaybackTime: context.initialPlaybackTime) else { return }
+            let resolvedSong = Song(playbackTrack: track, fallback: post.song)
+            onPlaybackContext(context.replacingSong(resolvedSong))
+        }
+    }
+
+    private func like(post: FeedPost) {
+        guard let cardID = post.cardID else { return }
+        Task {
+            try? await FirebaseAPI.shared.incrementGoods(cardID: cardID)
         }
     }
 }
@@ -105,7 +147,8 @@ struct MusicFeedView: View {
 
 private struct FeedPostCard: View {
     let post: FeedPost
-    let onPlay: (NowPlayingContext) -> Void
+    let onSongTap: () -> Void
+    let onLike: () -> Void
     @State private var isLiked: Bool = false
 
     var body: some View {
@@ -145,15 +188,15 @@ private struct FeedPostCard: View {
                 .foregroundStyle(Color.white.opacity(0.85))
                 .lineLimit(3)
 
-            MiniSongCard(context: post.playbackContext, onTap: {
-                onPlay(post.playbackContext)
-            })
+            MiniSongCard(context: post.playbackContext, onTap: onSongTap)
 
             HStack(spacing: 20) {
                 Button {
+                    guard !isLiked else { return }
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        isLiked.toggle()
+                        isLiked = true
                     }
+                    onLike()
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: isLiked ? "heart.fill" : "heart")
@@ -191,9 +234,7 @@ private struct MiniSongCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 52, height: 52)
+            CircularArtworkView(song: song, size: 52, isPlaying: isPlaying)
             VStack(alignment: .leading, spacing: 3) {
                 Text(song.title)
                     .font(.subheadline)
@@ -239,5 +280,5 @@ private struct MiniSongCard: View {
 }
 
 #Preview {
-    MusicFeedView(artist: Artist.mock[0], onPlaybackContext: { _ in })
+    MusicFeedView(artist: Artist.catalog[0], onPlaybackContext: { _ in }, playback: PlaybackViewModel())
 }
