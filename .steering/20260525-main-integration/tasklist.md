@@ -52,3 +52,11 @@
 - [x] Node 構文チェックと iOS ビルドを実行する
 - [x] 検証後に `AI_USAGE_LOG.md` を更新する
 - [x] 変更をコミットして push する
+
+## フェーズ7: Howカード seed warmup 修正
+
+- [x] `ContentView` の main 起動時に `GET /how-cards?limit=1` を叩く
+- [x] Community 導線に依存せず Functions の seed 判定が走るようにする
+- [x] iOS ビルドを実行する
+- [x] `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する

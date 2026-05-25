@@ -7,6 +7,7 @@ struct ContentView: View {
     @StateObject private var airPods = AirPodsMotionViewModel()
     @State private var nowPlayingSong: Song?
     @State private var showNowPlaying: Bool = false
+    @State private var didWarmHowCards = false
 
     var body: some View {
         if !authVM.isLoggedIn {
@@ -47,6 +48,7 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .task {
             await playback.onAppear()
+            await warmHowCardSeedIfNeeded()
         }
         .onChange(of: nowPlayingSong?.id) { _, newValue in
             if newValue != nil {
@@ -67,6 +69,19 @@ struct ContentView: View {
             if let song = nowPlayingSong {
                 NowPlayingView(song: song, playback: playback, airPods: airPods)
             }
+        }
+    }
+
+    private func warmHowCardSeedIfNeeded() async {
+        guard !didWarmHowCards else { return }
+        didWarmHowCards = true
+
+        do {
+            _ = try await FirebaseAPI.shared.fetchHowCards(limit: 1)
+        } catch {
+            #if DEBUG
+            print("[HowCards] seed warmup failed: \(error)")
+            #endif
         }
     }
 }

@@ -695,6 +695,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：iOS が直接 Firestore やローカル mock に依存せず、Functions 経由で `how-cards` を取得する実データ経路に寄せられたため。
 
+### #036 Howカード seed warmup の修正
+
+- **時刻**：18:47
+- **ツール**：Codex / xcodebuild
+- **目的**：Community 導線に依存せず、ログイン後の main 起動時に Functions の Howカード seed 判定を走らせる
+- **プロンプト**：
+  ```text
+  コミュニティタブ開いてもFirestoreにデータあがらんかも
+  ```
+- **出力サマリ**：
+  - 現在の main UI では `CommunityView` が main 導線に載っていないことを確認
+  - `ContentView` の main 起動時に `FirebaseAPI.fetchHowCards(limit: 1)` を一度だけ呼ぶ warmup を追加
+  - warmup 失敗時は DEBUG ログだけに留め、メイン画面表示は止めないようにした
+  - `git diff --check` と `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：ユーザーが特定画面を開く操作に依存せず、ログイン後に Functions の seed 処理が実行される経路を作れたため。
+
 ---
 
 ## Day 3（2026-05-26）
