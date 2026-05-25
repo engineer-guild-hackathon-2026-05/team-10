@@ -1610,6 +1610,116 @@
   - `functions:api` を再デプロイし、本番 endpoint が認証必須の 401 を返すことを再確認
 - **評価**：採用
 - **採用 / 不採用の理由**：暗黙グローバル化のリスクを消し、レビュー指摘と本番 Functions の状態を揃えられたため。
+### #005 How Resonance（共鳴マッチング + リアルタイムDM）一晩実装
+
+- **時刻**：深夜（ヘッドレス自律実装）
+- **ツール**：Claude Code（Opus 4.7）/ xcodebuild
+- **目的**：AirPodsピークモーション起点の問いかけ→AI深掘り→Howカード→同地点リアルタイムマッチング→🔥DM を、既存を壊さず一晩で実装する
+- **プロンプト**：
+  ```text
+  ヘッドレスモードで朝までに作業完成させといてください。…AirPodsをつけている人がどこで1番動いたかを記録し「ここどうですか」と聞く。1回目は決めうち、2回目はLLMで深掘りしてコメント/ハウカードに。…ハウカード投稿で同じところ/違うところで反応した人が見れる。分子が量子力学的にふわっと現れ摩擦で発火するアーティスティックな演出で、火がつく=マッチ。その人とDMできる。リアルタイムDB同期で。既存は壊さない。ステアリングとADRも残して。HTML/PPTX両方のスライドも。
+  ```
+- **出力サマリ**：
+  - 着手前に矛盾点を4問（ベースブランチ / デモ同期方式 / 優先順位 / headless検証方針）チェックボックスで確認し方針確定
+  - feat/how-chat-deepening に最新main再マージ（競合解決・ビルド通過）→ 新ブランチ feat/how-resonance
+  - `PeakMotionTracker`（ML不使用、interactionIntensityピーク）/ `HowResonancePromptBuilder`（1回目決めうち）
+  - `ResonanceMatchService`（how-cards を Firestore リアルタイム購読・±2.5s同地点判定）/ `ResonanceChatService`（楽観的DM）
+  - `QuantumIgnitionView`（Canvas+TimelineView で量子→摩擦→発火、Metal非依存）
+  - HowChat/HowCard/HomeView へ optional 引数で非破壊接続
+  - Firestore rules（how-cards read / conversations 参加者限定）+ seed スクリプト
+  - ADR-0006、steering 一式、HTML+PPTX スライド（Canvas発火アニメ付きHTML含む）
+  - `xcodebuild` で BUILD SUCCEEDED を全フェーズで確認（見た目・実機リアルタイムは実機確認に委譲）
+- **評価**：採用（※見た目とリアルタイム挙動は実機で要確認）
+- **採用 / 不採用の理由**：既存を壊さず（optional引数・新規ファイル中心）にコア体験〜マッチング〜DMを通し、ビルド通過まで保証できたため。検証限界（headlessでUI目視不可・Playwrightはweb専用）を先に共有した上で進めた。
+
+### #006 歌詞タップからの Howカード投稿
+
+- **時刻**：01:55
+- **ツール**：Codex / xcodebuild
+- **目的**：NowPlaying の歌詞行をタップした時に、選択歌詞に対応する範囲で感想を Howカード投稿できるようにする
+- **プロンプト**：
+  ```text
+  歌詞をタップした時に感想を投稿できる機能をつけて欲しい。以前はあったと思うんだけど、消えてしまった。歌詞の対応範囲がsong_start, song_endに対応するといいな、と思っているんだけど、時間対応していない場合は文字数とかからいい感じにカウントして、対応箇所として表示したい。トンマナを守っていい感じのUIとして実装して欲しいです
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `feat/lyrics-how-card-comments` ブランチを作成
+  - NowPlaying の歌詞行を tappable にし、選択歌詞・対応範囲・推定フラグを持つ `LyricHowCardDraft` を作成
+  - 同期歌詞では `TimedLyricLine.startTime/endTime`、静的歌詞では行ごとの非空白文字数比から `song_start/song_end` を推定
+  - 選択歌詞、範囲、コメント入力、投稿状態を表示する sheet UI を追加し、`FirebaseAPI.createHowCard` で投稿するよう実装
+  - functional design と steering docs を更新
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：既存 NowPlaying の暗いミニマルなトンマナを保ちつつ、歌詞を起点に曲中区間へ直接コメントを紐づけられるため。
+
+### #007 歌詞投稿シートの推定表示削除
+
+- **時刻**：02:08
+- **ツール**：Codex
+- **目的**：歌詞タップ投稿シートから「推定」というテキスト表示を削除する
+- **プロンプト**：
+  ```text
+  「推定」というテキスト表示を削除してください
+  ```
+- **出力サマリ**：
+  - 投稿シートの範囲表示横に出していた「推定」バッジを削除
+  - `song_start` / `song_end` の推定計算自体は維持
+- **評価**：採用
+- **採用 / 不採用の理由**：機能上必要な範囲推定は残しつつ、画面上の不要な説明テキストだけを消せたため。
+
+### #008 PR #99 レビュー対応と main merge
+
+- **時刻**：06:30
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #99 `feat/how-resonance` の CodeRabbit 指摘と `main` conflict を解消する
+- **プロンプト**：
+  ```text
+  pr 99のレビューを修正して、pushしておいて
+  ```
+- **出力サマリ**：
+  - `origin/main` を merge し、`AI_USAGE_LOG.md` の conflict を解消
+  - Firestore DM rules を fixed schema + `created_at == request.time` にし、Swift 側を server timestamp 送信へ変更
+  - DM / マッチング購読のエラー処理、失敗時 pending 維持、song_start/song_end validation、入力 trim を修正
+  - `PeakMoment.interval` の track duration 境界と `QuantumIgnitionView` の cadence 連動描画密度を修正
+  - スライド生成 helper を `pptx_utils.py` に共通化し、gradient_angle 例外を限定して debug log 化
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘をデータ境界・リアルタイム購読・描画負荷・ドキュメント/ログ整合性の各面で解消し、PR を main と統合可能な状態へ戻せるため。
+### #007 Howカード内ミニ楽曲カードの全面タップ化
+
+- **時刻**：06:29
+- **ツール**：Codex / xcodebuild
+- **目的**：Howカード内のミニ楽曲カードを、再生ボタンだけでなくカード全体のタップで再生開始できるようにする
+- **プロンプト**：
+  ```text
+  新しいブランチで、[Image #1]赤枠の部分タップしたら曲が流れ始める（再生ボタンに限らない、ということ）ようにして欲しい
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `fix/how-card-preview-tap-playback` ブランチを作成
+  - `MiniSongCard` の背景、padding、`contentShape` を Button ラベル内部に移し、カード全面をタップ領域化
+  - 既存の `startPlayback()` / `onTap` 経由の MusicKit 再生と NowPlaying 遷移は維持
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：UIの見た目と再生経路を変えずに、ユーザーが期待する赤枠全体のタップ操作へ拡張できたため。
+
+### #009 NowPlaying 歌詞 / 範囲選択タブ改善
+
+- **時刻**：06:54
+- **ツール**：Codex / xcodebuild
+- **目的**：再生画面と切り抜き画面のタブ構造を整理し、共通再生 UI と範囲選択 UI の役割を分ける
+- **プロンプト**：
+  ```text
+  再生画面と切り抜き画面の移動tabのところ、もうちょっといい感じにしたい。
+  - 再生と切り抜きで、playback buttonより上のUIは共通のものを表示するように構造を変更したい。再生・停止ボタン、今の再生バー、波形表示のところ。
+  - 切り抜き画面で、波形の範囲選択UIの上にsliderとかがあると思うんだけど、これは何に使うの？削除して良いと思う。
+  - 「再生」と「切り抜き」じゃなくて、「歌詞」と「範囲選択」に変更して
+  ```
+- **出力サマリ**：
+  - NowPlaying のアートワーク/波形、曲情報、再生バー、再生/停止ボタンをタブ分岐の外へ移動
+  - 下部タブを「歌詞」「範囲選択」に変更し、白い active capsule の segmented 表示に整理
+  - 範囲選択タブ内の重複 album art / 曲情報 / 再生スライダーを削除
+  - standalone の切り抜き画面からも未使用の再生スライダーと旧タブ UI を削除
+  - `ClipCreationViewModel` の未使用再生状態を整理
+- **評価**：採用
+- **採用 / 不採用の理由**：再生状態は NowPlaying 上部に集約し、下部タブは歌詞閲覧と範囲選択という作業対象だけを切り替える構造にできたため。
 
 ---
 

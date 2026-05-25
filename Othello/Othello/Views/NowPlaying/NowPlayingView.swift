@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum NowPlayingTab {
-    case playback, clip
+    case lyrics, rangeSelection
 }
 
 struct NowPlayingView: View {
@@ -10,7 +10,8 @@ struct NowPlayingView: View {
     @ObservedObject var airPods: AirPodsMotionViewModel
     @Environment(\.dismiss) private var dismiss
     @StateObject private var lyricsViewModel = LyricsViewModel()
-    @State private var activeTab: NowPlayingTab = .playback
+    @State private var activeTab: NowPlayingTab = .lyrics
+    @State private var selectedLyricDraft: LyricHowCardDraft?
 
     private var song: Song { context.song }
 
@@ -29,14 +30,7 @@ struct NowPlayingView: View {
             Color.black.ignoresSafeArea()
             VStack(spacing: 0) {
                 topBar
-                if activeTab == .playback {
-                    playbackContent
-                } else {
-                    clipContent
-                        .safeAreaInset(edge: .bottom, spacing: 0) {
-                            nowPlayingFooterSpacer
-                        }
-                }
+                mainContent
             }
             VStack {
                 Spacer()
@@ -47,34 +41,47 @@ struct NowPlayingView: View {
         .task(id: lyricsTaskID) {
             await lyricsViewModel.loadLyrics(for: lyricsQuery)
         }
+        .sheet(item: $selectedLyricDraft) { draft in
+            LyricHowCardComposerView(song: song, draft: draft)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color.black)
+        }
     }
 
-    private var nowPlayingFooterSpacer: some View {
-        Color.clear.frame(height: 80)
-    }
+    // MARK: - Main Content
 
-    // MARK: - 再生タブのコンテンツ
-
-    private var playbackContent: some View {
+    private var mainContent: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-                    circularVisualizer
-                        .padding(.top, 8)
-                    songInfo
-                    playbackControls
-                    lyricsCard(proxy: proxy)
-                        .padding(.top, 24)
+                    sharedPlaybackSurface
+                    tabContent(proxy: proxy)
                     Color.clear.frame(height: 104)
                 }
             }
         }
     }
 
-    // MARK: - 切り抜きタブのコンテンツ
+    private var sharedPlaybackSurface: some View {
+        VStack(spacing: 0) {
+            circularVisualizer
+                .padding(.top, 8)
+            songInfo
+            playbackControls
+        }
+    }
 
-    private var clipContent: some View {
-        ClipCreationInlineView(song: song)
+    @ViewBuilder
+    private func tabContent(proxy: ScrollViewProxy) -> some View {
+        switch activeTab {
+        case .lyrics:
+            lyricsCard(proxy: proxy)
+                .padding(.top, 24)
+        case .rangeSelection:
+            ClipCreationInlineView(song: song)
+                .padding(.top, 24)
+        }
     }
 
     private var topBar: some View {
@@ -226,10 +233,13 @@ struct NowPlayingView: View {
         return LazyVStack(alignment: .leading, spacing: 20) {
             ForEach(Array(loadedLyrics.lines.enumerated()), id: \.element.id) { index, line in
                 lyricLineView(
-                    text: line.text,
+                    line: line,
                     isActive: activeID == line.id,
                     distanceFromActive: activeIndex.map { abs($0 - index) },
-                    hasActiveLine: activeID != nil
+                    hasActiveLine: activeID != nil,
+                    onTap: {
+                        selectedLyricDraft = lyricDraft(for: line, at: index, in: loadedLyrics)
+                    }
                 )
                 .id(line.id)
             }
@@ -244,22 +254,38 @@ struct NowPlayingView: View {
     }
 
     private func lyricLineView(
-        text: String,
+        line: TimedLyricLine,
         isActive: Bool,
         distanceFromActive: Int?,
-        hasActiveLine: Bool
+        hasActiveLine: Bool,
+        onTap: @escaping () -> Void
     ) -> some View {
         let opacity = lyricOpacity(isActive: isActive, distanceFromActive: distanceFromActive, hasActiveLine: hasActiveLine)
         let font: Font = isActive ? .title.weight(.heavy) : .title3.weight(.bold)
+        let text = displayLyricText(line.text)
 
-        return Text(text)
-            .font(font)
-            .foregroundStyle(.white.opacity(opacity))
-            .lineSpacing(4)
-            .lineLimit(nil)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .animation(.easeInOut(duration: 0.24), value: opacity)
+        return Button(action: onTap) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(.white.opacity(opacity))
+                    .lineSpacing(4)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "plus.bubble")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(isActive ? 0.52 : 0.22))
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Howカードを作成 \(text)")
+        .animation(.easeInOut(duration: 0.24), value: opacity)
     }
 
     private func lyricsStatusMessage(_ message: String) -> some View {
@@ -288,6 +314,92 @@ struct NowPlayingView: View {
         if distanceFromActive <= 1 { return 0.64 }
         if distanceFromActive <= 3 { return 0.42 }
         return 0.28
+    }
+
+    private func lyricDraft(
+        for line: TimedLyricLine,
+        at index: Int,
+        in lyrics: SynchronizedLyrics
+    ) -> LyricHowCardDraft {
+        let range = lyricRange(for: line, at: index, in: lyrics)
+        return LyricHowCardDraft(
+            lyricText: displayLyricText(line.text),
+            songStart: range.start,
+            songEnd: range.end,
+            isEstimatedRange: range.isEstimated
+        )
+    }
+
+    private func lyricRange(
+        for line: TimedLyricLine,
+        at index: Int,
+        in lyrics: SynchronizedLyrics
+    ) -> (start: TimeInterval, end: TimeInterval, isEstimated: Bool) {
+        let duration = max(song.duration, 1)
+
+        if lyrics.isTimeSynced {
+            let start = normalizedLyricStart(line.startTime, duration: duration)
+            let rawEnd = line.endTime ?? min(start + fallbackLyricDuration(for: line), duration)
+            let end = normalizedLyricEnd(rawEnd, start: start, duration: duration)
+            return (start, end, line.endTime == nil)
+        }
+
+        return estimatedLyricRange(at: index, in: lyrics.lines, duration: duration)
+    }
+
+    private func estimatedLyricRange(
+        at index: Int,
+        in lines: [TimedLyricLine],
+        duration: TimeInterval
+    ) -> (start: TimeInterval, end: TimeInterval, isEstimated: Bool) {
+        let weights = lines.map { max(nonWhitespaceCharacterCount($0.text), 6) }
+        let totalWeight = max(weights.reduce(0, +), 1)
+        let safeIndex = min(max(index, 0), max(weights.count - 1, 0))
+        let leadingWeight = weights.prefix(safeIndex).reduce(0, +)
+        let lineWeight = weights.indices.contains(safeIndex) ? weights[safeIndex] : totalWeight
+
+        let start = normalizedLyricStart(
+            duration * TimeInterval(leadingWeight) / TimeInterval(totalWeight),
+            duration: duration
+        )
+        let rawEnd = duration * TimeInterval(leadingWeight + lineWeight) / TimeInterval(totalWeight)
+        let end = normalizedLyricEnd(rawEnd, start: start, duration: duration)
+        return (start, end, true)
+    }
+
+    private func normalizedLyricStart(_ rawStart: TimeInterval, duration: TimeInterval) -> TimeInterval {
+        let minimumDuration = minimumLyricDuration(for: duration)
+        let latestStart = max(duration - minimumDuration, 0)
+        return min(max(rawStart, 0), latestStart)
+    }
+
+    private func normalizedLyricEnd(
+        _ rawEnd: TimeInterval,
+        start: TimeInterval,
+        duration: TimeInterval
+    ) -> TimeInterval {
+        let minimumDuration = minimumLyricDuration(for: duration)
+        let lowerBound = min(start + minimumDuration, duration)
+        let upperBound = max(duration, lowerBound)
+        return min(max(rawEnd, lowerBound), upperBound)
+    }
+
+    private func minimumLyricDuration(for duration: TimeInterval) -> TimeInterval {
+        min(min(max(duration * 0.012, 2), 5), duration)
+    }
+
+    private func fallbackLyricDuration(for line: TimedLyricLine) -> TimeInterval {
+        let characterBasedDuration = TimeInterval(nonWhitespaceCharacterCount(line.text)) * 0.28
+        return min(max(characterBasedDuration, 4), 12)
+    }
+
+    private func nonWhitespaceCharacterCount(_ text: String) -> Int {
+        text.filter { !$0.isWhitespace }.count
+    }
+
+    private func displayLyricText(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "♪" : trimmed
     }
 
     private func scrollToActiveLyric(_ id: String?, proxy: ScrollViewProxy, animated: Bool) {
@@ -406,54 +518,36 @@ struct NowPlayingView: View {
 
     private var nowPlayingFooter: some View {
         HStack(spacing: 0) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { activeTab = .playback }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "waveform")
-                        .font(.subheadline)
-                    Text("再生")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-                .foregroundStyle(activeTab == .playback ? .white : Color.gray)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    activeTab == .playback ? Color.white.opacity(0.12) : Color.clear,
-                    in: Capsule()
-                )
-            }
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { activeTab = .clip }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "scissors")
-                        .font(.subheadline)
-                    Text("切り抜き")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-                .foregroundStyle(
-                    activeTab == .clip
-                        ? Color(red: 0.65, green: 0.5, blue: 1.0)
-                        : Color.gray
-                )
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    activeTab == .clip
-                        ? Color(red: 0.25, green: 0.18, blue: 0.45)
-                        : Color.clear,
-                    in: Capsule()
-                )
-            }
+            footerTabButton(tab: .lyrics, title: "歌詞", systemImage: "music.note.list")
+            footerTabButton(tab: .rangeSelection, title: "範囲選択", systemImage: "slider.horizontal.3")
         }
         .padding(4)
-        .background(Color(red: 0.1, green: 0.1, blue: 0.12), in: RoundedRectangle(cornerRadius: 30))
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
         .padding(.horizontal, 20)
         .padding(.bottom, 32)
+    }
+
+    private func footerTabButton(tab: NowPlayingTab, title: String, systemImage: String) -> some View {
+        let isActive = activeTab == tab
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) { activeTab = tab }
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: systemImage)
+                    .font(.subheadline.weight(.semibold))
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(isActive ? Color.black : Color.white.opacity(0.58))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .background(isActive ? Color.white : Color.clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 

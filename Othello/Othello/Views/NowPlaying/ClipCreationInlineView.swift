@@ -10,52 +10,18 @@ struct ClipCreationInlineView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                albumArt
-                songInfo
-                playerControls
-                waveformSection
-                commentSection
-                shareButton
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-            .padding(.bottom, 24)
+        VStack(spacing: 28) {
+            waveformSection
+            commentSection
+            shareButton
         }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 24)
         .alert("投稿エラー", isPresented: postErrorBinding) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.postErrorMessage ?? "")
         }
-    }
-
-    private var albumArt: some View {
-        CircularArtworkView(song: song, size: 180, isPlaying: viewModel.isPlaying, showsCenterHole: true)
-    }
-
-    private var songInfo: some View {
-        VStack(spacing: 6) {
-            Text(song.title)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundStyle(.white)
-            Text(song.artistName)
-                .font(.subheadline)
-                .foregroundStyle(.gray)
-        }
-    }
-
-    private var playerControls: some View {
-        ClipProgressControls(
-            currentTime: viewModel.currentTime,
-            totalDuration: viewModel.totalDuration,
-            isPlaying: viewModel.isPlaying,
-            leadingButtonSize: 44,
-            playButtonSize: 48,
-            progressKnobSize: 14,
-            onTogglePlayback: viewModel.togglePlayback
-        )
     }
 
     private var waveformSection: some View {
