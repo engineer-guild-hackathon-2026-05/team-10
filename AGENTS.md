@@ -40,7 +40,7 @@ npm run serve        # firebase emulators:start --only functions
 ### ai-recognition/
 ```bash
 cd ai-recognition && python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt   # 存在する場合
+test -f requirements.txt && pip install -r requirements.txt   # requirements.txt がある場合のみ
 ```
 
 ### Othello/（iOS・エージェント作業不可）
