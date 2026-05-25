@@ -71,11 +71,16 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read: if isConversationParticipant(cid);
         allow create: if isConversationParticipant(cid)
+          && request.resource.data.keys().hasOnly([
+            'sender_id',
+            'text',
+            'created_at'
+          ])
           && request.resource.data.sender_id == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 2000
-          && request.resource.data.created_at is timestamp;
+          && request.resource.data.created_at == request.time;
         allow update, delete: if false;
       }
     }

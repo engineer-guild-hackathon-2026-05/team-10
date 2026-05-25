@@ -43,8 +43,13 @@ final class ResonanceChatService: ObservableObject {
         guard let ref = messagesRef else { return }
         listener = ref
             .order(by: "created_at")
-            .addSnapshotListener { [weak self] snapshot, _ in
-                guard let self, let docs = snapshot?.documents else { return }
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+                if let error {
+                    print("[ResonanceChatService] snapshot error: \(error.localizedDescription)")
+                    return
+                }
+                guard let docs = snapshot?.documents else { return }
                 let server: [ResonanceMessage] = docs.compactMap { Self.message(from: $0.data(), id: $0.documentID) }
                 let serverIds = Set(server.map(\.id))
                 let pending = self.messages.filter { $0.isPending && !serverIds.contains($0.id) }
@@ -71,9 +76,13 @@ final class ResonanceChatService: ObservableObject {
         ref.document(localId).setData([
             "sender_id": me,
             "text": trimmed,
-            "created_at": Timestamp(date: now)
-        ]) { [weak self] _ in
+            "created_at": FieldValue.serverTimestamp()
+        ]) { [weak self] error in
             guard let self else { return }
+            if let error {
+                print("[ResonanceChatService] send error: \(error.localizedDescription)")
+                return
+            }
             if let idx = self.messages.firstIndex(where: { $0.id == localId }) {
                 self.messages[idx].isPending = false
             }

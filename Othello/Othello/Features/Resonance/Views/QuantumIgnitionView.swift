@@ -23,8 +23,9 @@ struct QuantumIgnitionView: View {
         TimelineView(.animation) { timeline in
             let elapsed = max(0, timeline.date.timeIntervalSince(startDate))
             let p = min(1.0, elapsed / ResonanceVisualConfig.cycleDuration)
+            let drawQuality = timeline.cadence == .live ? 1.0 : 0.45
             Canvas { ctx, size in
-                draw(ctx: &ctx, size: size, progress: p, elapsed: elapsed)
+                draw(ctx: &ctx, size: size, progress: p, elapsed: elapsed, quality: drawQuality)
             }
             .overlay(centerSymbol(progress: p))
         }
@@ -33,10 +34,12 @@ struct QuantumIgnitionView: View {
 
     // MARK: - Drawing
 
-    private func draw(ctx: inout GraphicsContext, size: CGSize, progress p: Double, elapsed: Double) {
+    private func draw(ctx: inout GraphicsContext, size: CGSize, progress p: Double, elapsed: Double, quality: Double) {
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
         let maxR = min(size.width, size.height) * 0.46
         ctx.blendMode = .plusLighter
+        let particleLimit = max(1, min(particles.count, Int((Double(particles.count) * quality).rounded(.up))))
+        let emberLimit = max(1, min(embers.count, Int((Double(embers.count) * quality).rounded(.up))))
 
         // フェーズ係数
         let appear = smooth(p, 0.0, 0.35)      // 量子ゆらぎ出現
@@ -45,7 +48,7 @@ struct QuantumIgnitionView: View {
         let ignite = smooth(p, 0.78, 1.0)      // 発火
 
         // 量子粒子
-        for particle in particles {
+        for particle in particles.prefix(particleLimit) {
             let jitter = sin(elapsed * particle.wobbleSpeed + particle.phase) * (1 - converge) * 6
             let baseR = maxR * particle.radius
             let r = baseR * (1 - converge) + (maxR * 0.06) * converge
@@ -81,7 +84,7 @@ struct QuantumIgnitionView: View {
 
         // 発火の火の粉
         if ignite > 0.01 {
-            for ember in embers {
+            for ember in embers.prefix(emberLimit) {
                 let t = ignite
                 let dist = maxR * ember.distance * t
                 let rise = -maxR * 0.5 * t * ember.lift

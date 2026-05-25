@@ -11,6 +11,7 @@ struct NowPlayingView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var lyricsViewModel = LyricsViewModel()
     @State private var activeTab: NowPlayingTab = .playback
+    @State private var selectedLyricDraft: LyricHowCardDraft?
 
     private var song: Song { context.song }
 
@@ -46,6 +47,12 @@ struct NowPlayingView: View {
         .preferredColorScheme(.dark)
         .task(id: lyricsTaskID) {
             await lyricsViewModel.loadLyrics(for: lyricsQuery)
+        }
+        .sheet(item: $selectedLyricDraft) { draft in
+            LyricHowCardComposerView(song: song, draft: draft)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color.black)
         }
     }
 
@@ -226,10 +233,13 @@ struct NowPlayingView: View {
         return LazyVStack(alignment: .leading, spacing: 20) {
             ForEach(Array(loadedLyrics.lines.enumerated()), id: \.element.id) { index, line in
                 lyricLineView(
-                    text: line.text,
+                    line: line,
                     isActive: activeID == line.id,
                     distanceFromActive: activeIndex.map { abs($0 - index) },
-                    hasActiveLine: activeID != nil
+                    hasActiveLine: activeID != nil,
+                    onTap: {
+                        selectedLyricDraft = lyricDraft(for: line, at: index, in: loadedLyrics)
+                    }
                 )
                 .id(line.id)
             }
@@ -244,22 +254,38 @@ struct NowPlayingView: View {
     }
 
     private func lyricLineView(
-        text: String,
+        line: TimedLyricLine,
         isActive: Bool,
         distanceFromActive: Int?,
-        hasActiveLine: Bool
+        hasActiveLine: Bool,
+        onTap: @escaping () -> Void
     ) -> some View {
         let opacity = lyricOpacity(isActive: isActive, distanceFromActive: distanceFromActive, hasActiveLine: hasActiveLine)
         let font: Font = isActive ? .title.weight(.heavy) : .title3.weight(.bold)
+        let text = displayLyricText(line.text)
 
-        return Text(text)
-            .font(font)
-            .foregroundStyle(.white.opacity(opacity))
-            .lineSpacing(4)
-            .lineLimit(nil)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .animation(.easeInOut(duration: 0.24), value: opacity)
+        return Button(action: onTap) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(.white.opacity(opacity))
+                    .lineSpacing(4)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "plus.bubble")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(isActive ? 0.52 : 0.22))
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Howカードを作成 \(text)")
+        .animation(.easeInOut(duration: 0.24), value: opacity)
     }
 
     private func lyricsStatusMessage(_ message: String) -> some View {
@@ -288,6 +314,92 @@ struct NowPlayingView: View {
         if distanceFromActive <= 1 { return 0.64 }
         if distanceFromActive <= 3 { return 0.42 }
         return 0.28
+    }
+
+    private func lyricDraft(
+        for line: TimedLyricLine,
+        at index: Int,
+        in lyrics: SynchronizedLyrics
+    ) -> LyricHowCardDraft {
+        let range = lyricRange(for: line, at: index, in: lyrics)
+        return LyricHowCardDraft(
+            lyricText: displayLyricText(line.text),
+            songStart: range.start,
+            songEnd: range.end,
+            isEstimatedRange: range.isEstimated
+        )
+    }
+
+    private func lyricRange(
+        for line: TimedLyricLine,
+        at index: Int,
+        in lyrics: SynchronizedLyrics
+    ) -> (start: TimeInterval, end: TimeInterval, isEstimated: Bool) {
+        let duration = max(song.duration, 1)
+
+        if lyrics.isTimeSynced {
+            let start = normalizedLyricStart(line.startTime, duration: duration)
+            let rawEnd = line.endTime ?? min(start + fallbackLyricDuration(for: line), duration)
+            let end = normalizedLyricEnd(rawEnd, start: start, duration: duration)
+            return (start, end, line.endTime == nil)
+        }
+
+        return estimatedLyricRange(at: index, in: lyrics.lines, duration: duration)
+    }
+
+    private func estimatedLyricRange(
+        at index: Int,
+        in lines: [TimedLyricLine],
+        duration: TimeInterval
+    ) -> (start: TimeInterval, end: TimeInterval, isEstimated: Bool) {
+        let weights = lines.map { max(nonWhitespaceCharacterCount($0.text), 6) }
+        let totalWeight = max(weights.reduce(0, +), 1)
+        let safeIndex = min(max(index, 0), max(weights.count - 1, 0))
+        let leadingWeight = weights.prefix(safeIndex).reduce(0, +)
+        let lineWeight = weights.indices.contains(safeIndex) ? weights[safeIndex] : totalWeight
+
+        let start = normalizedLyricStart(
+            duration * TimeInterval(leadingWeight) / TimeInterval(totalWeight),
+            duration: duration
+        )
+        let rawEnd = duration * TimeInterval(leadingWeight + lineWeight) / TimeInterval(totalWeight)
+        let end = normalizedLyricEnd(rawEnd, start: start, duration: duration)
+        return (start, end, true)
+    }
+
+    private func normalizedLyricStart(_ rawStart: TimeInterval, duration: TimeInterval) -> TimeInterval {
+        let minimumDuration = minimumLyricDuration(for: duration)
+        let latestStart = max(duration - minimumDuration, 0)
+        return min(max(rawStart, 0), latestStart)
+    }
+
+    private func normalizedLyricEnd(
+        _ rawEnd: TimeInterval,
+        start: TimeInterval,
+        duration: TimeInterval
+    ) -> TimeInterval {
+        let minimumDuration = minimumLyricDuration(for: duration)
+        let lowerBound = min(start + minimumDuration, duration)
+        let upperBound = max(duration, lowerBound)
+        return min(max(rawEnd, lowerBound), upperBound)
+    }
+
+    private func minimumLyricDuration(for duration: TimeInterval) -> TimeInterval {
+        min(min(max(duration * 0.012, 2), 5), duration)
+    }
+
+    private func fallbackLyricDuration(for line: TimedLyricLine) -> TimeInterval {
+        let characterBasedDuration = TimeInterval(nonWhitespaceCharacterCount(line.text)) * 0.28
+        return min(max(characterBasedDuration, 4), 12)
+    }
+
+    private func nonWhitespaceCharacterCount(_ text: String) -> Int {
+        text.filter { !$0.isWhitespace }.count
+    }
+
+    private func displayLyricText(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "♪" : trimmed
     }
 
     private func scrollToActiveLyric(_ id: String?, proxy: ScrollViewProxy, animated: Bool) {

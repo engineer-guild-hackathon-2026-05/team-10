@@ -1046,7 +1046,6 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #73 の主目的である6軸 HowChat 深掘りを失わず、main 側で入った AirPods / Metal / 3状態波形制御ともコンパイル可能な形で統合できたため。
 
-### #033 PR #73 再レビュー対応
 ### #033 how-cards song_id 契約修正
 
 - **時刻**：21:35
@@ -1577,6 +1576,58 @@
   - `xcodebuild` で BUILD SUCCEEDED を全フェーズで確認（見た目・実機リアルタイムは実機確認に委譲）
 - **評価**：採用（※見た目とリアルタイム挙動は実機で要確認）
 - **採用 / 不採用の理由**：既存を壊さず（optional引数・新規ファイル中心）にコア体験〜マッチング〜DMを通し、ビルド通過まで保証できたため。検証限界（headlessでUI目視不可・Playwrightはweb専用）を先に共有した上で進めた。
+
+### #006 歌詞タップからの Howカード投稿
+
+- **時刻**：01:55
+- **ツール**：Codex / xcodebuild
+- **目的**：NowPlaying の歌詞行をタップした時に、選択歌詞に対応する範囲で感想を Howカード投稿できるようにする
+- **プロンプト**：
+  ```text
+  歌詞をタップした時に感想を投稿できる機能をつけて欲しい。以前はあったと思うんだけど、消えてしまった。歌詞の対応範囲がsong_start, song_endに対応するといいな、と思っているんだけど、時間対応していない場合は文字数とかからいい感じにカウントして、対応箇所として表示したい。トンマナを守っていい感じのUIとして実装して欲しいです
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `feat/lyrics-how-card-comments` ブランチを作成
+  - NowPlaying の歌詞行を tappable にし、選択歌詞・対応範囲・推定フラグを持つ `LyricHowCardDraft` を作成
+  - 同期歌詞では `TimedLyricLine.startTime/endTime`、静的歌詞では行ごとの非空白文字数比から `song_start/song_end` を推定
+  - 選択歌詞、範囲、コメント入力、投稿状態を表示する sheet UI を追加し、`FirebaseAPI.createHowCard` で投稿するよう実装
+  - functional design と steering docs を更新
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：既存 NowPlaying の暗いミニマルなトンマナを保ちつつ、歌詞を起点に曲中区間へ直接コメントを紐づけられるため。
+
+### #007 歌詞投稿シートの推定表示削除
+
+- **時刻**：02:08
+- **ツール**：Codex
+- **目的**：歌詞タップ投稿シートから「推定」というテキスト表示を削除する
+- **プロンプト**：
+  ```text
+  「推定」というテキスト表示を削除してください
+  ```
+- **出力サマリ**：
+  - 投稿シートの範囲表示横に出していた「推定」バッジを削除
+  - `song_start` / `song_end` の推定計算自体は維持
+- **評価**：採用
+- **採用 / 不採用の理由**：機能上必要な範囲推定は残しつつ、画面上の不要な説明テキストだけを消せたため。
+
+### #008 PR #99 レビュー対応と main merge
+
+- **時刻**：06:30
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #99 `feat/how-resonance` の CodeRabbit 指摘と `main` conflict を解消する
+- **プロンプト**：
+  ```text
+  pr 99のレビューを修正して、pushしておいて
+  ```
+- **出力サマリ**：
+  - `origin/main` を merge し、`AI_USAGE_LOG.md` の conflict を解消
+  - Firestore DM rules を fixed schema + `created_at == request.time` にし、Swift 側を server timestamp 送信へ変更
+  - DM / マッチング購読のエラー処理、失敗時 pending 維持、song_start/song_end validation、入力 trim を修正
+  - `PeakMoment.interval` の track duration 境界と `QuantumIgnitionView` の cadence 連動描画密度を修正
+  - スライド生成 helper を `pptx_utils.py` に共通化し、gradient_angle 例外を限定して debug log 化
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘をデータ境界・リアルタイム購読・描画負荷・ドキュメント/ログ整合性の各面で解消し、PR を main と統合可能な状態へ戻せるため。
 
 ---
 

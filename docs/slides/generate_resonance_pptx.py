@@ -6,7 +6,22 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-from lxml import etree
+from pptx_utils import (
+    _alpha,
+    _line_alpha,
+    add_slide,
+    bar,
+    configure,
+    dot,
+    glass,
+    grad_card,
+    grad_fill,
+    kicker,
+    mtxt,
+    round_it,
+    to_back,
+    txt,
+)
 
 WHITE  = RGBColor(0xFF, 0xFF, 0xFF)
 BLACK  = RGBColor(0x00, 0x00, 0x00)
@@ -31,98 +46,25 @@ OUT = "docs/slides/howtune_resonance.pptx"
 prs = Presentation()
 prs.slide_width, prs.slide_height = W, H
 blank = prs.slide_layouts[6]
-ANS = 'http://schemas.openxmlformats.org/drawingml/2006/main'
-
-def _alpha(shape, pct):
-    solid = shape._element.find('.//{%s}solidFill' % ANS)
-    if solid is None: return
-    for tag in ('srgbClr','sysClr','schemeClr'):
-        clr = solid.find('{%s}%s' % (ANS, tag))
-        if clr is not None:
-            for old in clr.findall('{%s}alpha' % ANS): clr.remove(old)
-            a = etree.SubElement(clr, '{%s}alpha' % ANS); a.set('val', str(int(pct*1000))); return
-
-def _line_alpha(shape, pct):
-    ln = shape._element.find('.//{%s}ln' % ANS)
-    if ln is None: return
-    solid = ln.find('{%s}solidFill' % ANS)
-    if solid is None: return
-    for tag in ('srgbClr','sysClr','schemeClr'):
-        clr = solid.find('{%s}%s' % (ANS, tag))
-        if clr is not None:
-            for old in clr.findall('{%s}alpha' % ANS): clr.remove(old)
-            a = etree.SubElement(clr, '{%s}alpha' % ANS); a.set('val', str(int(pct*1000))); return
-
-def round_it(shape, adj=12000):
-    g = shape._element.find('.//{%s}prstGeom' % ANS)
-    if g is None: return
-    g.set('prst', 'roundRect')
-    av = g.find('{%s}avLst' % ANS)
-    if av is None: av = etree.SubElement(g, '{%s}avLst' % ANS)
-    for old in list(av): av.remove(old)
-    gd = etree.SubElement(av, '{%s}gd' % ANS); gd.set('name','adj'); gd.set('fmla','val %d' % adj)
-
-def grad_fill(shape, c1, c2, angle=90):
-    f = shape.fill; f.gradient()
-    try: f.gradient_angle = angle
-    except Exception: pass
-    f.gradient_stops[0].position = 0.0; f.gradient_stops[0].color.rgb = c1
-    f.gradient_stops[1].position = 1.0; f.gradient_stops[1].color.rgb = c2
-
-def to_back(slide, shape):
-    sp = shape._element; sp.getparent().remove(sp); slide.shapes._spTree.insert(2, sp)
-
-def add_slide(c1=DBLUE, c2=BLACK):
-    s = prs.slides.add_slide(blank)
-    s.background.fill.solid(); s.background.fill.fore_color.rgb = BLACK
-    bg = s.shapes.add_shape(1, 0, 0, W, H); grad_fill(bg, c1, c2, angle=130)
-    bg.line.fill.background(); to_back(s, bg); return s
-
-def glass(slide, x, y, w, h, fa=45, radius=14000):
-    sh = slide.shapes.add_shape(1, x, y, w, h)
-    sh.fill.solid(); sh.fill.fore_color.rgb = GLASS; _alpha(sh, fa)
-    sh.line.color.rgb = WHITE; sh.line.width = Pt(1); _line_alpha(sh, 14)
-    round_it(sh, radius); sh.shadow.inherit = False; return sh
-
-def grad_card(slide, x, y, w, h, c1, c2, angle=120, radius=16000):
-    sh = slide.shapes.add_shape(1, x, y, w, h); grad_fill(sh, c1, c2, angle)
-    sh.line.fill.background(); round_it(sh, radius); sh.shadow.inherit = False; return sh
-
-def bar(slide, x, y, w, h=Inches(0.07), c1=ORANGE, c2=PINK):
-    sh = slide.shapes.add_shape(1, x, y, w, h); grad_fill(sh, c1, c2, angle=0)
-    sh.line.fill.background(); round_it(sh, 50000); sh.shadow.inherit = False; return sh
-
-def dot(slide, x, y, color, d=Inches(0.26)):
-    sh = slide.shapes.add_shape(9, x, y, d, d); sh.fill.solid(); sh.fill.fore_color.rgb = color
-    sh.line.fill.background(); sh.shadow.inherit = False; return sh
-
-def txt(slide, text, x, y, w, h, sz=18, bold=False, col=WHITE, align=PP_ALIGN.LEFT,
-        italic=False, anchor=None, spacing=None):
-    box = slide.shapes.add_textbox(x, y, w, h); tf = box.text_frame; tf.word_wrap = True
-    if anchor: tf.vertical_anchor = anchor
-    for i, ln in enumerate(text.split("\n")):
-        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-        p.alignment = align
-        if spacing: p.line_spacing = spacing
-        r = p.add_run(); r.text = ln
-        r.font.name = "Inter"; r.font.size = Pt(sz); r.font.bold = bold
-        r.font.italic = italic; r.font.color.rgb = col
-    return box
-
-def mtxt(slide, lines, x, y, w, h, dsz=15, dcol=WHITE, spacing=1.4):
-    box = slide.shapes.add_textbox(x, y, w, h); tf = box.text_frame; tf.word_wrap = True
-    first = True
-    for item in lines:
-        t, sz, bd, cl = (item, dsz, False, dcol) if isinstance(item, str) else (
-            item[0], item[1] if len(item)>1 else dsz, item[2] if len(item)>2 else False,
-            item[3] if len(item)>3 else dcol)
-        p = tf.paragraphs[0] if first else tf.add_paragraph(); first = False
-        p.line_spacing = spacing
-        r = p.add_run(); r.text = t
-        r.font.name = "Inter"; r.font.size = Pt(sz); r.font.bold = bd; r.font.color.rgb = cl
-
-def kicker(slide, text, col=ORANGE):
-    txt(slide, text, ML, Inches(0.55), CW, Inches(0.34), sz=12, bold=True, col=col)
+configure(
+    presentation=prs,
+    blank_layout=blank,
+    width=W,
+    height=H,
+    margin_left=ML,
+    content_width=CW,
+    white=WHITE,
+    black=BLACK,
+    glass_fill=GLASS,
+    default_gradient_start=DBLUE,
+    default_gradient_end=BLACK,
+    default_glass_alpha=45,
+    default_glass_radius=14000,
+    default_bar_height=Inches(0.07),
+    default_bar_start=ORANGE,
+    default_bar_end=PINK,
+    default_kicker_color=ORANGE,
+)
 
 # 1 — TITLE
 s = add_slide(DRED, BLACK)

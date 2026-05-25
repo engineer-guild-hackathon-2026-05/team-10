@@ -18,9 +18,18 @@ struct PeakMoment: Equatable {
 
     /// マッチング・Howカード投稿に使う反応区間（ピーク前後に少し幅を持たせる）。
     func interval(spread: TimeInterval = 2.0, trackDuration: TimeInterval? = nil) -> (start: TimeInterval, end: TimeInterval) {
-        let start = max(0, playbackTime - spread)
-        var end = playbackTime + spread
-        if let trackDuration { end = min(end, trackDuration) }
-        return (start, max(end, start + 1))
+        var start = max(0, playbackTime - spread)
+        let tentativeEnd = playbackTime + spread
+
+        if let trackDuration {
+            let duration = max(0, trackDuration)
+            if start + 1 > duration {
+                start = max(0, duration - 1)
+            }
+            let end = min(duration, max(tentativeEnd, start + 1))
+            return (start, end)
+        }
+
+        return (start, max(tentativeEnd, start + 1))
     }
 }

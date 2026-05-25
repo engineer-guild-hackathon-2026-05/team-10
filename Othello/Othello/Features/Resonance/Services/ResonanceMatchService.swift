@@ -28,8 +28,17 @@ final class ResonanceMatchService: ObservableObject {
         listener = Firestore.firestore()
             .collection(collectionName)
             .whereField("song_id", isEqualTo: songId)
-            .addSnapshotListener { [weak self] snapshot, _ in
-                guard let self, let documents = snapshot?.documents else { return }
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+                if let error {
+                    print("[ResonanceMatchService] snapshot error: \(error.localizedDescription)")
+                    self.reactors = []
+                    return
+                }
+                guard let documents = snapshot?.documents else {
+                    self.reactors = []
+                    return
+                }
                 let mapped: [ResonanceReactor] = documents.compactMap { doc in
                     Self.reactor(from: doc.data(), id: doc.documentID, myInterval: myInterval)
                 }
@@ -67,8 +76,9 @@ final class ResonanceMatchService: ObservableObject {
         myInterval: (start: TimeInterval, end: TimeInterval)
     ) -> ResonanceReactor? {
         guard let userId = (data["user_id"] as? String) ?? (data["userId"] as? String) else { return nil }
-        let start = doubleValue(data["song_start"]) ?? 0
-        let end = doubleValue(data["song_end"]) ?? (start + 2)
+        guard let start = doubleValue(data["song_start"]),
+              let end = doubleValue(data["song_end"]),
+              end >= start else { return nil }
         let comment = (data["comment"] as? String) ?? ""
         let name = (data["user_name"] as? String) ?? (data["display_name"] as? String) ?? "リスナー"
         let same = isSameSpot((start, end), myInterval)

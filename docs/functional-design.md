@@ -78,6 +78,7 @@ HealthKit / 心拍連携は現行実装から削除済み。
 
 - 曲中区間に対して `comment`, `song_start`, `song_end`, `song_id`, `artist_id` を保存する。
 - 保存・取得・更新・いいねは Functions の `/how-cards` API を使う。
+- NowPlaying の歌詞行をタップすると、その歌詞を起点に感想を投稿できる。同期歌詞では歌詞行の時刻を `song_start` / `song_end` に使い、静的歌詞では行ごとの文字数比から曲内範囲を推定する。
 - `user_name` は Functions が `users/{user_id}.display_name` から補完する。
 
 ### コミュニティ / フィード

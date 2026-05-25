@@ -62,7 +62,7 @@
 
 ### バックエンド/Functions
 - 既存 `GET /how-cards?song_id=` / `POST /how-cards` をそのまま利用。新規エンドポイントは作らない（リアルタイムは Firestore 直購読で実現）。
-- seed 用 Node スクリプト `functions/scripts/seed-resonance.js`（admin SDK）で mock how-cards 2件を投入。
+- seed 用 Node スクリプト `functions/scripts/seed-resonance.js`（admin SDK）で mock how-cards 5件を投入。
 
 ## 同地点判定ロジック
 - 自分の Howカード `[start, end]` と他者の `[start, end]` が **±2.5 秒のマージン込みで重なる**なら同地点（🔥）。
@@ -81,5 +81,5 @@
 ## データフロー（リアルタイム）
 1. 投稿 → Functions が how-cards に書き込み
 2. `ResonanceMatchService` が同 song_id の how-cards を `addSnapshotListener` で購読 → 変更が即時反映
-3. seed 済みの2件（同地点1・別地点1）が現れる
+3. seed 済みの5件（同地点・別地点）が現れる
 4. 🔥タップ → conversationId を生成 → `ResonanceChatService` が messages を購読 → DM 開始
