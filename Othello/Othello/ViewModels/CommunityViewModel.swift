@@ -43,6 +43,7 @@ final class CommunityViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     @Published private var cards: [HowCardComment] = []
+    @Published private var userProfilesByID: [String: UserProfile] = [:]
 
     private let songLookup: [String: (title: String, artistName: String)] = {
         var result: [String: (title: String, artistName: String)] = [:]
@@ -141,10 +142,33 @@ final class CommunityViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            cards = try await FirebaseAPI.shared.fetchHowCards(limit: 250)
+            let fetchedCards = try await FirebaseAPI.shared.fetchHowCards(limit: 250)
+            cards = fetchedCards
+            await loadUserProfiles(for: fetchedCards)
         } catch {
             cards = []
+            userProfilesByID = [:]
             errorMessage = "Howカードを取得できませんでした"
+        }
+    }
+
+    private func loadUserProfiles(for cards: [HowCardComment]) async {
+        let userIDs = uniqueUserIDs(from: cards)
+        guard !userIDs.isEmpty else {
+            userProfilesByID = [:]
+            return
+        }
+
+        do {
+            let seededUsers = try await UserSeedService.seedUsers(for: cards)
+            userProfilesByID = profilesByID(seededUsers)
+        } catch {
+            do {
+                let users = try await FirebaseAPI.shared.fetchUsers(ids: userIDs)
+                userProfilesByID = profilesByID(users)
+            } catch {
+                userProfilesByID = [:]
+            }
         }
     }
 
@@ -177,8 +201,26 @@ final class CommunityViewModel: ObservableObject {
     }
 
     private func displayName(from userID: String) -> String {
-        userID
-            .replacingOccurrences(of: "seed_", with: "")
-            .replacingOccurrences(of: "_", with: " ")
+        if let displayName = userProfilesByID[userID]?.displayName?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !displayName.isEmpty {
+            return displayName
+        }
+
+        return "listener"
+    }
+
+    private func uniqueUserIDs(from cards: [HowCardComment]) -> [String] {
+        var seen = Set<String>()
+        return cards.compactMap { card in
+            let userID = card.userID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !userID.isEmpty, !seen.contains(userID) else { return nil }
+            seen.insert(userID)
+            return userID
+        }
+    }
+
+    private func profilesByID(_ profiles: [UserProfile]) -> [String: UserProfile] {
+        Dictionary(uniqueKeysWithValues: profiles.map { ($0.userID, $0) })
     }
 }

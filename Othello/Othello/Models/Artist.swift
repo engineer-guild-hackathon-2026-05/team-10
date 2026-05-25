@@ -16,7 +16,6 @@ extension Artist: Hashable {
 
 extension Artist {
     static let catalog: [Artist] = makeCatalog()
-    static let mock: [Artist] = catalog
 
     private static func makeCatalog() -> [Artist] {
         [

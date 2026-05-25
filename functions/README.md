@@ -49,7 +49,7 @@ functions/
 │   └── firestore.js          # Firestore 読み書き（how-cards / users）
 ├── routes/
 │   ├── how-cards.js          # /how-cards 配下
-│   └── users.js              # /users/me
+│   └── users.js              # /users / /users/me
 ├── package.json
 └── .gitignore
 ```
@@ -124,6 +124,8 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
 | PATCH | `/how-cards/:id` | ✅ | 自分のHowカードコメント更新 |
 | POST | `/how-cards/:id/like` | ✅ | いいね（冪等、二重防止） |
+| GET | `/users?user_ids=uid1,uid2` | ✅ | 指定ユーザー一覧取得 |
+| POST | `/users/seed` | ✅ | Howカード表示用 seed ユーザーの作成 |
 | GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
 | PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
 
@@ -208,10 +210,12 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 - 未いいねなら: `liked-by/{uid}` 作成 + `goods` を +1
 - 既いいねなら: ノーオペ（現在の `goods` を返す）
 
-### `GET /users/me` / `PUT /users/me`
+### `GET /users` / `POST /users/seed` / `GET /users/me` / `PUT /users/me`
 
 `onUserSignup` で自動生成された `users/{uid}` を取得・追加同期する。
 `PUT /users/me` では ID トークンのメールアドレスを正とし、body の `email` が異なる場合は 400 を返す。
+`GET /users` は `user_ids` クエリで渡したユーザーをまとめて取得する。
+`POST /users/seed` は Howカードの初期データに対応する `users/{uid}` を作成するための endpoint で、既存ドキュメントの `display_name` / `email` は上書きしない。
 
 **リクエスト**
 
@@ -219,6 +223,20 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 {
   "email": "user@example.com",
   "display_name": "Atsushi"
+}
+```
+
+`POST /users/seed` のリクエスト:
+
+```json
+{
+  "users": [
+    {
+      "user_id": "seed-listener-001",
+      "email": null,
+      "display_name": "みなと"
+    }
+  ]
 }
 ```
 

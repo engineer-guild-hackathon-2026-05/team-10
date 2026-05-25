@@ -730,6 +730,46 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：seed 専用処理を Functions 側に置かず、iOS 起点で既存の作成 endpoint を使う要件に合わせられたため。
 
+### #038 GoogleService-Info.plist の追跡解除
+
+- **時刻**：20:05
+- **ツール**：Codex / git
+- **目的**：Firebase 設定ファイルをローカルに残したまま git 追跡から外し、今後 push されない状態にする
+- **プロンプト**：
+  ```text
+  いま、githubをみると,GoogleService-Info.plistがpushされてしまっている。これはいけないので、git追跡から削除して欲しい。githubの履歴からも削除できたらしておいて欲しい。gitignoreに追加して、ということ。削除っていうのはファイルを消すってことじゃないからね。
+  ```
+- **出力サマリ**：
+  - `Othello/Othello/GoogleService-Info.plist` が git 追跡対象であることを確認
+  - ローカルファイルを残したまま `git rm --cached` で追跡から外した
+  - `.gitignore` に `**/GoogleService-Info.plist` が既に含まれていることを確認
+  - 履歴上は `origin/main` の `6ca0437` から複数ブランチへ混入しており、完全 purge には main と関連ブランチの履歴書き換えが必要であることを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：現在の PR 先端からは Firebase 設定ファイルを外し、ローカル開発用ファイルは保持したまま今後の再追加を `.gitignore` で防げるため。
+
+### #039 歌詞取得と users 表示の実データ接続
+
+- **時刻**：20:16
+- **ツール**：Codex / xcodebuild / curl
+- **目的**：NowPlaying の固定歌詞を Musixmatch API 取得に差し替え、Community の user_id 表示を users.display_name 表示へ変更する
+- **プロンプト**：
+  ```text
+  歌詞が全然表示されないのと、どの曲でも同じ歌詞が表示されるんだけど。ちゃんとmusixmatch APIを呼び出すようになっている？
+
+  また、コミュニティ画面でuser idが表示されているんだけど、user_nameが表示されて欲しい。ということは、usersコレクションから対応するuserをとってきてnameを入れたいんだけど、そうなると今度はusersコレクションにseedsをしなきゃいけない。iosアプリ側で、アプリ開いたら対応するusersのseedするスクリプト書いてくれる？
+  ```
+- **出力サマリ**：
+  - `NowPlayingView` の固定歌詞配列を削除し、曲ごとに `LyricsViewModel` から Musixmatch 取得結果を表示するよう変更
+  - Musixmatch Provider で `track.subtitle.get` の LRC を優先し、取得できない場合は `track.lyrics.get` へ fallback するよう変更
+  - LRC parser を追加し、`[Intro]` / `[Verse]` などの bracket 行と Musixmatch footer を表示しないよう整理
+  - Functions に `GET /users` と `POST /users/seed` を追加し、既存ユーザーの `display_name` / `email` を上書きしない seed にした
+  - iOS 起動時と Howカード表示時に、既存 Howカードの `user_id` に対応する users seed / fetch を呼び、Community / MusicFeed は `display_name` を表示するよう変更
+  - 旧 Howカード seed service と Preview 用 `Artist.mock` alias を削除
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+  - 手元の `MUSIXMATCH_API_KEY` は長さ 0 で、API 疎通時の JSON status は 401 だったため、実機表示には有効なキー設定が必要
+- **評価**：採用
+- **採用 / 不採用の理由**：固定歌詞・user_id 表示・一時 Howカード seed を取り除き、Functions / Musixmatch / users collection から表示を組み立てる実データ経路に寄せられたため。
+
 ---
 
 ## Day 3（2026-05-26）

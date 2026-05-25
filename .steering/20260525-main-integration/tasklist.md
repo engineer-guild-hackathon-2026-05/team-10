@@ -70,3 +70,23 @@
 - [x] Node 構文チェックと iOS ビルドを実行する
 - [x] `AI_USAGE_LOG.md` を更新する
 - [x] 変更をコミットして push する
+
+## フェーズ9: GoogleService-Info.plist の追跡解除
+
+- [x] `GoogleService-Info.plist` が git 追跡対象になっているパスを確認する
+- [x] ローカルファイルを残したまま `git rm --cached` で追跡から外す
+- [x] `.gitignore` に `GoogleService-Info.plist` の ignore ルールがあることを確認する
+- [x] GitHub 履歴上の混入範囲を確認する
+- [x] `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する
+
+## フェーズ10: 歌詞取得と users 表示修正
+
+- [x] `NowPlayingView` の固定歌詞配列を削除し、Musixmatch 取得結果を表示する
+- [x] Musixmatch Provider で LRC subtitle を優先取得し、静的歌詞へ fallback する
+- [x] `users` の一括取得 / seed endpoint を Functions に追加する
+- [x] iOS 起動時に既存 Howカードに対応する users seed を呼び出す
+- [x] Community / MusicFeed で `users.display_name` を表示する
+- [x] Node 構文チェックと iOS ビルドを実行する
+- [x] `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する

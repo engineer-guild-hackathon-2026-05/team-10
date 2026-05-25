@@ -30,10 +30,35 @@ final class MusicFeedViewModel: ObservableObject {
 
         do {
             let howCards = try await FirebaseAPI.shared.fetchHowCards(songID: song.firestoreSongID)
-            posts = howCards.map { FeedPost(howCard: $0, song: song) }
+            let userProfiles = (try? await loadUserProfiles(for: howCards)) ?? [:]
+            posts = howCards.map { card in
+                FeedPost(
+                    howCard: card,
+                    song: song,
+                    userProfile: userProfiles[card.userID]
+                )
+            }
         } catch {
             errorMessage = "Howカードを取得できませんでした"
             posts = []
         }
+    }
+
+    private func loadUserProfiles(for cards: [HowCardComment]) async throws -> [String: UserProfile] {
+        guard !cards.isEmpty else {
+            return [:]
+        }
+
+        do {
+            let seededUsers = try await UserSeedService.seedUsers(for: cards)
+            return profilesByID(seededUsers)
+        } catch {
+            let users = try await FirebaseAPI.shared.fetchUsers(ids: cards.map(\.userID))
+            return profilesByID(users)
+        }
+    }
+
+    private func profilesByID(_ profiles: [UserProfile]) -> [String: UserProfile] {
+        Dictionary(uniqueKeysWithValues: profiles.map { ($0.userID, $0) })
     }
 }

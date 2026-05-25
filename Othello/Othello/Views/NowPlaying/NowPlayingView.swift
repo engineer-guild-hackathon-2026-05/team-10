@@ -9,14 +9,8 @@ struct NowPlayingView: View {
     @ObservedObject var playback: PlaybackViewModel
     @ObservedObject var airPods: AirPodsMotionViewModel
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var lyricsViewModel = LyricsViewModel()
     @State private var activeTab: NowPlayingTab = .playback
-
-    private let lyrics: [String] = [
-        "ふと見上げた空に咲いた",
-        "小さな花のように",
-        "風が運ぶ 街の音",
-        "君と歩いた あの坂道"
-    ]
 
     var body: some View {
         ZStack {
@@ -38,6 +32,9 @@ struct NowPlayingView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .task(id: lyricsTaskID) {
+            await lyricsViewModel.loadLyrics(for: lyricsQuery)
+        }
     }
 
     private var nowPlayingFooterSpacer: some View {
@@ -164,8 +161,31 @@ struct NowPlayingView: View {
 
     private var lyricsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ForEach(Array(lyrics.enumerated()), id: \.offset) { _, line in
-                Text(line)
+            switch lyricsViewModel.state {
+            case .idle, .loading:
+                Text("歌詞を読み込み中")
+                    .font(.body)
+                    .foregroundStyle(.white)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .loaded:
+                if let loadedLyrics = lyricsViewModel.lyrics, !loadedLyrics.lines.isEmpty {
+                    ForEach(loadedLyrics.lines) { line in
+                        Text(line.text)
+                            .font(.body)
+                            .foregroundStyle(.white)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Text("歌詞を表示できません")
+                        .font(.body)
+                        .foregroundStyle(.white)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            case .unavailable(let message), .failed(let message):
+                Text(message)
                     .font(.body)
                     .foregroundStyle(.white)
                     .lineLimit(nil)
@@ -176,6 +196,52 @@ struct NowPlayingView: View {
         .padding(16)
         .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
         .padding(.horizontal, 16)
+    }
+
+    private var lyricsQuery: LyricsTrackQuery {
+        if let track = playback.currentTrack, matches(track: track, song: song) {
+            return LyricsTrackQuery(playbackTrack: track)
+        }
+
+        return LyricsTrackQuery(
+            title: song.title,
+            artistName: song.artistName,
+            duration: song.duration
+        )
+    }
+
+    private var lyricsTaskID: String {
+        [
+            lyricsQuery.musicKitID ?? "",
+            lyricsQuery.title,
+            lyricsQuery.artistName,
+            lyricsQuery.albumName ?? "",
+            lyricsQuery.isrc ?? "",
+            lyricsQuery.duration.map { String(Int($0.rounded())) } ?? ""
+        ]
+        .joined(separator: "|")
+    }
+
+    private func matches(track: PlaybackTrack, song: Song) -> Bool {
+        if let musicKitID = song.musicKitID, track.musicKitID == musicKitID {
+            return true
+        }
+
+        let trackTitle = normalizedMatchText(track.title)
+        let songTitle = normalizedMatchText(song.title)
+        let trackArtist = normalizedMatchText(track.artistName)
+        let songArtist = normalizedMatchText(song.artistName)
+
+        return !songTitle.isEmpty
+            && !songArtist.isEmpty
+            && trackTitle.contains(songTitle)
+            && trackArtist.contains(songArtist)
+    }
+
+    private func normalizedMatchText(_ value: String) -> String {
+        value
+            .lowercased()
+            .replacingOccurrences(of: "\\s+", with: "", options: .regularExpression)
     }
 
     private func formatTime(_ time: TimeInterval) -> String {

@@ -7,7 +7,7 @@ struct ContentView: View {
     @StateObject private var airPods = AirPodsMotionViewModel()
     @State private var nowPlayingSong: Song?
     @State private var showNowPlaying: Bool = false
-    @State private var didSeedHowCards = false
+    @State private var didSeedHowCardUsers = false
 
     var body: some View {
         if !authVM.isLoggedIn {
@@ -48,7 +48,7 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .task {
             await playback.onAppear()
-            await seedHowCardsIfNeeded()
+            await seedHowCardUsersIfNeeded()
         }
         .onChange(of: nowPlayingSong?.id) { _, newValue in
             if newValue != nil {
@@ -72,18 +72,18 @@ struct ContentView: View {
         }
     }
 
-    private func seedHowCardsIfNeeded() async {
-        guard !didSeedHowCards else { return }
-        didSeedHowCards = true
+    private func seedHowCardUsersIfNeeded() async {
+        guard !didSeedHowCardUsers else { return }
+        didSeedHowCardUsers = true
 
         do {
-            let createdCount = try await HowCardSeedService.seedIfNeeded()
+            let seededUsers = try await UserSeedService.seedUsersForExistingHowCards()
             #if DEBUG
-            print("[HowCards] seeded \(createdCount) initial cards from iOS")
+            print("[HowCards] seeded \(seededUsers.count) users for existing How cards")
             #endif
         } catch {
             #if DEBUG
-            print("[HowCards] iOS seed failed: \(error)")
+            print("[HowCards] user seed failed: \(error)")
             #endif
         }
     }

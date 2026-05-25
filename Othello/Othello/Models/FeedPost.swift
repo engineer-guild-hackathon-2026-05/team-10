@@ -15,9 +15,9 @@ struct FeedPost: Identifiable {
 }
 
 extension FeedPost {
-    init(howCard: HowCardComment, song: Song) {
-        let displayHandle = FeedPost.displayHandle(from: howCard.userID)
-        let displayName = FeedPost.displayName(from: howCard.userID)
+    init(howCard: HowCardComment, song: Song, userProfile: UserProfile? = nil) {
+        let displayName = FeedPost.displayName(from: userProfile)
+        let displayHandle = FeedPost.displayHandle(from: userProfile)
         self.init(
             id: UUID(),
             cardID: howCard.documentID,
@@ -33,20 +33,25 @@ extension FeedPost {
         )
     }
 
-    private static func displayHandle(from userID: String) -> String {
-        let handle = userID
-            .replacingOccurrences(of: "seed_", with: "")
-            .replacingOccurrences(of: "_", with: ".")
-        return handle.isEmpty ? "@listener" : "@\(handle)"
+    private static func displayHandle(from profile: UserProfile?) -> String {
+        guard let displayName = normalizedDisplayName(from: profile) else {
+            return "@listener"
+        }
+
+        let handle = displayName
+            .replacingOccurrences(of: "\\s+", with: ".", options: .regularExpression)
+        return "@\(handle)"
     }
 
-    private static func displayName(from userID: String) -> String {
-        let normalized = userID
-            .replacingOccurrences(of: "seed_", with: "")
-            .replacingOccurrences(of: "_", with: " ")
-        guard let firstWord = normalized.split(separator: " ").first else {
-            return "listener"
+    private static func displayName(from profile: UserProfile?) -> String {
+        normalizedDisplayName(from: profile) ?? "listener"
+    }
+
+    private static func normalizedDisplayName(from profile: UserProfile?) -> String? {
+        guard let displayName = profile?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !displayName.isEmpty else {
+            return nil
         }
-        return String(firstWord)
+        return displayName
     }
 }

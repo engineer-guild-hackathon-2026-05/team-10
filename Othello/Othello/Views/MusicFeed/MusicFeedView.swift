@@ -265,5 +265,5 @@ private struct MiniSongCard: View {
 }
 
 #Preview {
-    MusicFeedView(artist: Artist.mock[0], onSongTap: { _ in }, playback: PlaybackViewModel())
+    MusicFeedView(artist: Artist.catalog[0], onSongTap: { _ in }, playback: PlaybackViewModel())
 }
