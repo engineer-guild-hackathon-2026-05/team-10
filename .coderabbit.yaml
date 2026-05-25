@@ -1,0 +1,21 @@
+# CodeRabbit 設定 — https://docs.coderabbit.ai/reference/configuration
+language: ja-JP
+
+reviews:
+  # ハッカソン向けに優しめ（assertive にすると指摘が細かくなる）
+  profile: chill
+  # PR 作成時に自動レビュー
+  auto_review:
+    enabled: true
+  # 自動生成物・バイナリ・ロックファイルはレビュー対象外
+  path_filters:
+    - "!**/*.pdf"
+    - "!docs/share/index.html"
+    - "!docs/slides/*.html"
+    - "!**/*.pbxproj"
+    - "!**/package-lock.json"
+  # PR の要約・ウォークスルーを自動生成
+  high_level_summary: true
+
+chat:
+  auto_reply: true
