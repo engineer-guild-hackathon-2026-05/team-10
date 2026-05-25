@@ -3,12 +3,14 @@
   "trainedAt": "2026-05-24T05:03:21.267Z",
   "examples": 16,
   "labelCounts": {
-    "groove": 3,
-    "hype": 4,
-    "chill": 3,
-    "immersion": 4,
-    "hit": 2,
-    "afterglow": 2
+    "groove": 6,
+    "chill": 4,
+    "neutral": 6
+  },
+  "dataQuality": {
+    "status": "seed_only",
+    "note": "This model is trained on 16 seed examples and is suitable only for MVP interaction prototyping. Do not treat validation metrics as production-quality until new AirPods sessions provide substantially more balanced data.",
+    "recommendedMinExamplesPerClass": 200
   },
   "training": {
     "epochs": 120,

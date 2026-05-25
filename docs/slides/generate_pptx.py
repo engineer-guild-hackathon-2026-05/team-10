@@ -1,495 +1,712 @@
 """
-HowTune — 統合プレゼンデッキ (6分 / 11スライド)
-デザイン: Apple Style (black #000000, blue #0071E3, Inter font)
+HowTune — Apple Keynote 風プレゼンデッキ
+ミニマル · 角丸カード · グラデーション主体 · 透明感
+10分 (14スライド) + Q&A対策 6スライド
 """
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
-from pptx.oxml.ns import qn
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from lxml import etree
 
-# ── Colors (Apple-style) ──────────────────────────────────────
-BLACK   = RGBColor(0x00, 0x00, 0x00)
-WHITE   = RGBColor(0xFF, 0xFF, 0xFF)
-DIM     = RGBColor(0x88, 0x88, 0x99)
-BLUE    = RGBColor(0x00, 0x71, 0xE3)   # Apple blue
-LGRAY   = RGBColor(0x1C, 0x1C, 0x1E)   # card bg
-BORDER  = RGBColor(0x38, 0x38, 0x3A)   # subtle border
+# ── Palette ──────────────────────────────────────────────────
+BLACK  = RGBColor(0x00, 0x00, 0x00)
+WHITE  = RGBColor(0xFF, 0xFF, 0xFF)
+GRAY   = RGBColor(0x8E, 0x8E, 0x93)
+LGRAY  = RGBColor(0xB8, 0xB8, 0xBE)
+BLUE   = RGBColor(0x0A, 0x84, 0xFF)
+LBLUE  = RGBColor(0x64, 0xD2, 0xFF)
+GREEN  = RGBColor(0x30, 0xD1, 0x58)
+RED    = RGBColor(0xFF, 0x45, 0x3A)
+AMBER  = RGBColor(0xFF, 0x9F, 0x0A)
+PURPLE = RGBColor(0xBF, 0x5A, 0xF2)
+PINK   = RGBColor(0xFF, 0x37, 0x5F)
+GLASS  = RGBColor(0x1C, 0x1C, 0x1E)
+DBLUE  = RGBColor(0x06, 0x12, 0x24)
 
-W = Inches(13.33)
-H = Inches(7.5)
-MARGIN_L = Inches(1.1)
-MARGIN_R = Inches(1.1)
-CONTENT_W = W - MARGIN_L - MARGIN_R
+W  = Inches(13.333)
+H  = Inches(7.5)
+ML = Inches(1.0)
+CW = W - ML * 2
+
+import os
+OUT = "docs/slides/howtune_final.pptx"
+
+# 既存スライドのノート（発表原稿）を退避 — 再生成で消さないため。
+# スライドの順序が変わると位置がずれる点に注意。
+_saved_notes = {}
+if os.path.exists(OUT):
+    try:
+        _old = Presentation(OUT)
+        for _i, _s in enumerate(_old.slides):
+            if _s.has_notes_slide:
+                _t = _s.notes_slide.notes_text_frame.text
+                if _t.strip():
+                    _saved_notes[_i] = _t
+        if _saved_notes:
+            print("既存ノートを %d 件退避しました" % len(_saved_notes))
+    except Exception as _e:
+        print("ノート退避をスキップ:", _e)
 
 prs = Presentation()
 prs.slide_width  = W
 prs.slide_height = H
-blank_layout = prs.slide_layouts[6]
+blank = prs.slide_layouts[6]
+ANS = 'http://schemas.openxmlformats.org/drawingml/2006/main'
 
-# ── Helpers ───────────────────────────────────────────────────
+# ── XML helpers ──────────────────────────────────────────────
+def _alpha(shape, pct):
+    solid = shape._element.find('.//{%s}solidFill' % ANS)
+    if solid is None:
+        return
+    for tag in ('srgbClr', 'sysClr', 'schemeClr'):
+        clr = solid.find('{%s}%s' % (ANS, tag))
+        if clr is not None:
+            for old in clr.findall('{%s}alpha' % ANS):
+                clr.remove(old)
+            a = etree.SubElement(clr, '{%s}alpha' % ANS)
+            a.set('val', str(int(pct * 1000)))
+            return
 
-def add_slide():
-    slide = prs.slides.add_slide(blank_layout)
-    bg = slide.background.fill
-    bg.solid()
-    bg.fore_color.rgb = BLACK
-    return slide
+def _line_alpha(shape, pct):
+    ln = shape._element.find('.//{%s}ln' % ANS)
+    if ln is None:
+        return
+    solid = ln.find('{%s}solidFill' % ANS)
+    if solid is None:
+        return
+    for tag in ('srgbClr', 'sysClr', 'schemeClr'):
+        clr = solid.find('{%s}%s' % (ANS, tag))
+        if clr is not None:
+            for old in clr.findall('{%s}alpha' % ANS):
+                clr.remove(old)
+            a = etree.SubElement(clr, '{%s}alpha' % ANS)
+            a.set('val', str(int(pct * 1000)))
+            return
 
-def txb(slide, text, x, y, w, h, *, size=18, bold=False, color=WHITE,
-        align=PP_ALIGN.LEFT, font="Inter", wrap=True):
-    tf = slide.shapes.add_textbox(x, y, w, h).text_frame
-    tf.word_wrap = wrap
+def round_it(shape, adj=12000):
+    """Apple 風の角丸に変換。adj: 0-50000 (大きいほど丸い)"""
+    g = shape._element.find('.//{%s}prstGeom' % ANS)
+    if g is None:
+        return
+    g.set('prst', 'roundRect')
+    av = g.find('{%s}avLst' % ANS)
+    if av is None:
+        av = etree.SubElement(g, '{%s}avLst' % ANS)
+    for old in list(av):
+        av.remove(old)
+    gd = etree.SubElement(av, '{%s}gd' % ANS)
+    gd.set('name', 'adj')
+    gd.set('fmla', 'val %d' % adj)
+
+def grad_fill(shape, c1, c2, angle=90):
+    """2色グラデーション塗り。angle: 度 (0=左→右, 90=上→下)"""
+    f = shape.fill
+    f.gradient()
+    try:
+        f.gradient_angle = angle
+    except Exception:
+        pass
+    f.gradient_stops[0].position = 0.0
+    f.gradient_stops[0].color.rgb = c1
+    f.gradient_stops[1].position = 1.0
+    f.gradient_stops[1].color.rgb = c2
+
+def to_back(slide, shape):
+    sp = shape._element
+    sp.getparent().remove(sp)
+    slide.shapes._spTree.insert(2, sp)
+
+# ── Slide primitives ─────────────────────────────────────────
+def add_slide(grad=True):
+    s = prs.slides.add_slide(blank)
+    s.background.fill.solid()
+    s.background.fill.fore_color.rgb = BLACK
+    if grad:
+        bg = s.shapes.add_shape(1, 0, 0, W, H)
+        grad_fill(bg, DBLUE, BLACK, angle=130)
+        bg.line.fill.background()
+        to_back(s, bg)
+    return s
+
+def glass(slide, x, y, w, h, fill=GLASS, fa=55, ba=14, radius=12000):
+    sh = slide.shapes.add_shape(1, x, y, w, h)
+    sh.fill.solid()
+    sh.fill.fore_color.rgb = fill
+    _alpha(sh, fa)
+    sh.line.color.rgb = WHITE
+    sh.line.width = Pt(1)
+    _line_alpha(sh, ba)
+    round_it(sh, radius)
+    sh.shadow.inherit = False
+    return sh
+
+def grad_card(slide, x, y, w, h, c1, c2, angle=120, radius=14000, alpha=None):
+    sh = slide.shapes.add_shape(1, x, y, w, h)
+    grad_fill(sh, c1, c2, angle)
+    sh.line.fill.background()
+    round_it(sh, radius)
+    sh.shadow.inherit = False
+    return sh
+
+def bar(slide, x, y, w, h=Inches(0.06), c1=BLUE, c2=LBLUE, radius=50000):
+    sh = slide.shapes.add_shape(1, x, y, w, h)
+    grad_fill(sh, c1, c2, angle=0)
+    sh.line.fill.background()
+    round_it(sh, radius)
+    sh.shadow.inherit = False
+    return sh
+
+def pill(slide, x, y, w, h, label, color):
+    sh = slide.shapes.add_shape(1, x, y, w, h)
+    sh.fill.solid()
+    sh.fill.fore_color.rgb = color
+    _alpha(sh, 18)
+    sh.line.color.rgb = color
+    sh.line.width = Pt(1)
+    _line_alpha(sh, 55)
+    round_it(sh, 50000)
+    sh.shadow.inherit = False
+    tf = sh.text_frame
+    tf.word_wrap = True
     p = tf.paragraphs[0]
-    p.alignment = align
-    run = p.add_run()
-    run.text = text
-    f = run.font
-    f.name = font
-    f.size = Pt(size)
-    f.bold = bold
-    f.color.rgb = color
+    p.alignment = PP_ALIGN.CENTER
+    r = p.add_run(); r.text = label
+    r.font.name = "Inter"; r.font.size = Pt(15); r.font.bold = True
+    r.font.color.rgb = color
 
-def multiline(slide, lines, x, y, w, h, *, default_size=16, default_color=WHITE, font="Inter"):
-    """lines: list of (text, size, bold, color) or just str"""
-    from pptx.shapes.base import BaseShape
-    tf = slide.shapes.add_textbox(x, y, w, h).text_frame
+def txt(slide, text, x, y, w, h, sz=18, bold=False, col=WHITE,
+        align=PP_ALIGN.LEFT, font="Inter", italic=False, anchor=None, spacing=None):
+    box = slide.shapes.add_textbox(x, y, w, h)
+    tf = box.text_frame
+    tf.word_wrap = True
+    if anchor:
+        tf.vertical_anchor = anchor
+    lines = text.split("\n")
+    for i, ln in enumerate(lines):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = align
+        if spacing:
+            p.line_spacing = spacing
+        r = p.add_run(); r.text = ln
+        r.font.name = font; r.font.size = Pt(sz); r.font.bold = bold
+        r.font.italic = italic; r.font.color.rgb = col
+    return box
+
+def mtxt(slide, lines, x, y, w, h, dsz=16, dcol=WHITE, spacing=1.25):
+    box = slide.shapes.add_textbox(x, y, w, h)
+    tf = box.text_frame
     tf.word_wrap = True
     first = True
     for item in lines:
         if isinstance(item, str):
-            text, size, bold, color = item, default_size, False, default_color
+            t, sz, bd, cl = item, dsz, False, dcol
         else:
-            text = item[0]
-            size = item[1] if len(item) > 1 else default_size
-            bold = item[2] if len(item) > 2 else False
-            color = item[3] if len(item) > 3 else default_color
+            t  = item[0]
+            sz = item[1] if len(item) > 1 else dsz
+            bd = item[2] if len(item) > 2 else False
+            cl = item[3] if len(item) > 3 else dcol
         p = tf.paragraphs[0] if first else tf.add_paragraph()
         first = False
-        run = p.add_run()
-        run.text = text
-        f = run.font
-        f.name = font
-        f.size = Pt(size)
-        f.bold = bold
-        f.color.rgb = color
+        p.line_spacing = spacing
+        r = p.add_run(); r.text = t
+        r.font.name = "Inter"; r.font.size = Pt(sz); r.font.bold = bd
+        r.font.color.rgb = cl
 
-def chapter_label(slide, text):
-    txb(slide, text, MARGIN_L, Inches(0.45), Inches(6), Inches(0.35),
-        size=11, bold=False, color=BLUE, font="Inter SemiBold")
+def kicker(slide, text):
+    txt(slide, text, ML, Inches(0.55), CW, Inches(0.34),
+        sz=12, bold=True, col=BLUE, font="Inter")
 
-def big_title(slide, text, y=Inches(1.05), w=None, size=52):
-    txb(slide, text, MARGIN_L, y, w or CONTENT_W, Inches(1.5),
-        size=size, bold=True, color=WHITE)
+import os
+ASSET = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+def pic(slide, name, x, y, w, h):
+    path = os.path.join(ASSET, name)
+    return slide.shapes.add_picture(path, x, y, width=w, height=h)
 
-def body_text(slide, text, y=Inches(2.5), w=None, size=17):
-    txb(slide, text, MARGIN_L, y, w or CONTENT_W, Inches(3.0),
-        size=size, bold=False, color=WHITE)
-
-def dim_text(slide, text, y, w=None, size=14):
-    txb(slide, text, MARGIN_L, y, w or CONTENT_W, Inches(0.5),
-        size=size, bold=False, color=DIM)
-
-def divider(slide, y, color=BLUE, width=None):
-    from pptx.util import Pt as _Pt
-    from pptx.oxml import parse_xml
-    line_w = width or Inches(1.2)
-    line = slide.shapes.add_shape(
-        1,  # MSO_SHAPE_TYPE.RECTANGLE
-        MARGIN_L, y, line_w, Inches(0.025)
-    )
-    line.fill.solid()
-    line.fill.fore_color.rgb = color
-    line.line.fill.background()
-
-def card_box(slide, x, y, w, h, bg=LGRAY):
-    box = slide.shapes.add_shape(1, x, y, w, h)
-    box.fill.solid()
-    box.fill.fore_color.rgb = bg
-    box.line.color.rgb = BORDER
-
-
-# ════════════════════════════════════════════════════════════════
-# Slide 1 — Title
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 1 — TITLE
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
+txt(s, "HowTune", ML, Inches(2.35), Inches(11), Inches(1.8),
+    sz=96, bold=True, col=WHITE)
+bar(s, ML+Inches(0.05), Inches(4.15), Inches(3.6), h=Inches(0.07))
+txt(s, "何を聴くかではなく、どう聴いているか。",
+    ML, Inches(4.45), Inches(11), Inches(0.7), sz=22, col=LGRAY)
+txt(s, "Team Othello   ·   Engineer Guild Hackathon 2026/05",
+    ML, Inches(6.55), Inches(11), Inches(0.45), sz=13, col=GRAY)
 
-txb(s, "HowTune",
-    MARGIN_L, Inches(1.8), Inches(9), Inches(1.8),
-    size=80, bold=True, color=WHITE)
-
-txb(s, "何を聴くかではなく、どう聴いているかでつながる。",
-    MARGIN_L, Inches(3.4), Inches(9), Inches(0.7),
-    size=20, bold=False, color=DIM)
-
-divider(s, Inches(4.3))
-
-txb(s, "Engineer Guild Hackathon 2026/05  ·  Team Othello",
-    MARGIN_L, Inches(4.55), Inches(8), Inches(0.45),
-    size=13, bold=False, color=BLUE, font="Inter SemiBold")
-
-
-# ════════════════════════════════════════════════════════════════
-# Slide 2 — Problem: Labeling is not enough
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 2 — CORE IDEA: 曲の特定の瞬間でつながる
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 01 — THE PROBLEM")
+kicker(s, "THE CORE IDEA")
+txt(s, "つながるのは、曲の「この一点」。",
+    ML, Inches(1.0), CW, Inches(0.95), sz=44, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.05), Inches(2.6))
 
-big_title(s, "Labeling is not enough.")
+# 楽曲タイムラインのカード
+cy, ch = Inches(2.6), Inches(3.0)
+glass(s, ML, cy, CW, ch, fa=45)
+txt(s, "♪  Blinding Lights — The Weeknd",
+    ML+Inches(0.55), cy+Inches(0.3), Inches(8), Inches(0.5),
+    sz=18, bold=True, col=WHITE)
 
-body_text(s,
-    "既存の音楽サービスは「What（曲名・ジャンル・再生回数）」でしか人を繋げません。\n"
-    "しかし、本当に心が動く瞬間は、聴き方（How）の中にあります。",
-    y=Inches(2.55), size=18)
+# タイムライン（反応地点 = 時刻 + 歌詞）
+ts_in, tw_in = 1.55, 10.233          # track start / width (inch)
+mfrac = 0.62                          # 1:18 の位置
+mx_in = ts_in + tw_in * mfrac
+track_y = cy + Inches(1.35)
+base = s.shapes.add_shape(1, Inches(ts_in), track_y, Inches(tw_in), Inches(0.14))
+base.fill.solid(); base.fill.fore_color.rgb = RGBColor(0x33,0x33,0x38)
+base.line.fill.background(); round_it(base, 50000); base.shadow.inherit = False
+bar(s, Inches(ts_in), track_y, Inches(tw_in*mfrac), h=Inches(0.14))
+# 再生ヘッド（マーカー）
+dot = s.shapes.add_shape(9, Inches(mx_in-0.14), track_y-Inches(0.07), Inches(0.28), Inches(0.28))
+dot.fill.solid(); dot.fill.fore_color.rgb = LBLUE
+dot.line.color.rgb = WHITE; dot.line.width = Pt(1.5); dot.shadow.inherit = False
+txt(s, "1:18", Inches(mx_in-0.55), track_y-Inches(0.6), Inches(1.1), Inches(0.4),
+    sz=16, bold=True, col=LBLUE, align=PP_ALIGN.CENTER)
+# その瞬間の歌詞
+txt(s, "“I said, ooh, I'm blinded by the lights”",
+    ML+Inches(0.55), cy+Inches(2.0), CW-Inches(1.1), Inches(0.5),
+    sz=19, col=WHITE, align=PP_ALIGN.CENTER, italic=True)
+txt(s, "●  ●  ●  ●    同じ瞬間に反応した人と出会う",
+    ML+Inches(0.55), cy+Inches(2.5), CW-Inches(1.1), Inches(0.4),
+    sz=15, bold=True, col=LBLUE, align=PP_ALIGN.CENTER)
 
-# Two column cards
-card_box(s, MARGIN_L, Inches(4.2), Inches(5.4), Inches(2.4))
-txb(s, "既存サービス",
-    MARGIN_L + Inches(0.3), Inches(4.35), Inches(4.8), Inches(0.45),
-    size=14, bold=True, color=DIM)
-multiline(s, [
-    ("What 中心：曲名・ジャンル・再生回数", 15, False, WHITE),
-    ("✗  「この瞬間の感動」は共有できない", 15, False, DIM),
-    ("✗  同じ聴き方の人とは出会えない",    15, False, DIM),
-], MARGIN_L + Inches(0.3), Inches(4.8), Inches(4.8), Inches(1.6))
+txt(s, "曲全体でも、ジャンルでもない。特定の瞬間の歌詞 × 反応で、人とつながる。",
+    ML, Inches(5.85), CW, Inches(0.6), sz=18, col=LGRAY)
 
-card_box(s, MARGIN_L + Inches(5.8), Inches(4.2), Inches(5.4), Inches(2.4), bg=RGBColor(0x00, 0x18, 0x32))
-txb(s, "HowTune",
-    MARGIN_L + Inches(6.1), Inches(4.35), Inches(4.8), Inches(0.45),
-    size=14, bold=True, color=BLUE, font="Inter SemiBold")
-multiline(s, [
-    ("How 中心：歌詞 × 反応 × 聴き方",          15, False, WHITE),
-    ("✓  「1:18のあの一節が刺さった」を共有",    15, False, WHITE),
-    ("✓  同じ波形を持つ見知らぬ人と出会える",    15, False, WHITE),
-], MARGIN_L + Inches(6.1), Inches(4.8), Inches(4.8), Inches(1.6))
-
-
-# ════════════════════════════════════════════════════════════════
-# Slide 3 — Why Now: The Great Inversion
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 3 — WHY NOW (旧→新を2カードで)
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 02 — WHY NOW")
+kicker(s, "WHY NOW")
+txt(s, "AIが、価値をひっくり返す。",
+    ML, Inches(1.05), CW, Inches(1.0), sz=48, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.15), Inches(2.6))
 
-big_title(s, "The Great Inversion", size=54)
+gap = Inches(0.5)
+cw2 = (CW - gap) / 2
+glass(s, ML, Inches(2.85), cw2, Inches(3.6), fa=40)
+txt(s, "これまで", ML+Inches(0.5), Inches(3.2), cw2-Inches(1), Inches(0.5),
+    sz=15, bold=True, col=GRAY)
+txt(s, "何を作るか", ML+Inches(0.5), Inches(3.9), cw2-Inches(1), Inches(0.9),
+    sz=40, bold=True, col=LGRAY)
+txt(s, "スキルの希少性が価値だった。\nAIがそれをコモディティ化する。",
+    ML+Inches(0.5), Inches(5.0), cw2-Inches(1), Inches(1.2), sz=16, col=GRAY, spacing=1.3)
 
-txb(s, "AIはスキルの希少価値をゼロに近づける",
-    MARGIN_L, Inches(2.35), CONTENT_W, Inches(0.5),
-    size=20, bold=False, color=DIM)
+c2x = ML + cw2 + gap
+grad_card(s, c2x, Inches(2.85), cw2, Inches(3.6), DBLUE, RGBColor(0x0E,0x2A,0x52), angle=130)
+txt(s, "これから", c2x+Inches(0.5), Inches(3.2), cw2-Inches(1), Inches(0.5),
+    sz=15, bold=True, col=LBLUE)
+txt(s, "どう楽しむか", c2x+Inches(0.5), Inches(3.9), cw2-Inches(1), Inches(0.9),
+    sz=40, bold=True, col=WHITE)
+txt(s, "体験とコミュニティが最も希少な資源になる。\nHowTune はその中心にいる。",
+    c2x+Inches(0.5), Inches(5.0), cw2-Inches(1), Inches(1.2), sz=16, col=LGRAY, spacing=1.3)
 
-divider(s, Inches(3.05))
-
-multiline(s, [
-    ("旧時代の価値：「何を作れるか」（スキル） → AIが代替", 17, False, DIM),
-    ("",),
-    ("新時代の価値：「誰と・どう楽しむか」（コミュニティ・体験）", 19, True, WHITE),
-], MARGIN_L, Inches(3.2), CONTENT_W, Inches(1.5))
-
-txb(s, "HowTuneはこのパラダイムシフトのど真ん中にいる。",
-    MARGIN_L, Inches(4.55), CONTENT_W, Inches(0.6),
-    size=17, bold=False, color=BLUE, font="Inter SemiBold")
-
-# Arrow visual: pyramid → circle
-card_box(s, MARGIN_L, Inches(5.25), Inches(5.4), Inches(1.6))
-multiline(s, [
-    ("旧：ピラミッド型", 13, True, DIM),
-    ("アーティストが頂点・ファンは消費者", 13, False, DIM),
-], MARGIN_L + Inches(0.2), Inches(5.4), Inches(5.0), Inches(1.4))
-
-txb(s, "→", MARGIN_L + Inches(5.6), Inches(5.8), Inches(0.6), Inches(0.6),
-    size=28, bold=True, color=BLUE, align=PP_ALIGN.CENTER)
-
-card_box(s, MARGIN_L + Inches(6.4), Inches(5.25), Inches(5.4), Inches(1.6), bg=RGBColor(0x00, 0x18, 0x32))
-multiline(s, [
-    ("新：円環型エコシステム", 13, True, BLUE),
-    ("ファンの「How」が価値の源泉になる", 13, False, WHITE),
-], MARGIN_L + Inches(6.6), Inches(5.4), Inches(5.0), Inches(1.4))
-
-
-# ════════════════════════════════════════════════════════════════
-# Slide 4 — Solution: Lyrics × AI
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 4 — PROBLEM (絵文字3枚)
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 03 — SOLUTION")
+kicker(s, "THE PROBLEM")
+txt(s, "Labeling is not enough.",
+    ML, Inches(1.05), CW, Inches(1.0), sz=52, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.2), Inches(2.6))
+txt(s, "既存サービスは「曲名」でしか繋げない。本当の熱狂は、聴き方の中にある。",
+    ML, Inches(2.5), CW, Inches(0.6), sz=18, col=LGRAY)
 
-big_title(s, "歌詞を「鏡」にする。", size=58)
+cards = [
+    ("🎵", "歌詞の一節で\n息が止まる"),
+    ("🥁", "ベースで\n体が動く"),
+    ("✨", "サビ前の溜めで\n鳥肌が立つ"),
+]
+gap = Inches(0.4)
+cwd = (CW - gap*2) / 3
+for i, (emo, t) in enumerate(cards):
+    x = ML + i*(cwd+gap)
+    glass(s, x, Inches(3.5), cwd, Inches(3.0), fa=45)
+    txt(s, emo, x, Inches(3.9), cwd, Inches(0.9), sz=52, align=PP_ALIGN.CENTER)
+    txt(s, t, x, Inches(5.0), cwd, Inches(1.2), sz=19, bold=True,
+        align=PP_ALIGN.CENTER, spacing=1.2)
 
-txb(s, "身体が動いた瞬間に歌詞をタップ → AIが問いかける → How が言語化される",
-    MARGIN_L, Inches(2.45), CONTENT_W, Inches(0.6),
-    size=17, bold=False, color=DIM)
+# ═══════════════════════════════════════════════════════════════
+# 5 — VISION
+# ═══════════════════════════════════════════════════════════════
+s = add_slide()
+kicker(s, "THE SOLUTION")
+txt(s, "歌詞を、鏡に。",
+    ML, Inches(2.1), CW, Inches(1.4), sz=74, bold=True)
+bar(s, ML+Inches(0.05), Inches(3.85), Inches(3.2))
+mtxt(s, [
+    ("センサーは事実を捉える。", 22, False, LGRAY),
+    ("AIは断面を差し出す。", 22, False, LGRAY),
+    ("意味は、あなたが見つける。", 22, True, WHITE),
+], ML, Inches(4.2), CW, Inches(2.5), spacing=1.35)
 
-divider(s, Inches(3.2))
+# ═══════════════════════════════════════════════════════════════
+# 6 — CORE FLOW (5枚・絵文字+1語)
+# ═══════════════════════════════════════════════════════════════
+s = add_slide()
+kicker(s, "HOW IT WORKS")
+txt(s, "聴くだけで、体験が言葉になる。",
+    ML, Inches(1.05), CW, Inches(0.9), sz=42, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.1), Inches(3.0))
 
-# Flow steps
 steps = [
-    ("01", "歌詞タップ",      "「この一節だ」と感じた瞬間にタップ"),
-    ("02", "Groove 記録",    "音量 × モーションで盛り上がりを自動算出"),
-    ("03", "AI 問いかけ",    "Claude がリズム・歌詞を起点に質問。断定しない"),
-    ("04", "How カード",      "対話の結果が一生モノの「聴き方カード」に"),
-    ("05", "マッチング",      "同じ歌詞・同じ How に反応した人と出会う"),
+    ("🎧", "聴く"), ("👆", "タップ"), ("🌊", "Groove"),
+    ("💬", "AI 対話"), ("🪪", "How Card"),
 ]
-step_w = Inches(2.2)
-for i, (num, title, desc) in enumerate(steps):
-    x = MARGIN_L + i * (step_w + Inches(0.12))
-    card_box(s, x, Inches(3.45), step_w, Inches(2.9))
-    txb(s, num, x + Inches(0.2), Inches(3.6), step_w - Inches(0.3), Inches(0.4),
-        size=11, bold=False, color=BLUE, font="Inter SemiBold")
-    txb(s, title, x + Inches(0.2), Inches(3.95), step_w - Inches(0.3), Inches(0.45),
-        size=16, bold=True, color=WHITE)
-    txb(s, desc, x + Inches(0.2), Inches(4.45), step_w - Inches(0.3), Inches(1.7),
-        size=13, bold=False, color=DIM)
+gap = Inches(0.3)
+cwd = (CW - gap*4) / 5
+for i, (emo, t) in enumerate(steps):
+    x = ML + i*(cwd+gap)
+    glass(s, x, Inches(2.85), cwd, Inches(3.3), fa=45)
+    txt(s, emo, x, Inches(3.35), cwd, Inches(1.0), sz=46, align=PP_ALIGN.CENTER)
+    bar(s, x+cwd/2-Inches(0.35), Inches(4.5), Inches(0.7), h=Inches(0.05))
+    txt(s, t, x, Inches(4.75), cwd, Inches(0.6), sz=18, bold=True, align=PP_ALIGN.CENTER)
+    txt(s, "0%d" % (i+1), x, Inches(5.45), cwd, Inches(0.4), sz=13, col=BLUE, align=PP_ALIGN.CENTER)
 
-
-# ════════════════════════════════════════════════════════════════
-# Slide 5 — AI: Mirror Principle
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 7 — DEMO
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 04 — AI DESIGN PHILOSOPHY")
+kicker(s, "LIVE DEMO")
+txt(s, "DEMO", ML, Inches(2.0), Inches(8), Inches(2.0), sz=110, bold=True)
+bar(s, ML+Inches(0.05), Inches(4.3), Inches(4.0), h=Inches(0.08))
+txt(s, "実機で、歌詞タップ → AI対話 → HowCard を体験します。",
+    ML, Inches(4.65), CW, Inches(0.6), sz=20, col=LGRAY)
+txt(s, "▶ ここに実機スクリーンショット / 画面録画を配置",
+    ML, Inches(6.4), CW, Inches(0.5), sz=14, col=GRAY, italic=True)
 
-big_title(s, "AIは断定しない。\n鏡であること。", size=48)
-
-txb(s, "センサーは事実を捉える。AIは断面を差し出す。意味はユーザーが発見する。",
-    MARGIN_L, Inches(3.05), CONTENT_W, Inches(0.55),
-    size=15, bold=False, color=DIM)
-
-divider(s, Inches(3.7))
-
-# Two panels
-card_box(s, MARGIN_L, Inches(3.9), Inches(5.2), Inches(2.7))
-txb(s, "❌  断定する AI", MARGIN_L + Inches(0.3), Inches(4.05), Inches(4.6), Inches(0.45),
-    size=15, bold=True, color=RGBColor(0xFF, 0x3B, 0x30))
-multiline(s, [
-    ("「あなたはここで感動しました」", 15, False, DIM),
-    ("「あなたはベースが好きです」", 15, False, DIM),
-    ("→ 断定は対話を閉じる", 14, False, DIM),
-], MARGIN_L + Inches(0.3), Inches(4.55), Inches(4.6), Inches(2.0))
-
-card_box(s, MARGIN_L + Inches(5.6), Inches(3.9), Inches(5.2), Inches(2.7), bg=RGBColor(0x00, 0x18, 0x32))
-txb(s, "✅  HowTune の AI", MARGIN_L + Inches(5.9), Inches(4.05), Inches(4.6), Inches(0.45),
-    size=15, bold=True, color=BLUE, font="Inter SemiBold")
-multiline(s, [
-    ("「ここで反応していましたね」", 15, False, WHITE),
-    ("「リズムに乗っていた感じ？」", 15, False, WHITE),
-    ("「それとも歌詞が刺さった？」", 15, False, WHITE),
-    ("→ 問いかけが言語化を引き出す", 14, True, BLUE),
-], MARGIN_L + Inches(5.9), Inches(4.55), Inches(4.6), Inches(2.0))
-
-
-# ════════════════════════════════════════════════════════════════
-# Slide 6 — Technology Stack
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 8 — AI PHILOSOPHY (対比・短文)
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 05 — TECHNOLOGY")
+kicker(s, "AI DESIGN")
+txt(s, "断定しない。問いかける。",
+    ML, Inches(1.05), CW, Inches(1.0), sz=48, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.2), Inches(2.6))
 
-big_title(s, "Apple Ecosystem × Claude API", size=46)
+gap = Inches(0.5)
+cw2 = (CW - gap) / 2
+glass(s, ML, Inches(2.9), cw2, Inches(3.4), fa=35)
+txt(s, "✕", ML+Inches(0.5), Inches(3.2), Inches(1), Inches(0.7), sz=30, bold=True, col=RED)
+txt(s, "断定する AI", ML+Inches(1.3), Inches(3.28), cw2-Inches(1.8), Inches(0.6),
+    sz=20, bold=True, col=RED)
+mtxt(s, [
+    ("「あなたは感動しました」", 18, False, GRAY),
+    ("「ベースが好きですね」", 18, False, GRAY),
+], ML+Inches(0.5), Inches(4.2), cw2-Inches(1), Inches(1.8), spacing=1.5)
 
-txb(s, "iOS ネイティブに一本化（ADR-0001）。センサーからモデルまでオンデバイス優先。",
-    MARGIN_L, Inches(2.35), CONTENT_W, Inches(0.5),
-    size=16, bold=False, color=DIM)
+c2x = ML + cw2 + gap
+grad_card(s, c2x, Inches(2.9), cw2, Inches(3.4), DBLUE, RGBColor(0x0E,0x2A,0x52), angle=130)
+txt(s, "✓", c2x+Inches(0.5), Inches(3.2), Inches(1), Inches(0.7), sz=30, bold=True, col=LBLUE)
+txt(s, "HowTune の AI", c2x+Inches(1.3), Inches(3.28), cw2-Inches(1.8), Inches(0.6),
+    sz=20, bold=True, col=WHITE)
+mtxt(s, [
+    ("「ここで反応していましたね」", 18, False, WHITE),
+    ("「リズム？それとも歌詞？」", 18, False, WHITE),
+], c2x+Inches(0.5), Inches(4.2), cw2-Inches(1), Inches(1.8), spacing=1.5)
 
-divider(s, Inches(3.0))
-
-rows = [
-    ("iOS / UI",       "SwiftUI + MusicKit",           "ネイティブ必須、Apple Music 連携"),
-    ("歌詞",            "Musixmatch API",                "時刻同期歌詞（ADR-0004 解決）"),
-    ("Groove センサー", "音量 + 本体モーション",         "AirPods 不要でデモ可（ADR-0005）"),
-    ("LLM",             "Claude claude-sonnet-4-6",      "バックエンド経由でキー秘匿（ADR-0002）"),
-    ("ML",              "Create ML → Core ML",           "端末推論、対話がラベルに（データフライホイール）"),
-    ("DB",              "Firestore + Node.js",           "iOS SDK・リアルタイム同期"),
-]
-col_x = [MARGIN_L, MARGIN_L + Inches(2.0), MARGIN_L + Inches(5.0)]
-col_w = [Inches(1.8), Inches(2.8), Inches(5.3)]
-y = Inches(3.2)
-row_h = Inches(0.52)
-for i, (layer, tech, reason) in enumerate(rows):
-    bg = RGBColor(0x0A, 0x0A, 0x0A) if i % 2 == 0 else BLACK
-    card_box(s, MARGIN_L, y + i * row_h, CONTENT_W, row_h, bg=bg)
-    txb(s, layer, col_x[0] + Inches(0.1), y + i*row_h + Inches(0.1),
-        col_w[0], row_h, size=13, bold=False, color=DIM)
-    txb(s, tech,  col_x[1], y + i*row_h + Inches(0.1),
-        col_w[1], row_h, size=13, bold=True, color=WHITE)
-    txb(s, reason,col_x[2], y + i*row_h + Inches(0.1),
-        col_w[2], row_h, size=12, bold=False, color=DIM)
-
-
-# ════════════════════════════════════════════════════════════════
-# Slide 7 — Data Flywheel
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 9 — GROOVE (数式 + 6 pill)
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 06 — DATA STRATEGY")
+kicker(s, "THE SCIENCE OF GROOVE")
+txt(s, "身体反応を、数値に。",
+    ML, Inches(1.05), CW, Inches(0.9), sz=46, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.1), Inches(2.6))
 
-big_title(s, "対話がデータになる。\nデータが精度になる。", size=48)
+grad_card(s, ML, Inches(2.6), CW, Inches(1.5), RGBColor(0x06,0x1A,0x36), DBLUE, angle=0)
+txt(s, "Groove  =  volume × 0.42  +  pulse × 0.58",
+    ML, Inches(2.6), CW, Inches(1.0), sz=28, bold=True, col=LBLUE,
+    align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+txt(s, "AirPods 不要。iPhone だけで動く。",
+    ML, Inches(3.55), CW, Inches(0.5), sz=14, col=GRAY, align=PP_ALIGN.CENTER)
 
-txb(s, "AI 対話の回答が暗黙のラベルとなり、モデルが使えば使うほど賢くなる設計。",
-    MARGIN_L, Inches(2.9), CONTENT_W, Inches(0.5),
-    size=16, bold=False, color=DIM)
+axes = [("groove",BLUE),("hype",LBLUE),("chill",GREEN),
+        ("immersion",PURPLE),("hit",AMBER),("afterglow",PINK)]
+gap = Inches(0.25)
+pw = (CW - gap*5) / 6
+for i,(name,color) in enumerate(axes):
+    pill(s, ML+i*(pw+gap), Inches(4.6), pw, Inches(0.7), name, color)
+txt(s, "6軸スコアで「聴き方」を多次元に表現する",
+    ML, Inches(5.6), CW, Inches(0.5), sz=16, col=LGRAY, align=PP_ALIGN.CENTER)
 
-divider(s, Inches(3.5))
+# ═══════════════════════════════════════════════════════════════
+# 10 — FLYWHEEL (横一列・短語)
+# ═══════════════════════════════════════════════════════════════
+s = add_slide()
+kicker(s, "THE MOAT")
+txt(s, "使うほど、賢くなる。",
+    ML, Inches(1.05), CW, Inches(0.9), sz=48, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.15), Inches(2.6))
+txt(s, "AI対話の回答が、そのまま学習データになる。",
+    ML, Inches(2.45), CW, Inches(0.5), sz=18, col=LGRAY)
 
-# Flywheel steps
-fw = [
-    ("音量 + モーション", "Groove レベルをリアルタイム算出"),
-    ("歌詞タップ",        "文脈付きの反応ポイントを記録"),
-    ("AI 対話の回答",     "暗黙のラベルとして蓄積"),
-    ("Create ML 学習",   "Groove 精度が向上"),
-    ("より良い HowCard", "より多くの共鳴 → ユーザー増加"),
-]
-fw_w = Inches(2.15)
-fw_y = Inches(3.7)
-for i, (title, desc) in enumerate(fw):
-    x = MARGIN_L + i * (fw_w + Inches(0.08))
-    card_box(s, x, fw_y, fw_w, Inches(2.6))
-    txb(s, f"0{i+1}", x + Inches(0.2), fw_y + Inches(0.15), fw_w, Inches(0.35),
-        size=11, bold=False, color=BLUE, font="Inter SemiBold")
-    txb(s, title, x + Inches(0.2), fw_y + Inches(0.5), fw_w - Inches(0.3), Inches(0.55),
-        size=15, bold=True, color=WHITE)
-    txb(s, desc, x + Inches(0.2), fw_y + Inches(1.1), fw_w - Inches(0.3), Inches(1.3),
-        size=13, bold=False, color=DIM)
+nodes = ["タップ","AI 対話","学習","精度向上","共鳴増加"]
+gap = Inches(0.55)
+nw = (CW - gap*4) / 5
+for i, t in enumerate(nodes):
+    x = ML + i*(nw+gap)
+    grad_card(s, x, Inches(3.5), nw, Inches(2.0),
+              RGBColor(0x10,0x10,0x16), RGBColor(0x06,0x16,0x2E), angle=120)
+    txt(s, "0%d"%(i+1), x, Inches(3.75), nw, Inches(0.4), sz=13, col=BLUE, align=PP_ALIGN.CENTER)
+    txt(s, t, x, Inches(4.3), nw, Inches(0.9), sz=18, bold=True, align=PP_ALIGN.CENTER)
     if i < 4:
-        txb(s, "→", x + fw_w - Inches(0.05), fw_y + Inches(0.9), Inches(0.25), Inches(0.4),
-            size=18, bold=True, color=BLUE, align=PP_ALIGN.CENTER)
+        txt(s, "→", x+nw+Inches(0.05), Inches(4.25), gap-Inches(0.1), Inches(0.5),
+            sz=22, bold=True, col=BLUE, align=PP_ALIGN.CENTER)
+txt(s, "このデータ資産が、競合の参入障壁になる。",
+    ML, Inches(6.0), CW, Inches(0.5), sz=16, bold=True, col=LBLUE, align=PP_ALIGN.CENTER)
 
-# Phase table
-card_box(s, MARGIN_L, Inches(6.45), CONTENT_W, Inches(0.72), bg=LGRAY)
-multiline(s, [
-    ("MVP（今）: ルールベース Groove  →  Phase 1（〜6ヶ月）: 学習モデル 32次元  →  Phase 2（〜1年）: 個人最適化 128次元", 14, False, DIM),
-], MARGIN_L + Inches(0.3), Inches(6.57), CONTENT_W - Inches(0.5), Inches(0.5))
-
-
-# ════════════════════════════════════════════════════════════════
-# Slide 8 — Business Model
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 11 — TECHNOLOGY (色ドット + 最小テキスト)
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 07 — BUSINESS MODEL")
+kicker(s, "TECHNOLOGY")
+txt(s, "Apple Ecosystem × Claude",
+    ML, Inches(1.05), CW, Inches(0.9), sz=44, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.1), Inches(3.0))
 
-big_title(s, "アーティスト・リスナー・\nプラットフォームのプラスサム", size=42)
+tech = [
+    (BLUE,   "iOS",     "SwiftUI + MusicKit"),
+    (LBLUE,  "歌詞",     "Musixmatch API"),
+    (GREEN,  "Groove",  "音量 + 本体モーション"),
+    (AMBER,  "AI",      "Claude (backend経由)"),
+    (PURPLE, "ML",      "Create ML → Core ML"),
+    (PINK,   "Backend", "Firestore + Node.js"),
+]
+gap = Inches(0.4)
+cwd = (CW - gap*2) / 3
+chd = Inches(1.7)
+for i, (color, layer, t) in enumerate(tech):
+    ci, ri = i % 3, i // 3
+    x = ML + ci*(cwd+gap)
+    y = Inches(2.7) + ri*(chd+Inches(0.4))
+    glass(s, x, y, cwd, chd, fa=40)
+    dot = s.shapes.add_shape(9, x+Inches(0.4), y+Inches(0.4), Inches(0.28), Inches(0.28))
+    dot.fill.solid(); dot.fill.fore_color.rgb = color
+    dot.line.fill.background(); dot.shadow.inherit = False
+    txt(s, layer, x+Inches(0.85), y+Inches(0.32), cwd-Inches(1), Inches(0.5),
+        sz=16, bold=True, col=color)
+    txt(s, t, x+Inches(0.42), y+Inches(0.95), cwd-Inches(0.7), Inches(0.6),
+        sz=16, col=WHITE)
 
-divider(s, Inches(3.0))
+# ═══════════════════════════════════════════════════════════════
+# 11.5 — AI-DRIVEN DEVELOPMENT (CodeRabbit 顧客事例風)
+# ═══════════════════════════════════════════════════════════════
+s = add_slide()
+kicker(s, "AI-DRIVEN DEVELOPMENT")
+txt(s, "AI を、チームメイトに。",
+    ML, Inches(1.0), CW, Inches(0.9), sz=46, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.05), Inches(2.6))
+txt(s, "設計・実装・レビューの全工程に AI を組み込んだ。",
+    ML, Inches(2.35), CW, Inches(0.5), sz=18, col=LGRAY)
+
+# 実績メトリクス 3枚
+metrics = [("151", "Commits"), ("41", "Pull Requests"), ("5", "Days")]
+gap = Inches(0.4)
+mcw = (CW - gap*2) / 3
+for i, (num, lab) in enumerate(metrics):
+    x = ML + i*(mcw+gap)
+    grad_card(s, x, Inches(2.95), mcw, Inches(1.5),
+              RGBColor(0x06,0x1A,0x36), DBLUE, angle=120)
+    txt(s, num, x, Inches(3.1), mcw, Inches(0.9), sz=48, bold=True, col=LBLUE,
+        align=PP_ALIGN.CENTER)
+    txt(s, lab, x, Inches(4.0), mcw, Inches(0.4), sz=14, col=LGRAY, align=PP_ALIGN.CENTER)
+
+# ツール 2枚（ロゴ入り）
+gap2 = Inches(0.5)
+tcw = (CW - gap2) / 2
+glass(s, ML, Inches(4.75), tcw, Inches(1.65), fa=45)
+pic(s, "anthropic.png", ML+Inches(0.4), Inches(5.05), Inches(1.05), Inches(1.05))
+txt(s, "Claude Code", ML+Inches(1.7), Inches(5.05), tcw-Inches(2.0), Inches(0.5),
+    sz=20, bold=True, col=WHITE)
+txt(s, "設計ドキュメント・実装・スライドを生成", ML+Inches(1.7), Inches(5.55), tcw-Inches(2.0), Inches(0.8),
+    sz=14, col=LGRAY, spacing=1.2)
+
+t2x = ML + tcw + gap2
+glass(s, t2x, Inches(4.75), tcw, Inches(1.65), fa=45)
+pic(s, "coderabbit.png", t2x+Inches(0.4), Inches(5.05), Inches(1.05), Inches(1.05))
+txt(s, "CodeRabbit", t2x+Inches(1.7), Inches(5.05), tcw-Inches(2.0), Inches(0.5),
+    sz=20, bold=True, col=WHITE)
+txt(s, "全 PR を日本語で自動レビュー（8 PR で指摘・改善）", t2x+Inches(1.7), Inches(5.55), tcw-Inches(2.0), Inches(0.8),
+    sz=14, col=LGRAY, spacing=1.2)
+
+# CodeRabbit 実績の引用（出典リンク）
+txt(s, "CodeRabbit 実績: コードデリバリ 86% 高速化 / レビュー指摘 60% 削減  ―  claude.com/ja/customers/coderabbit",
+    ML, Inches(6.65), CW, Inches(0.45), sz=12, col=GRAY, italic=True)
+
+# ═══════════════════════════════════════════════════════════════
+# 12 — BUSINESS MODEL (大きく・収益を明示)
+# ═══════════════════════════════════════════════════════════════
+s = add_slide()
+kicker(s, "BUSINESS MODEL")
+txt(s, "3つの収益エンジン。",
+    ML, Inches(1.05), CW, Inches(0.9), sz=46, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.15), Inches(2.6))
 
 biz = [
-    ("B2B\nSaaS",        "#0071E3", "アーティスト向けインサイト",
-     "身体反応ヒートマップ\n「1:18にGroove集中」\nSpotify にないデータで差別化"),
-    ("プレミアム\nマッチング", "#34C759", "セレンディピティマッチング",
-     "同曲・同瞬間に反応した\n見知らぬ人との出会い\n（Premium 解禁）"),
-    ("チップ\n循環",      "#FF9F0A", "P2Pチップ + アーティスト支援",
-     "チップ送付者を「発見者」\nとして可視化\nマージン 10%"),
+    (BLUE,   "B2B SaaS",  "アーティスト\nインサイト",
+     "身体反応ヒートマップを提供", "月額サブスク"),
+    (GREEN,  "Premium",   "セレンディピティ\nマッチング",
+     "同じ瞬間に反応した人と出会う", "プレミアム課金"),
+    (AMBER,  "P2P Tips",  "チップ循環",
+     "発見者を可視化し直接還元", "マージン 10%"),
 ]
-biz_w = Inches(3.5)
-for i, (tag, color_hex, title, body) in enumerate(biz):
-    r, g, b = int(color_hex[1:3],16), int(color_hex[3:5],16), int(color_hex[5:7],16)
-    col = RGBColor(r, g, b)
-    x = MARGIN_L + i * (biz_w + Inches(0.4))
-    card_box(s, x, Inches(3.2), biz_w, Inches(3.7))
-    txb(s, tag, x + Inches(0.25), Inches(3.35), biz_w - Inches(0.4), Inches(0.7),
-        size=13, bold=True, color=col, font="Inter SemiBold")
-    txb(s, title, x + Inches(0.25), Inches(4.1), biz_w - Inches(0.4), Inches(0.55),
-        size=16, bold=True, color=WHITE)
-    txb(s, body, x + Inches(0.25), Inches(4.7), biz_w - Inches(0.4), Inches(1.9),
-        size=14, bold=False, color=DIM)
+gap = Inches(0.45)
+cwd = (CW - gap*2) / 3
+for i, (color, tag, title, desc, rev) in enumerate(biz):
+    x = ML + i*(cwd+gap)
+    glass(s, x, Inches(2.75), cwd, Inches(4.0), fa=45, radius=14000)
+    head = grad_card(s, x, Inches(2.75), cwd, Inches(0.9),
+                     color, RGBColor(max(color[0]-40,0),max(color[1]-40,0),max(color[2]-40,0)),
+                     angle=0, radius=14000)
+    txt(s, tag, x, Inches(2.75), cwd, Inches(0.9), sz=20, bold=True, col=WHITE,
+        align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+    txt(s, title, x+Inches(0.4), Inches(3.95), cwd-Inches(0.8), Inches(1.1),
+        sz=22, bold=True, col=WHITE, spacing=1.1)
+    txt(s, desc, x+Inches(0.4), Inches(5.05), cwd-Inches(0.8), Inches(0.9),
+        sz=15, col=LGRAY, spacing=1.25)
+    bar(s, x+Inches(0.4), Inches(5.95), cwd-Inches(0.8), h=Inches(0.04), c1=color, c2=color)
+    txt(s, rev, x+Inches(0.4), Inches(6.1), cwd-Inches(0.8), Inches(0.5),
+        sz=17, bold=True, col=color)
 
-
-# ════════════════════════════════════════════════════════════════
-# Slide 9 — MVP Status + Team
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 13 — TEAM + MVP
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 08 — TEAM & MVP")
+kicker(s, "TEAM & MVP")
+txt(s, "実装済み、実機で動く。",
+    ML, Inches(1.05), CW, Inches(0.9), sz=48, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.15), Inches(2.6))
+txt(s, "Team Othello — PM / iOS / Backend / ML・Design",
+    ML, Inches(2.5), CW, Inches(0.5), sz=17, col=GRAY)
 
-big_title(s, "実装済み、動いている。", size=52)
+gap = Inches(0.5)
+cw2 = (CW - gap) / 2
+grad_card(s, ML, Inches(3.2), cw2, Inches(3.4), RGBColor(0x06,0x24,0x12), RGBColor(0x04,0x12,0x0A), angle=130)
+txt(s, "✓  実装済み (P0)", ML+Inches(0.5), Inches(3.45), cw2-Inches(1), Inches(0.5),
+    sz=18, bold=True, col=GREEN)
+mtxt(s, [
+    "曲再生 × MusicKit", "時刻同期歌詞 (Musixmatch)",
+    "歌詞タップ → AI対話 (Claude)", "HowCard 生成・保存",
+    "Groove レベル表示",
+], ML+Inches(0.5), Inches(4.1), cw2-Inches(1), Inches(2.5), dsz=16, spacing=1.4)
 
-txb(s, "Team Othello — PM / iOS / Backend / ML・Design の4名",
-    MARGIN_L, Inches(2.45), CONTENT_W, Inches(0.5),
-    size=16, bold=False, color=DIM)
+c2x = ML + cw2 + gap
+glass(s, c2x, Inches(3.2), cw2, Inches(3.4), fa=35)
+txt(s, "○  意図的にスコープ外", c2x+Inches(0.5), Inches(3.45), cw2-Inches(1), Inches(0.5),
+    sz=18, bold=True, col=GRAY)
+mtxt(s, [
+    "DM・フォロー・タイムライン", "Spotify 連携",
+    "完全な認証フロー", "AirPods 必須のセンサー精度",
+    "教師データ収集アプリ",
+], c2x+Inches(0.5), Inches(4.1), cw2-Inches(1), Inches(2.5), dsz=16, dcol=GRAY, spacing=1.4)
 
-divider(s, Inches(3.1))
-
-# Built / Not built
-card_box(s, MARGIN_L, Inches(3.3), Inches(5.4), Inches(3.5))
-txb(s, "✅  実装済み（P0）",
-    MARGIN_L + Inches(0.3), Inches(3.45), Inches(5.0), Inches(0.45),
-    size=15, bold=True, color=RGBColor(0x34, 0xC7, 0x59))
-multiline(s, [
-    ("曲再生 × MusicKit", 14, False, WHITE),
-    ("時刻同期歌詞（Musixmatch）", 14, False, WHITE),
-    ("歌詞タップ → AI 対話（Claude API）", 14, False, WHITE),
-    ("Howカード生成・Firestore 保存", 14, False, WHITE),
-    ("Groove レベル表示（音量ベース）", 14, False, WHITE),
-    ("コミュニティ画面", 14, False, WHITE),
-], MARGIN_L + Inches(0.3), Inches(3.95), Inches(5.0), Inches(2.7))
-
-card_box(s, MARGIN_L + Inches(5.8), Inches(3.3), Inches(5.4), Inches(3.5))
-txb(s, "🚫  スコープ外",
-    MARGIN_L + Inches(6.1), Inches(3.45), Inches(5.0), Inches(0.45),
-    size=15, bold=True, color=DIM)
-multiline(s, [
-    ("DM・フォロー・タイムライン", 14, False, DIM),
-    ("Spotify 連携", 14, False, DIM),
-    ("完全な認証フロー", 14, False, DIM),
-    ("AirPods 必須センサー精度", 14, False, DIM),
-    ("教師データ収集アプリ（別仕様）", 14, False, DIM),
-], MARGIN_L + Inches(6.1), Inches(3.95), Inches(5.0), Inches(2.7))
-
-
-# ════════════════════════════════════════════════════════════════
-# Slide 10 — Competitive Differentiation
-# ════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 14 — CLOSING
+# ═══════════════════════════════════════════════════════════════
 s = add_slide()
-chapter_label(s, "CHAPTER 09 — DIFFERENTIATION")
+txt(s, "音楽は、\nどう聴くかだ。",
+    ML, Inches(2.0), CW, Inches(2.6), sz=78, bold=True, spacing=1.05)
+bar(s, ML+Inches(0.05), Inches(4.85), Inches(3.6), h=Inches(0.07))
+txt(s, "歌詞が、あなたの How を語り始める。",
+    ML, Inches(5.15), CW, Inches(0.6), sz=22, col=LGRAY)
+txt(s, "HowTune   ·   Team Othello",
+    ML, Inches(6.6), CW, Inches(0.45), sz=13, col=GRAY)
 
-big_title(s, "誰もやっていない、\n3つの掛け合わせ。", size=48)
+# ═══════════════════════════════════════════════════════════════
+# REFERENCES — 参考資料
+# ═══════════════════════════════════════════════════════════════
+s = add_slide()
+kicker(s, "REFERENCES")
+txt(s, "参考資料",
+    ML, Inches(1.0), CW, Inches(0.9), sz=46, bold=True)
+bar(s, ML+Inches(0.05), Inches(2.05), Inches(2.6))
 
-divider(s, Inches(3.05))
-
-table_rows = [
-    ("",                 "Spotify", "Last.fm", "Apple Music", "HowTune"),
-    ("How の言語化",      "✗",       "✗",       "✗",           "✓"),
-    ("歌詞 × 反応",       "✗",       "✗",       "✗",           "✓"),
-    ("AI 対話 + HowCard", "✗",       "✗",       "✗",           "✓"),
-    ("身体反応マッチング", "✗",       "✗",       "✗",           "✓"),
+refs = [
+    ("coderabbit.png", "CodeRabbit × Claude 顧客事例",
+     "claude.com/ja/customers/coderabbit"),
+    ("anthropic.png", "Claude Code — AI ペアプログラミング",
+     "claude.com/claude-code"),
+    ("coderabbit.png", "CodeRabbit — AI コードレビュー",
+     "coderabbit.ai"),
 ]
-row_h = Inches(0.58)
-col_xs = [MARGIN_L, MARGIN_L+Inches(3.8), MARGIN_L+Inches(5.8), MARGIN_L+Inches(7.8), MARGIN_L+Inches(9.65)]
-col_ws = [Inches(3.5), Inches(1.8), Inches(1.8), Inches(1.8), Inches(1.5)]
+ry = Inches(2.75)
+rh = Inches(1.25)
+for i, (logo, title, url) in enumerate(refs):
+    y = ry + i*(rh + Inches(0.22))
+    glass(s, ML, y, CW, rh, fa=42)
+    pic(s, logo, ML+Inches(0.4), y+Inches(0.27), Inches(0.7), Inches(0.7))
+    txt(s, title, ML+Inches(1.45), y+Inches(0.25), CW-Inches(2), Inches(0.5),
+        sz=20, bold=True, col=WHITE)
+    txt(s, url, ML+Inches(1.45), y+Inches(0.72), CW-Inches(2), Inches(0.4),
+        sz=15, col=LBLUE)
 
-for ri, row in enumerate(table_rows):
-    y = Inches(3.15) + ri * row_h
-    bg = RGBColor(0x00, 0x18, 0x32) if ri == 0 else (LGRAY if ri % 2 == 1 else BLACK)
-    card_box(s, MARGIN_L, y, CONTENT_W, row_h, bg=bg)
-    for ci, cell in enumerate(row):
-        color = BLUE if (ri == 0) else (RGBColor(0x34, 0xC7, 0x59) if cell == "✓" else DIM)
-        bold = ri == 0 or ci == 0
-        txb(s, cell, col_xs[ci] + Inches(0.15), y + Inches(0.1),
-            col_ws[ci], row_h, size=14, bold=bold, color=color, align=PP_ALIGN.CENTER if ci > 0 else PP_ALIGN.LEFT)
+# ═══════════════════════════════════════════════════════════════
+# Q&A APPENDIX
+# ═══════════════════════════════════════════════════════════════
+def qa(q, answer):
+    s = add_slide()
+    txt(s, "Q&A", ML, Inches(0.5), Inches(3), Inches(0.36), sz=12, bold=True, col=BLUE)
+    glass(s, ML, Inches(0.95), CW, Inches(1.3), fa=45, radius=10000)
+    txt(s, q, ML+Inches(0.4), Inches(0.95), CW-Inches(0.8), Inches(1.3),
+        sz=22, bold=True, col=WHITE, anchor=MSO_ANCHOR.MIDDLE)
+    bar(s, ML+Inches(0.05), Inches(2.5), Inches(3.0))
+    mtxt(s, answer, ML, Inches(2.8), CW, Inches(4.0), dsz=17, spacing=1.45)
 
+qa("Q1: AirPods がないと精度が落ちる？", [
+    ("A. AirPods はサプリメントに降格済み (ADR-0005)。", 18, True, WHITE),
+    "",
+    ("デモは iPhone 単体で完全動作。", 17, False, LBLUE),
+    "音量 × 本体モーションで Groove を算出。AirPods 接続時は精度が上がるが必須ではない。",
+    "ロードマップ: 音量 → AirPods → 個人最適化。",
+])
+qa("Q2: 音楽・歌詞のライセンスは？", [
+    ("A. Apple MusicKit で再生 = ライセンス取得済み。", 18, True, WHITE),
+    "",
+    "音源は保持・配信せず MusicKit に委任。",
+    "歌詞は Musixmatch API（商用時は有償プラン）。",
+    "Claude API はバックエンド経由でキーを秘匿。",
+])
+qa("Q3: ML の精度は現実的？", [
+    ("A. MVP はルールベース。精度より体験を優先。", 18, True, WHITE),
+    "",
+    ("volume × 0.42 + motion × 0.58。", 17, False, LBLUE),
+    "誇大な精度は主張しない。",
+    "AI対話の回答 → ラベル → Create ML で精度向上。使うほど賢くなる。",
+])
+qa("Q4: スケールするか / 模倣されないか？", [
+    ("A. データモートとネットワーク効果。", 18, True, WHITE),
+    "",
+    "「歌詞 × 身体反応 × AI対話」のラベル付きデータは、後発が追うのに同量のユーザー時間が必要。",
+    ("同じ歌詞に反応した人が増えるほど、マッチング価値が上がる。", 17, False, LBLUE),
+])
+qa("Q5: 心拍・身体データのプライバシーは？", [
+    ("A. プライバシーを設計の中心に。", 18, True, WHITE),
+    "",
+    "心拍は HealthKit 端末内に留め、Firestore には書き込まない。",
+    "LLM キーはバックエンド経由 (ADR-0002)。",
+    "最小権限・明示同意・削除手段を非機能要件に定義。",
+])
+qa("Q6: なぜ今、なぜこのチーム？", [
+    ("A. タイミング・技術・チームが揃った。", 18, True, WHITE),
+    "",
+    ("AIがスキルをコモディティ化した直後 — 「How」のSNSはまだ無い。", 17, False, LBLUE),
+    "Apple Ecosystem × Claude が今が最良の組み合わせ。",
+    "PM / iOS / Backend / ML の4専門職で、3日で動くものを作った。",
+])
 
-# ════════════════════════════════════════════════════════════════
-# Slide 11 — Closing Vision
-# ════════════════════════════════════════════════════════════════
-s = add_slide()
+# 退避したノートを同じ位置のスライドに復元
+_slides = list(prs.slides)
+for _i, _t in _saved_notes.items():
+    if _i < len(_slides):
+        _slides[_i].notes_slide.notes_text_frame.text = _t
+if _saved_notes:
+    print("ノートを %d 件復元しました" % len(_saved_notes))
 
-txb(s, "音楽は、どう聴くかだ。",
-    MARGIN_L, Inches(1.6), CONTENT_W, Inches(1.5),
-    size=62, bold=True, color=WHITE)
-
-txb(s, "歌詞が、あなたの How を語り始める。",
-    MARGIN_L, Inches(3.1), CONTENT_W, Inches(0.8),
-    size=22, bold=False, color=DIM)
-
-divider(s, Inches(4.0))
-
-multiline(s, [
-    ("Phase 1（〜6ヶ月）：アーティスト向け反応ヒートマップ（B2B）", 15, False, DIM),
-    ("Phase 2（〜1年）：チップ循環 + Fan-to-Earn エコシステム",     15, False, DIM),
-    ("Phase 3（〜2年）：ライブ会場リアルタイム共感 × 個人最適化 How マッチング", 15, False, DIM),
-], MARGIN_L, Inches(4.2), CONTENT_W, Inches(1.5))
-
-txb(s, "HowTune  ·  Team Othello  ·  Engineer Guild Hackathon 2026/05",
-    MARGIN_L, Inches(6.45), CONTENT_W, Inches(0.5),
-    size=13, bold=False, color=BLUE, font="Inter SemiBold")
-
-
-# ════════════════════════════════════════════════════════════════
-# Save
-# ════════════════════════════════════════════════════════════════
-out = "docs/slides/howtune_final.pptx"
-prs.save(out)
-print(f"Saved: {out}  ({len(prs.slides)} slides)")
+prs.save(OUT)
+n = len(prs.slides)
+print("Saved: %s  (%d slides: 16 main + refs + %d Q&A)" % (OUT, n, n-17))

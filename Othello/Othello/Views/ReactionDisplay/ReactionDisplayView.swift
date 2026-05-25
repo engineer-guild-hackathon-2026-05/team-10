@@ -135,7 +135,7 @@ struct ReactionDisplayView: View {
             Text("このフレーズでの気持ちは？").font(.subheadline.bold()).foregroundStyle(.white)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(HowTag.allCases, id: \.self) { tag in
+                    ForEach(HowTag.scoreCases, id: \.self) { tag in
                     Button {
                         withAnimation(.spring(duration: 0.2)) {
                             viewModel.selectedHowTag = viewModel.selectedHowTag == tag ? nil : tag
@@ -229,6 +229,7 @@ struct ReactionDisplayView: View {
         case .immersion: return "🎧"
         case .hit:       return "💫"
         case .afterglow: return "✨"
+        case .neutral:   return "○"
         }
     }
 }

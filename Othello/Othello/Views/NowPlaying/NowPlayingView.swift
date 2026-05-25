@@ -6,15 +6,11 @@ enum NowPlayingTab {
 
 struct NowPlayingView: View {
     let song: Song
+    @ObservedObject var playback: PlaybackViewModel
+    @ObservedObject var airPods: AirPodsMotionViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var isPlaying: Bool = true
-    @State private var progress: Double = 0.32
+    @StateObject private var lyricsViewModel = LyricsViewModel()
     @State private var activeTab: NowPlayingTab = .playback
-
-    private let lyrics: [(section: String, lines: [String])] = [
-        ("Intro", ["ふと見上げた空に咲いた", "小さな花のように"]),
-        ("Verse 1", ["風が運ぶ 街の音", "君と歩いた あの坂道"])
-    ]
 
     var body: some View {
         ZStack {
@@ -36,6 +32,9 @@ struct NowPlayingView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .task(id: lyricsTaskID) {
+            await lyricsViewModel.loadLyrics(for: lyricsQuery)
+        }
     }
 
     private var nowPlayingFooterSpacer: some View {
@@ -45,14 +44,16 @@ struct NowPlayingView: View {
     // MARK: - 再生タブのコンテンツ
 
     private var playbackContent: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            vinylRecord
-            songInfo
-            Spacer()
-            sectionChip
-            lyricsCard
-            Spacer(minLength: 16)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 0) {
+                circularVisualizer
+                    .padding(.top, 8)
+                songInfo
+                playbackControls
+                lyricsCard
+                    .padding(.top, 24)
+                Color.clear.frame(height: 104)
+            }
         }
     }
 
@@ -64,52 +65,38 @@ struct NowPlayingView: View {
 
     private var topBar: some View {
         HStack {
-            Spacer()
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "waveform")
-                    .font(.title3)
+                Image(systemName: "chevron.left")
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
-                    .padding(10)
+                    .frame(width: 40, height: 40)
                     .background(Color.white.opacity(0.1), in: Circle())
             }
+            .accessibilityLabel("戻る")
+
+            Spacer()
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
     }
 
-    private var vinylRecord: some View {
+    private var circularVisualizer: some View {
         ZStack {
-            ForEach(Array(0..<8), id: \.self) { i in
-                let ratio = Double(i) / 8.0
-                let size = CGFloat(240 - i * 24)
-                Circle()
-                    .stroke(
-                        LinearGradient(
-                            colors: song.gradientColors.map { $0.opacity(1.0 - ratio * 0.6) },
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 14
-                    )
-                    .frame(width: size, height: size)
-            }
-            Circle()
-                .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
-                .frame(width: 36, height: 36)
-            Circle()
-                .fill(Color(red: 0.25, green: 0.25, blue: 0.25))
-                .frame(width: 12, height: 12)
+            AirPodsReactiveWaveformView(
+                isAnimating: playback.isPlaying,
+                playbackTime: playback.playbackTime,
+                audioLevel: waveformAudioLevel,
+                motionIntensity: airPods.recentInteractionIntensity,
+                trackSeed: waveformTrackSeed,
+                reactionState: waveformReactionState
+            )
+            .frame(width: 264, height: 264)
+
+            CircularArtworkView(song: song, size: 154, isPlaying: playback.isPlaying, showsCenterHole: true)
         }
-        .frame(width: 260, height: 260)
-        .rotationEffect(.degrees(isPlaying ? 360 : 0))
-        .animation(
-            isPlaying
-                ? .linear(duration: 4).repeatForever(autoreverses: false)
-                : .default,
-            value: isPlaying
-        )
+        .frame(width: 282, height: 282)
         .padding(.vertical, 12)
     }
 
@@ -126,73 +113,165 @@ struct NowPlayingView: View {
         .padding(.bottom, 8)
     }
 
-    private var sectionChip: some View {
-        HStack {
-            Text("● Section 1・イントロ")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color(red: 0.3, green: 0.2, blue: 0.5), in: Capsule())
-            Spacer()
+    private var playbackControls: some View {
+        VStack(spacing: 10) {
+            let duration = song.duration
+            let progress = duration > 0 ? min(max(playback.playbackTime / duration, 0), 1) : 0
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.14))
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.3, blue: 0.3), Color(red: 0.18, green: 0.68, blue: 1.0)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: proxy.size.width * progress)
+                }
+            }
+            .frame(height: 6)
+
+            HStack {
+                Text(formatTime(playback.playbackTime))
+                Spacer()
+                Button {
+                    Task { await playback.togglePlayback() }
+                } label: {
+                    Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 44, height: 44)
+                        .background(Color.white, in: Circle())
+                        .offset(x: playback.isPlaying ? 0 : 2)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+                Text(formatTime(duration))
+            }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.white.opacity(0.64))
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 28)
+        .padding(.top, 10)
     }
 
     private var lyricsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("歌詞")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+        VStack(alignment: .leading, spacing: 10) {
+            switch lyricsViewModel.state {
+            case .idle, .loading:
+                Text("歌詞を読み込み中")
+                    .font(.body)
                     .foregroundStyle(.white)
-                Spacer()
-                Button {} label: {
-                    HStack(spacing: 4) {
-                        Text("全文表示")
-                            .font(.caption)
-                            .foregroundStyle(Color(red: 0.5, green: 0.4, blue: 0.9))
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .foregroundStyle(Color(red: 0.5, green: 0.4, blue: 0.9))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .loaded:
+                if let loadedLyrics = lyricsViewModel.lyrics, !loadedLyrics.lines.isEmpty {
+                    ForEach(loadedLyrics.lines) { line in
+                        Text(line.text)
+                            .font(.body)
+                            .foregroundStyle(.white)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                } else {
+                    Text("歌詞を表示できません")
+                        .font(.body)
+                        .foregroundStyle(.white)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+            case .unavailable(let message), .failed(let message):
+                Text(message)
+                    .font(.body)
+                    .foregroundStyle(.white)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            ForEach(Array(lyrics.enumerated()), id: \.offset) { _, section in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("[\(section.section)]")
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                    ForEach(Array(section.lines.enumerated()), id: \.offset) { lineIndex, line in
-                        Text(line)
-                            .font(lineIndex == 0 ? .body.bold() : .body)
-                            .foregroundStyle(lineIndex == 0 ? .white : Color.white.opacity(0.5))
-                    }
-                }
-            }
-
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
         .padding(.horizontal, 16)
     }
 
-    private func actionButtonAccent(icon: String, label: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(Color(red: 0.5, green: 0.4, blue: 0.9))
-            Text(label)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color(red: 0.5, green: 0.4, blue: 0.9))
+    private var lyricsQuery: LyricsTrackQuery {
+        if let track = playback.currentTrack, matches(track: track, song: song) {
+            return LyricsTrackQuery(playbackTrack: track)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color(red: 0.3, green: 0.2, blue: 0.5).opacity(0.3), in: Capsule())
+
+        return LyricsTrackQuery(
+            title: song.title,
+            artistName: song.artistName,
+            duration: song.duration
+        )
+    }
+
+    private var lyricsTaskID: String {
+        [
+            lyricsQuery.musicKitID ?? "",
+            lyricsQuery.title,
+            lyricsQuery.artistName,
+            lyricsQuery.albumName ?? "",
+            lyricsQuery.isrc ?? "",
+            lyricsQuery.duration.map { String(Int($0.rounded())) } ?? ""
+        ]
+        .joined(separator: "|")
+    }
+
+    private func matches(track: PlaybackTrack, song: Song) -> Bool {
+        if let musicKitID = song.musicKitID, track.musicKitID == musicKitID {
+            return true
+        }
+
+        let trackTitle = normalizedMatchText(track.title)
+        let songTitle = normalizedMatchText(song.title)
+        let trackArtist = normalizedMatchText(track.artistName)
+        let songArtist = normalizedMatchText(song.artistName)
+
+        return !songTitle.isEmpty
+            && !songArtist.isEmpty
+            && trackTitle.contains(songTitle)
+            && trackArtist.contains(songArtist)
+    }
+
+    private func normalizedMatchText(_ value: String) -> String {
+        value
+            .lowercased()
+            .replacingOccurrences(of: "\\s+", with: "", options: .regularExpression)
+    }
+
+    private func formatTime(_ time: TimeInterval) -> String {
+        let seconds = max(0, Int(time))
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    private var waveformAudioLevel: Double {
+        guard playback.isPlaying else {
+            return 0.18
+        }
+
+        let pulse = 0.58
+            + 0.20 * sin(playback.playbackTime * 2.4)
+            + 0.12 * sin(playback.playbackTime * 5.2)
+        return min(max(pulse, 0.12), 1.0)
+    }
+
+    private var waveformTrackSeed: Int {
+        [song.firestoreSongID, song.title, song.artistName]
+            .joined(separator: "|")
+            .unicodeScalars
+            .reduce(17) { partialResult, scalar in
+                partialResult &* 31 &+ Int(scalar.value)
+            }
+    }
+
+    private var waveformReactionState: HowTag {
+        guard playback.isPlaying else { return .neutral }
+        return airPods.recentInteractionIntensity > 0.28 ? .groove : .neutral
     }
 
     // MARK: - フッター
@@ -258,5 +337,5 @@ struct NowPlayingView: View {
         artistName: "Mrs. GREEN APPLE",
         gradientColors: [Color(red: 0.85, green: 0.55, blue: 0.35), Color(red: 0.65, green: 0.35, blue: 0.5)],
         durationSeconds: 272
-    ))
+    ), playback: PlaybackViewModel(), airPods: AirPodsMotionViewModel())
 }

@@ -15,6 +15,12 @@ struct AirPodsMotionSample: Identifiable, Equatable {
     var rotationMagnitude: Double {
         rotationRate.magnitude
     }
+
+    var interactionIntensity: Double {
+        let accelerationScore = min(1.0, accelerationMagnitude * 1.8)
+        let rotationScore = min(1.0, rotationMagnitude / 6.5)
+        return min(1.0, accelerationScore * 0.58 + rotationScore * 0.42)
+    }
 }
 
 struct MotionVector: Equatable {

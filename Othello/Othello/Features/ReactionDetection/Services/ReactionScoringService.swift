@@ -43,6 +43,8 @@ struct ReactionScoringService {
             return ReactionScore(hype: 0.25, immersion: 0.35, hit: 1)
         case .afterglow:
             return ReactionScore(chill: 0.35, immersion: 0.25, afterglow: 1)
+        case .neutral:
+            return .empty
         }
     }
 

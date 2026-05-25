@@ -98,7 +98,7 @@ struct ReactionTimelineView: View {
                 Spacer()
                 // 凡例
                 HStack(spacing: 10) {
-                    ForEach([HowTag.groove, .hit, .chill], id: \.self) { tag in
+                    ForEach([HowTag.groove, .chill, .neutral], id: \.self) { tag in
                         HStack(spacing: 4) {
                             Circle().fill(tag.color).frame(width: 6, height: 6)
                             Text(tag.label).font(.caption2).foregroundStyle(.gray)

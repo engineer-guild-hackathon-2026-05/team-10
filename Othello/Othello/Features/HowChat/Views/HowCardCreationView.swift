@@ -157,7 +157,7 @@ struct HowCardCreationView: View {
                 .foregroundStyle(.white)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(HowTag.allCases, id: \.self) { tag in
+                ForEach(HowTag.scoreCases, id: \.self) { tag in
                     let isSelected = selectedTags.contains(tag)
                     Button {
                         withAnimation(.spring(duration: 0.2)) {
@@ -298,6 +298,7 @@ struct HowCardCreationView: View {
         case .immersion: return "🎧"
         case .hit:       return "💫"
         case .afterglow: return "✨"
+        case .neutral:   return "○"
         }
     }
 }

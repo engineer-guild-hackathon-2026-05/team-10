@@ -3,14 +3,14 @@ import SwiftUI
 struct MusicFeedView: View {
     let artist: Artist
     let onSongTap: (Song) -> Void
+    @ObservedObject private var playback: PlaybackViewModel
     @StateObject private var viewModel: MusicFeedViewModel
-    @State private var clipSong: Song?
-    @State private var nowPlayingSong: Song?
     @Environment(\.dismiss) private var dismiss
 
-    init(artist: Artist, onSongTap: @escaping (Song) -> Void) {
+    init(artist: Artist, onSongTap: @escaping (Song) -> Void, playback: PlaybackViewModel) {
         self.artist = artist
         self.onSongTap = onSongTap
+        self.playback = playback
         self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
     }
 
@@ -24,11 +24,8 @@ struct MusicFeedView: View {
             }
         }
         .navigationBarHidden(true)
-        .sheet(item: $clipSong) { song in
-            ClipCreationView(song: song)
-        }
-        .fullScreenCover(item: $nowPlayingSong) { song in
-            NowPlayingView(song: song)
+        .task(id: viewModel.selectedSong?.firestoreSongID) {
+            await viewModel.loadPosts()
         }
         .preferredColorScheme(.dark)
     }
@@ -93,10 +90,21 @@ struct MusicFeedView: View {
     private var feedList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                        .padding(.vertical, 24)
+                } else if let errorMessage = viewModel.errorMessage {
+                    feedStatusMessage(errorMessage, systemImage: "wifi.exclamationmark")
+                } else if viewModel.posts.isEmpty {
+                    feedStatusMessage("この曲のHowカードはまだありません", systemImage: "music.note.list")
+                }
+
                 ForEach(viewModel.posts) { post in
                     FeedPostCard(post: post, onSongTap: {
-                        nowPlayingSong = post.song
-                        onSongTap(post.song)
+                        play(post: post)
+                    }, onLike: {
+                        like(post: post)
                     })
                 }
             }
@@ -104,127 +112,36 @@ struct MusicFeedView: View {
             .padding(.vertical, 8)
         }
     }
-}
 
-// MARK: - Feed Post Card
-
-private struct FeedPostCard: View {
-    let post: FeedPost
-    let onSongTap: () -> Void
-    @State private var isLiked: Bool = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(post.avatarColor)
-                    .frame(width: 40, height: 40)
-                    .overlay {
-                        Text(post.avatarLetter)
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                    }
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Text(post.userName)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.caption2)
-                            .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
-                    }
-                    Text("\(post.userHandle) · \(post.timeAgo)")
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                }
-                Spacer()
-                Image(systemName: "ellipsis")
-                    .foregroundStyle(.gray)
-                    .font(.subheadline)
-            }
-
-            Text(post.comment)
+    private func feedStatusMessage(_ message: String, systemImage: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.title2)
+                .foregroundStyle(.gray)
+            Text(message)
                 .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.85))
-                .lineLimit(3)
-
-            MiniSongCard(song: post.song, onTap: onSongTap)
-
-            HStack(spacing: 20) {
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        isLiked.toggle()
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: isLiked ? "heart.fill" : "heart")
-                            .foregroundStyle(isLiked ? Color(red: 1.0, green: 0.3, blue: 0.3) : .white)
-                        Text("\(post.likeCount + (isLiked ? 1 : 0))")
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                    }
-                }
-                HStack(spacing: 6) {
-                    Image(systemName: "bubble.left")
-                        .foregroundStyle(.white)
-                    Text("\(post.commentCount)")
-                        .font(.subheadline)
-                        .foregroundStyle(.white)
-                }
-                Spacer()
-                Image(systemName: "paperplane")
-                    .foregroundStyle(.gray)
-            }
+                .foregroundStyle(.gray)
         }
-        .padding(16)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
     }
-}
 
-// MARK: - Mini Song Card
-
-private struct MiniSongCard: View {
-    let song: Song
-    let onTap: () -> Void
-    @State private var isPlaying: Bool = false
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 52, height: 52)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(song.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                    Text(song.artistName)
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                }
-                Spacer()
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isPlaying.toggle()
-                    }
-                    onTap()
-                } label: {
-                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 36))
-                        .foregroundStyle(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(12)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+    private func play(post: FeedPost) {
+        Task {
+            guard let track = await playback.select(song: post.song) else { return }
+            let resolvedSong = Song(playbackTrack: track, fallback: post.song)
+            onSongTap(resolvedSong)
         }
-        .buttonStyle(.plain)
+    }
+
+    private func like(post: FeedPost) {
+        guard let cardID = post.cardID else { return }
+        Task {
+            try? await FirebaseAPI.shared.incrementGoods(cardID: cardID)
+        }
     }
 }
 
 #Preview {
-    MusicFeedView(artist: Artist.mock[0], onSongTap: { _ in })
+    MusicFeedView(artist: Artist.catalog[0], onSongTap: { _ in }, playback: PlaybackViewModel())
 }
