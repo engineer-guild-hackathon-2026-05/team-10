@@ -7,8 +7,8 @@ struct HowChatView: View {
     @State private var navigateToHowCard = false
     @FocusState private var isInputFocused: Bool
 
-    init(event: ReactionEvent) {
-        _vm = StateObject(wrappedValue: HowChatViewModel(event: event))
+    init(event: ReactionEvent, peak: PeakMoment? = nil) {
+        _vm = StateObject(wrappedValue: HowChatViewModel(event: event, peak: peak))
     }
 
     var body: some View {

@@ -14,15 +14,29 @@ final class HowChatViewModel: ObservableObject {
     let event: ReactionEvent
     let sessionID: String
     private let maximumDialogueTurns = 2
+    /// 1回目の「決めうち」問いかけ（FR-RES-02）。peak がある時のみ設定され、その場合 turn0 は LLM を呼ばない。
+    private let scriptedFirstPrompt: HowResonancePromptBuilder.Prompt?
 
-    init(event: ReactionEvent) {
+    init(event: ReactionEvent, peak: PeakMoment? = nil) {
         self.event = event
         self.sessionID = event.id.uuidString
+        if let peak {
+            self.scriptedFirstPrompt = HowResonancePromptBuilder.firstPrompt(peak: peak)
+        } else {
+            self.scriptedFirstPrompt = nil
+        }
     }
 
     func start() {
         guard messages.isEmpty else { return }
-        Task { await sendToAI(userMessage: nil) }
+        if let scriptedFirstPrompt {
+            // 1回目は決めうち（ピーク地点の固定問いかけ）。2回目以降は LLM。
+            messages.append(HowChatMessage(sender: .ai, text: scriptedFirstPrompt.question))
+            choices = scriptedFirstPrompt.choices.map { HowChatChoice(label: $0) }
+            state = .waitingReply
+        } else {
+            Task { await sendToAI(userMessage: nil) }
+        }
     }
 
     func selectChoice(_ choice: HowChatChoice) {

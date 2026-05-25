@@ -1555,7 +1555,29 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：表示 metadata と Firestore lookup key を分離することで、MusicKit の英語タイトル解決後も既存 Howカードの曲別取得を壊さず、不要になった seed write も削除できたため。
 
-### #005 歌詞タップからの Howカード投稿
+### #005 How Resonance（共鳴マッチング + リアルタイムDM）一晩実装
+
+- **時刻**：深夜（ヘッドレス自律実装）
+- **ツール**：Claude Code（Opus 4.7）/ xcodebuild
+- **目的**：AirPodsピークモーション起点の問いかけ→AI深掘り→Howカード→同地点リアルタイムマッチング→🔥DM を、既存を壊さず一晩で実装する
+- **プロンプト**：
+  ```text
+  ヘッドレスモードで朝までに作業完成させといてください。…AirPodsをつけている人がどこで1番動いたかを記録し「ここどうですか」と聞く。1回目は決めうち、2回目はLLMで深掘りしてコメント/ハウカードに。…ハウカード投稿で同じところ/違うところで反応した人が見れる。分子が量子力学的にふわっと現れ摩擦で発火するアーティスティックな演出で、火がつく=マッチ。その人とDMできる。リアルタイムDB同期で。既存は壊さない。ステアリングとADRも残して。HTML/PPTX両方のスライドも。
+  ```
+- **出力サマリ**：
+  - 着手前に矛盾点を4問（ベースブランチ / デモ同期方式 / 優先順位 / headless検証方針）チェックボックスで確認し方針確定
+  - feat/how-chat-deepening に最新main再マージ（競合解決・ビルド通過）→ 新ブランチ feat/how-resonance
+  - `PeakMotionTracker`（ML不使用、interactionIntensityピーク）/ `HowResonancePromptBuilder`（1回目決めうち）
+  - `ResonanceMatchService`（how-cards を Firestore リアルタイム購読・±2.5s同地点判定）/ `ResonanceChatService`（楽観的DM）
+  - `QuantumIgnitionView`（Canvas+TimelineView で量子→摩擦→発火、Metal非依存）
+  - HowChat/HowCard/HomeView へ optional 引数で非破壊接続
+  - Firestore rules（how-cards read / conversations 参加者限定）+ seed スクリプト
+  - ADR-0006、steering 一式、HTML+PPTX スライド（Canvas発火アニメ付きHTML含む）
+  - `xcodebuild` で BUILD SUCCEEDED を全フェーズで確認（見た目・実機リアルタイムは実機確認に委譲）
+- **評価**：採用（※見た目とリアルタイム挙動は実機で要確認）
+- **採用 / 不採用の理由**：既存を壊さず（optional引数・新規ファイル中心）にコア体験〜マッチング〜DMを通し、ビルド通過まで保証できたため。検証限界（headlessでUI目視不可・Playwrightはweb専用）を先に共有した上で進めた。
+
+### #006 歌詞タップからの Howカード投稿
 
 - **時刻**：01:55
 - **ツール**：Codex / xcodebuild
@@ -1574,7 +1596,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：既存 NowPlaying の暗いミニマルなトンマナを保ちつつ、歌詞を起点に曲中区間へ直接コメントを紐づけられるため。
 
-### #006 歌詞投稿シートの推定表示削除
+### #007 歌詞投稿シートの推定表示削除
 
 - **時刻**：02:08
 - **ツール**：Codex
@@ -1589,6 +1611,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：機能上必要な範囲推定は残しつつ、画面上の不要な説明テキストだけを消せたため。
 
+### #008 PR #99 レビュー対応と main merge
+
+- **時刻**：06:30
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #99 `feat/how-resonance` の CodeRabbit 指摘と `main` conflict を解消する
+- **プロンプト**：
+  ```text
+  pr 99のレビューを修正して、pushしておいて
+  ```
+- **出力サマリ**：
+  - `origin/main` を merge し、`AI_USAGE_LOG.md` の conflict を解消
+  - Firestore DM rules を fixed schema + `created_at == request.time` にし、Swift 側を server timestamp 送信へ変更
+  - DM / マッチング購読のエラー処理、失敗時 pending 維持、song_start/song_end validation、入力 trim を修正
+  - `PeakMoment.interval` の track duration 境界と `QuantumIgnitionView` の cadence 連動描画密度を修正
+  - スライド生成 helper を `pptx_utils.py` に共通化し、gradient_angle 例外を限定して debug log 化
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘をデータ境界・リアルタイム購読・描画負荷・ドキュメント/ログ整合性の各面で解消し、PR を main と統合可能な状態へ戻せるため。
 ### #007 Howカード内ミニ楽曲カードの全面タップ化
 
 - **時刻**：06:29

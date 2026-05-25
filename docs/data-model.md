@@ -57,6 +57,22 @@ users/{uid}
 
 `onUserSignup` が初回サインアップ時に作成し、`PUT /users/me` が追加同期する。現行 iOS は起動時や Howカード読み込み時に users seed を行わず、必要に応じてログイン中ユーザー自身の `users/{uid}` を読み取るだけにする。
 
+### `conversations`（共鳴 DM・ADR-0006）
+
+リアルタイム DM。`conversationId` はソート済み uid を `__` で連結（`uidA__uidB`）。iOS が Firestore を直接購読・書き込みする（楽観的更新）。参加者のみ read/write（rules で担保）。
+
+```text
+conversations/{conversationId}
+  (ドキュメント本体はフィールドを持たない場合がある — messages サブコレクションが主体)
+
+conversations/{conversationId}/messages/{messageId}
+  sender_id:   string       // Firebase Auth uid
+  text:        string       // 本文（1〜2000字）
+  created_at:  Timestamp
+```
+
+マッチング自体は `how-cards` を `song_id` で購読し、`song_start`/`song_end` の重なり（±2.5秒）で同地点/別地点を判定する（新規コレクションは作らない）。デモは `functions/scripts/seed-resonance.js` で `song_id=howtune-demo-song` に複数地点の how-cards を seed する。
+
 ### `artists`
 
 現時点では Firestore に `artists` collection はない。アーティスト一覧は iOS の `Artist.catalog` と、`GET /how-cards` で返るコメントから組み立てた表示用 Artist に依存している。実データと UI カタログのずれを防ぐには、将来的に `artists` / `songs` catalog を Firestore か MusicKit metadata に寄せる設計へ移すのが望ましい。
