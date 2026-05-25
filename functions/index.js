@@ -19,9 +19,15 @@ exports.onUserSignup = functionsV1
   .region('asia-northeast1')
   .auth.user()
   .onCreate(async (user) => {
-    await admin.firestore().collection('users').doc(user.uid).set({
-      email: user.email ?? null,
-      displayName: user.displayName ?? null,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    const userRef = admin.firestore().collection('users').doc(user.uid);
+    try {
+      await userRef.create({
+        email: user.email ?? null,
+        displayName: user.displayName ?? null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (err) {
+      // grpc code 6 = ALREADY_EXISTS. Trigger re-fired, user doc already created — no-op.
+      if (err.code !== 6) throw err;
+    }
   });
