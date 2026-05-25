@@ -81,9 +81,11 @@ how-cards/{cardId}
   song_start: number
   song_end: number
   song_id: string
+  itunes_id: string
+  song_slug: string | null
   artist_id: string
   user_id: string
-  goods: number
+  likes: number
 
 how-cards/{cardId}         ← 既存Howカード生成API用
   userId: string

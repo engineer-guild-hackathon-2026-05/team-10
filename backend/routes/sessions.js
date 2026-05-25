@@ -21,9 +21,9 @@ router.post('/', auth, async (req, res) => {
 
 // POST /sessions/:id/chat
 router.post('/:id/chat', auth, async (req, res) => {
-  const { startTime, tags, intensity, lyric, history = [] } = req.body;
+  const { startTime, tags, intensity, lyric, history = [], scores, dominantAxis } = req.body;
   try {
-    const result = await chat({ startTime, tags, intensity, lyric, history });
+    const result = await chat({ startTime, tags, intensity, lyric, history, scores, dominantAxis });
     res.json(result);
   } catch (err) {
     console.error(err?.message ?? err);

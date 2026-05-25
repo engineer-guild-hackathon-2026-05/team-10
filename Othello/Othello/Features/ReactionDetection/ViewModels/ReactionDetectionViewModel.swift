@@ -93,6 +93,7 @@ final class ReactionDetectionViewModel: ObservableObject {
                 endTime: playbackTime + 1.4,
                 intensity: 1,
                 tags: [tag],
+                score: currentScore,
                 lyricLine: nil,
                 lyricTranslation: nil,
                 heartRateTrend: .stable
@@ -132,7 +133,10 @@ final class ReactionDetectionViewModel: ObservableObject {
         if isReactive {
             if var activeEvent {
                 activeEvent.endTime = window.endTime
-                activeEvent.maxIntensity = max(activeEvent.maxIntensity, intensity)
+                if intensity > activeEvent.maxIntensity {
+                    activeEvent.maxIntensity = intensity
+                    activeEvent.peakScore = score
+                }
                 activeEvent.tags.formUnion(tags)
                 self.activeEvent = activeEvent
             } else {
@@ -140,7 +144,8 @@ final class ReactionDetectionViewModel: ObservableObject {
                     startTime: window.startTime,
                     endTime: window.endTime,
                     maxIntensity: intensity,
-                    tags: Set(tags)
+                    tags: Set(tags),
+                    peakScore: score
                 )
             }
         } else {
@@ -164,6 +169,7 @@ final class ReactionDetectionViewModel: ObservableObject {
                 endTime: pending.endTime,
                 intensity: min(max(pending.maxIntensity, 0), 1),
                 tags: Array(pending.tags).sorted { $0.rawValue < $1.rawValue },
+                score: pending.peakScore,
                 lyricLine: nil,
                 lyricTranslation: nil,
                 heartRateTrend: .stable
@@ -182,4 +188,5 @@ private struct PendingReactionEvent {
     var endTime: TimeInterval
     var maxIntensity: Double
     var tags: Set<HowTag>
+    var peakScore: ReactionScore
 }

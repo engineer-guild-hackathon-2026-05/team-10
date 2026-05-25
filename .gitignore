@@ -69,3 +69,6 @@ docs/slides/howtune.pptx
 **/GoogleService-Info.plist
 
 **/ENV.plist
+
+# Office 一時ファイル
+~$*.pptx

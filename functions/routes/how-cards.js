@@ -140,7 +140,7 @@ function normalizeRequiredString(value, maxLength) {
 
 function normalizeOptionalMusicSongID(value) {
   const trimmed = normalizeOptionalString(value, 64);
-  if (!trimmed || !/^\d{5,}$/.test(trimmed)) return null;
+  if (!trimmed || !/^\d+$/.test(trimmed)) return null;
   return trimmed;
 }
 

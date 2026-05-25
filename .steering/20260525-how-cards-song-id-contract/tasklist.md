@@ -7,3 +7,12 @@
 - [x] AI_USAGE_LOG.md を更新する
 - [x] Functions の静的検証を実行する
 - [x] Firebase Functions deploy を実行する
+
+## PR #86 レビュー対応と main conflict 解消
+
+- [x] `origin/main` を merge して `AI_USAGE_LOG.md` の conflict を解消する
+- [x] `GET /how-cards?song_id=...` を `itunes_id` 主軸 + `song_id` fallback で検索する
+- [x] MusicKit / Apple Music / iTunes ID validation を空でない numeric string に緩和する
+- [x] docs の `goods` 表記を `likes` に統一し、Firestore schema に `itunes_id` / `song_slug` を追記する
+- [x] `itunes_id + created_at` の Firestore index を追加する
+- [x] Functions の静的検証、差分検証、iOS ビルドを実行する

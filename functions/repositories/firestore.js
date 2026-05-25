@@ -24,18 +24,35 @@ async function createHowCard({ uid, comment, songStart, songEnd, songId, artistI
 }
 
 async function getHowCards({ songId, limit = 50 } = {}) {
-  let query = db().collection('how-cards');
+  const collection = db().collection('how-cards');
 
   if (songId) {
-    query = query.where('song_id', '==', songId).orderBy('created_at', 'desc');
-  } else {
-    query = query.orderBy('created_at', 'desc');
+    const [itunesSnapshot, songSnapshot] = await Promise.all([
+      collection.where('itunes_id', '==', songId).orderBy('created_at', 'desc').limit(limit).get(),
+      collection.where('song_id', '==', songId).orderBy('created_at', 'desc').limit(limit).get(),
+    ]);
+
+    return serializeHowCardDocs([...itunesSnapshot.docs, ...songSnapshot.docs], limit);
   }
 
+  const query = collection.orderBy('created_at', 'desc');
   const snapshot = await query.limit(limit).get();
-  return snapshot.docs
+  return serializeHowCardDocs(snapshot.docs, limit);
+}
+
+function serializeHowCardDocs(docs, limit) {
+  const docsById = new Map();
+  for (const doc of docs) {
+    if (!docsById.has(doc.id)) {
+      docsById.set(doc.id, doc);
+    }
+  }
+
+  return [...docsById.values()]
     .map(doc => serializeHowCard(doc.id, doc.data()))
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((a, b) => timestampMillis(b.created_at) - timestampMillis(a.created_at))
+    .slice(0, limit);
 }
 
 async function getHowCard(cardId) {
@@ -199,7 +216,7 @@ function normalizeMusicSongID(value) {
 }
 
 function isMusicSongID(value) {
-  return typeof value === 'string' && /^\d{5,}$/.test(value);
+  return typeof value === 'string' && /^\d+$/.test(value);
 }
 
 function normalizeString(value) {
@@ -214,6 +231,12 @@ function timestampToISOString(value) {
   if (typeof value.toDate === 'function') return value.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
   return null;
+}
+
+function timestampMillis(value) {
+  if (!value) return 0;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
 }
 
 function isFirestoreTimestamp(value) {

@@ -125,4 +125,4 @@ Firebase Auth で作成したユーザーを、`PUT /users/me` 経由で `users/
 - iOS クライアントは Firestore に直接アクセスしない。Firestore Rules は deny-all とし、読み書きは Admin SDK を持つバックエンドに集約する
 - `song_start` / `song_end` は秒単位の数値として扱い、`song_end > song_start` を前提にする
 - `how-cards.user_id` は Firebase Auth の `uid` と一致させる
-- `goods` はクライアント上では `Int`、Firestore 上では integer として扱う
+- `likes` はクライアント上では `Int`、Firestore 上では integer として扱う
