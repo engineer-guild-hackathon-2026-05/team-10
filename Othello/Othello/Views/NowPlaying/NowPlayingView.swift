@@ -136,10 +136,13 @@ struct NowPlayingView: View {
                     Capsule()
                         .fill(Color.white.opacity(0.14))
                     if context.hasHighlight {
+                        let highlightStartX = width * highlightStartProgress
+                        let desiredHighlightWidth = width * max(0.02, highlightEndProgress - highlightStartProgress)
+                        let highlightWidth = max(0, min(desiredHighlightWidth, width - highlightStartX))
                         Capsule()
                             .fill(Color.white.opacity(0.18))
-                            .frame(width: width * max(0.02, highlightEndProgress - highlightStartProgress))
-                            .offset(x: width * highlightStartProgress)
+                            .frame(width: highlightWidth)
+                            .offset(x: highlightStartX)
                     }
                     Capsule()
                         .fill(

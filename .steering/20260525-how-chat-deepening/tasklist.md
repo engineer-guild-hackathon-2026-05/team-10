@@ -48,7 +48,7 @@
   - [x] chill/afterglow → 余韻・静寂系の選択肢
 
 - [x] `HowChatViewModel` のターン数を削減
-  - [x] `guard turnCount < 3` → `guard turnCount < 2`
+  - [x] `guard turnCount < 3` → `guard turnCount < maximumDialogueTurns`
 
 ## フェーズ4: バックエンド — system prompt + コンテキスト改善
 
@@ -69,7 +69,7 @@
   - [x] `xcodebuild -scheme Othello -sdk iphonesimulator build` でビルド成功（BUILD SUCCEEDED）
 - [x] mockMode で動作確認（コード確認済み、デバイス実機確認はユーザー側で実施）
   - [x] 歌詞タップ → dominant 軸に応じた選択肢が出る（mockResponse で dominant 分岐実装済み）
-  - [x] 2ターン後に HowCard 生成画面に遷移する（turnCount < 2 に変更済み）
+  - [x] 2ターン後に HowCard 生成画面に遷移する（maximumDialogueTurns = 2 に変更済み）
 - [x] バックエンドのコンテキストログ確認（コード確認済み）
   - [x] `buildContextMessage` で dominant軸と6軸スコアをコンテキストに含める実装済み
 
@@ -80,6 +80,16 @@
 - [x] `ReactionEvent.swift` の conflict を6軸タグと main の `neutral` 待機状態が共存する形で解消する
 - [x] `HomeView.swift` の conflict を main 側 AirPods / ReactionDetection セッション管理を使いながら、HowChat には6軸 `ReactionScore` を渡す形で解消する
 - [x] 6軸タグ追加に伴う switch / selector / Metal waveform mapping を更新する
+- [x] Node 構文チェック、`git diff --check`、iOS ビルドを実行する
+
+## フェーズ7: PR #73 再レビュー対応
+
+- [x] `POST /sessions/:id/chat` の auth middleware を外す
+- [x] `HowTag` / `HeartRateTrend` / `ReactionEvent` を1ファイル1型へ分割する
+- [x] HomeView の初回表示時にも AirPods 同期を実行する
+- [x] 停止中・手動モード時に stale sensor score を `ReactionEvent.score` に載せない
+- [x] backend の6軸スコア閾値と HowChat の最大ターン数を named constant 化する
+- [x] design / AI usage log の markdownlint 指摘を修正する
 - [x] Node 構文チェック、`git diff --check`、iOS ビルドを実行する
 
 ---

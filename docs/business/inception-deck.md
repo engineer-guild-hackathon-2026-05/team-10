@@ -83,8 +83,8 @@ section.lead h1 { font-size: 60px; }
 | iOS ネイティブ（iPhone + AirPods） | Android / Web |
 | 聴き方（How）でつながる | DM・フォロー・完全SNSタイムライン |
 | ルールベース反応検出 | 本格的な音源解析・高精度BPM |
-| AI対話・Howカード | 教師データ収集アプリ（別仕様 002-） |
-| （P1）歌詞・コミュニティ・心拍 | — |
+| Howコメント・Howカード | 教師データ収集アプリ（別仕様 002-） |
+| （P1）歌詞・コミュニティ | HealthKit / 心拍 |
 
 ---
 
@@ -93,8 +93,8 @@ section.lead h1 { font-size: 60px; }
 - **チーム Othello**: PM / iOS / Backend / ML / Design
 - **メンター**（Day2 FB ×2）
 - **スポンサー審査員**: メルカリ / P&G / Money Forward
-- **プラットフォーム**: Apple（MusicKit / HealthKit / CoreMotion）
-- **AI**: Anthropic Claude（claude-sonnet-4-6）
+- **プラットフォーム**: Apple（MusicKit / CoreMotion / CMHeadphoneMotionManager）
+- **バックエンド**: Firebase Functions / Firestore
 
 ---
 
@@ -103,15 +103,14 @@ section.lead h1 { font-size: 60px; }
 ```
 iPhone + AirPods (SwiftUI)
   ├ CMHeadphoneMotion … 頭部モーション
-  ├ HealthKit … 心拍（補助）
   └ MusicKit … 再生・再生位置
         ↓ ルールベースで反応検出
    反応地点 → タイムライン可視化
         ↓ HTTPS
-  backend (Node + Claude API)
-   /chat（問いかけ）・/how-card（生成）
+  Firebase Functions
+   /how-cards（保存・一覧・いいね）
         ↓
-   Firestore（保存・コミュニティ）※P1
+   Firestore（保存・コミュニティ）
 ```
 
 ML は **ルールベース → データフライホイール**で進化（ADR-0003）
@@ -120,7 +119,7 @@ ML は **ルールベース → データフライホイール**で進化（ADR-
 
 ## ⑦ 夜も眠れなくなるような問題は何か（リスク）
 
-- 🔴 **心拍のリアルタイム取得が不確実**（第三者アプリ制約）→ 補助に留める
+- ✅ **心拍のリアルタイム取得が不確実**（第三者アプリ制約）→ MVP から削除済み
 - 🔴 **反応検出の精度**（ルールベース）→ デモのギャップで魅せ、精度はナラティブで
 - 🟡 **認証フロー未検証**（Firebase Auth）→ まず認証なしで完成させる保険
 - 🟡 **残り時間**（Day3 午前提出）→ 勝ち筋に集中、P1 は削る
@@ -143,15 +142,15 @@ ML は **ルールベース → データフライホイール**で進化（ADR-
 | **デモ体験のギャップ** | 検出精度（ルールベースで割り切る） |
 | **勝ち筋（画面を見ない）への集中** | 機能網羅 |
 | **デモを必ず成立**（認証なし先行） | 完璧な認証・Firestore（P1） |
-| **頭部モーション主体** | 心拍リアルタイム（補助） |
+| **頭部モーション主体** | HealthKit / 心拍連携 |
 
 ---
 
 ## ⑩ 何がどれだけ必要か（コスト・チーム）
 
 - **チーム**: Team Othello（役割: PM / iOS / Backend / ML / Design）
-- **API コスト**: Claude API（Sonnet）… <span class="muted">概算未定</span>
-- **インフラ**: backend（ローカル / Cloud Run）, Firestore … <span class="muted">未定</span>
+- **API コスト**: Musixmatch API … <span class="muted">契約プラン依存</span>
+- **インフラ**: Firebase Functions, Firestore … <span class="muted">小規模想定</span>
 - **開発期間**: 3日間（実質 Day2＋Day3午前）
 
 <span class="muted">※ 詳細コストは空白（未確定）</span>
