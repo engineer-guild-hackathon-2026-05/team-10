@@ -6,7 +6,7 @@
 
 | データ種別 | ストレージ | 理由 |
 |---|---|---|
-| ユーザー情報 | Firestore | Firebase Auth uid と表示名を保存。Functions の `onUserSignup` と、iOS からの自分自身の `users/{uid}` seed で同期 |
+| ユーザー情報 | Firestore | Firebase Auth uid と表示名を保存。Functions の `onUserSignup` と `PUT /users/me` で同期 |
 | Howカードコメント | Firestore | 曲中区間に紐づくコメント、いいね、投稿者表示名を扱う |
 | 認証状態 | Firebase Auth / iOS Keychain | Firebase SDK がセッションを保持 |
 | 歌詞取得設定 | `ENV.plist` | Musixmatch API key など、git 管理しない値を端末側で注入 |
@@ -26,8 +26,8 @@ how-cards/{cardId}
   comment:      string       // ユーザーコメント
   song_start:   number       // コメント対象範囲の開始秒
   song_end:     number       // コメント対象範囲の終了秒
-  song_id:      string       // MusicKit / Apple Music / iTunes の数値曲 ID
-  itunes_id:    string       // canonical 曲 ID（song_id と同じ値）
+  song_id:      string       // 新規は MusicKit / Apple Music / iTunes の数値曲 ID。既存 legacy slug は読み取り互換対象
+  itunes_id:    string?      // canonical 曲 ID（新規は song_id と同じ値）
   song_slug:    string?      // 表示・移行用の曲 slug
   song_title:   string?      // 表示用タイトル
   artist_name:  string?      // 表示用アーティスト名
@@ -55,13 +55,19 @@ users/{uid}
   updated_at:   Timestamp
 ```
 
-`onUserSignup` が初回サインアップ時に作成し、`PUT /users/me` または iOS の `UserSeedService` が追加同期する。Firestore rules はログイン中ユーザー自身の `users/{uid}` の get/create/update のみ許可する。
+`onUserSignup` が初回サインアップ時に作成し、`PUT /users/me` が追加同期する。現行 iOS は起動時や Howカード読み込み時に users seed を行わず、必要に応じてログイン中ユーザー自身の `users/{uid}` を読み取るだけにする。
+
+### `artists`
+
+現時点では Firestore に `artists` collection はない。アーティスト一覧は iOS の `Artist.catalog` と、`GET /how-cards` で返るコメントから組み立てた表示用 Artist に依存している。実データと UI カタログのずれを防ぐには、将来的に `artists` / `songs` catalog を Firestore か MusicKit metadata に寄せる設計へ移すのが望ましい。
 
 ---
 
 ## Howカードコメント API データ構造
 
 `POST /how-cards` では iOS が `comment`, `song_start`, `song_end`, `song_id`, `artist_id` を送る。`song_id` は MusicKit / Apple Music / iTunes の数値曲 ID として扱い、`radwimps-愛にできることはまだあるかい` のような slug や表示名は入れない。表示用の slug / タイトルは `song_slug` / `song_title` など別フィールドに分離する。バックエンドは Firebase ID トークンから `user_id` を決めて `likes: 0` で保存する。
+
+既存 Firestore には legacy slug の `song_id` を持つ Howカードが残っているため、GET 系 API は読み取り互換として legacy slug も返す。`itunes_id` がない legacy ドキュメントでは、レスポンスの `song_id` も保存済み slug になる。新規作成・更新では引き続き数値 ID のみを受け付ける。
 
 ```json
 {

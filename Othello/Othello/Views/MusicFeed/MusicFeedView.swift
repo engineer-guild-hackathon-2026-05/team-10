@@ -31,7 +31,7 @@ struct MusicFeedView: View {
             }
         }
         .navigationBarHidden(true)
-        .task(id: viewModel.selectedSong?.firestoreSongID) {
+        .task(id: viewModel.selectedSong?.howCardLookupSongID) {
             await viewModel.loadPosts()
         }
         .preferredColorScheme(.dark)

@@ -183,12 +183,6 @@ private struct ArtistDashboardCard: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text(artist.tag)
-                        .font(.caption2.weight(.heavy))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.34), in: Capsule())
                     Spacer()
                     Image(systemName: "play.fill")
                         .font(.caption.weight(.heavy))
@@ -199,7 +193,11 @@ private struct ArtistDashboardCard: View {
 
                 Spacer()
 
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(artist.tag)
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .lineLimit(1)
                     Text(artist.name)
                         .font(.title3.weight(.heavy))
                         .foregroundStyle(.white)
@@ -211,9 +209,10 @@ private struct ArtistDashboardCard: View {
                         .lineLimit(1)
                 }
             }
-            .padding(14)
+            .padding(16)
         }
         .frame(width: 236, height: 188)
+        .compositingGroup()
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)

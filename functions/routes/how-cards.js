@@ -15,9 +15,9 @@ const INVALID_SONG_ID_ERROR = 'song_id には MusicKit / Apple Music / iTunes �
 router.get('/', auth, async (req, res) => {
   try {
     const hasSongIdQuery = Object.prototype.hasOwnProperty.call(req.query, 'song_id');
-    const songId = hasSongIdQuery ? normalizeMusicKitSongId(req.query.song_id) : null;
+    const songId = hasSongIdQuery ? normalizeLookupSongId(req.query.song_id) : null;
     if (hasSongIdQuery && !songId) {
-      return res.status(400).json({ error: INVALID_SONG_ID_ERROR });
+      return res.status(400).json({ error: 'song_id は空でない文字列を指定してください' });
     }
 
     const howCards = await getHowCards({
@@ -134,6 +134,10 @@ function normalizeOptionalString(value, maxLength) {
 
 function normalizeRequiredString(value, maxLength) {
   return normalizeOptionalString(value, maxLength);
+}
+
+function normalizeLookupSongId(value) {
+  return normalizeOptionalString(value, 120);
 }
 
 function normalizeRangePoint(value) {

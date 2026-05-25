@@ -1495,6 +1495,66 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：実害のあるスクロール競合を解消し、軽微な可読性・アニメーション指摘も小さな差分で改善できたため。
 
+### #002 Howカード取得失敗の修正
+
+- **時刻**：00:45
+- **ツール**：Codex / curl / xcodebuild
+- **目的**：Howカード画面で「Howカードを取得できませんでした」と表示される原因を調査し、取得処理を修正する
+- **プロンプト**：
+  ```text
+  どうやって起動してもHowカードを取得できませんでしたと表示されるんだけど、ちゃんと処理を見直して欲しい。ENV.plistとGoogleService-Info.plistはあるから、機能のバグなんだと思うんだけど。呼んだらわかったりしませんか？修正して下さい。修正用のブランチでやってください
+  ```
+- **出力サマリ**：
+  - `fix/how-cards-fetch-failure` ブランチを作成
+  - Functions `/how-cards` を実際に呼び、全件取得は 200、slug `song_id` 指定は 400 になることを確認
+  - Artist catalog の `musicKitID` 未設定時に `Song.firestoreSongID` が slug を返し、それを曲別 Howカード取得へ送っていたことを特定
+  - `FirebaseAPI.fetchHowCards(songID:limit:)` で numeric MusicKit / iTunes ID 以外の曲別取得をネットワークに送らず空配列にするよう修正
+- **評価**：採用
+- **採用 / 不採用の理由**：Functions の `song_id` 契約を維持しつつ、iOS 側の fallback slug が 400 エラーとして UI に出る問題を解消できるため。
+
+### #003 Howカード legacy slug 互換調査と修正
+
+- **時刻**：01:00
+- **ツール**：Codex / Firebase CLI / Firestore REST / curl / xcodebuild
+- **目的**：Firestore に Howカードが存在するのにおすすめコメント・アーティスト別 Howカードが表示されない原因を、実データと Functions 実装の両面から調査して修正する
+- **プロンプト**：
+  ```text
+  [HowCards] seeded 0 users for existing How cards
+  [HowCards] skipped fetch for non-MusicKit song_id: ここのっか-ここのっか
+
+  1けんもおすすめコメント表示がないし、アーティストのhow cardも取得できない。firestoreを見るとhow cardはたくさんあるのに。
+  アーティスト一覧って今ってどういうふうにとってきているんですか？ここもモックですか？もしかしてartists collectionがないのってアンチパターンじゃないですか？firebase cliはいくらでも使っていいので、いろいろみてみてください
+  ```
+- **出力サマリ**：
+  - Firestore の root collections が `how-cards` / `users` のみで、`artists` collection が存在しないことを確認
+  - `how-cards` の実データが legacy slug 形式の `song_id` を持っており、Functions serializer の数値 MusicKit ID 前提で全件落ちていたことを特定
+  - GET 系だけ legacy slug を読み取り互換として許可し、POST/PATCH の数値 MusicKit ID 契約は維持するよう Functions を修正
+  - iOS の曲別取得は legacy slug を API へ送れるよう戻し、Home dashboard では legacy slug を MusicKit playback ID として扱わないようにした
+  - backend / data model docs に GET 互換と現状の artist catalog 制約を追記
+  - `functions:api` をデプロイし、`/how-cards?limit=3` と `/how-cards?song_id=ここのっか-ここのっか&limit=3` がどちらも HTTP 200 で 3 件返すことを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：実 Firestore データと API contract の不一致が主因だったため、読み取り互換を入れて既存データを表示できる状態に戻しつつ、新規書き込みの MusicKit ID 契約は崩さない方針が最小リスクだったため。
+
+### #004 アーティスト詳細の Howカード取得と seed 削除
+
+- **時刻**：01:14
+- **ツール**：Codex / xcodebuild
+- **目的**：Home からアーティスト詳細へ遷移した時に曲別 Howカードが取得できない問題と、カード overlay / users seed の残存を修正する
+- **プロンプト**：
+  ```text
+  [Image #1] こんな感じで、cardの上に表示されているUIがcardの外に表示されちゃってます。[Image #2] また、アーティストのviewに入ったらまたコメントがfetchできていない。修正してください。
+  ... あとseedってもう必要ないんじゃないの？消してください
+  ```
+- **出力サマリ**：
+  - Home dashboard で MusicKit metadata 解決後の表示タイトルから別 slug が再生成され、Firestore の元 `song_id` と一致しないことを特定
+  - `Song` に `firestoreLookupID` を追加し、Home dashboard 由来の Song は元 Howカード `song_id` で曲別 API を叩くよう修正
+  - Artist card の上部 badge を下部メタ情報へ移し、play icon / badge がカード外へ出て見えない構成に変更
+  - `UserSeedService` / `UserSeedProfile` と起動時・読み込み時の users seed 呼び出しを削除し、読み取り専用の `UserProfileService` に置換
+  - backend / data model docs から iOS users seed 記述を削除
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：表示 metadata と Firestore lookup key を分離することで、MusicKit の英語タイトル解決後も既存 Howカードの曲別取得を壊さず、不要になった seed write も削除できたため。
+
 ---
 
 ## 全体振り返り

@@ -143,7 +143,9 @@ Response:
 }
 ```
 
-`song_id` を指定した場合は canonical `itunes_id` を主軸に検索し、後方互換として `song_id` も併用して曲単位のコメントを返す。`user_name` は `users/{user_id}.display_name` を Admin SDK で参照して付与する。
+`song_id` を指定した場合は `song_id` を検索し、数値の MusicKit / Apple Music / iTunes ID であれば `itunes_id` も併用して曲単位のコメントを返す。既存 Firestore には legacy slug の `song_id` が残っているため、GET 系は読み取り互換として slug も受け付ける。`user_name` は `users/{user_id}.display_name` を Admin SDK で参照して付与する。
+
+現状、アーティスト一覧専用の `artists` collection / endpoint はない。iOS の Home / For You は `/how-cards` から返ったコメントを元に表示用 Artist を組み立て、初期表示や不足分はアプリ内 `Artist.catalog` を使う。長期的には `artists` / `songs` の catalog を Firestore か MusicKit metadata 由来の永続モデルへ分離した方が、Howカードの実データと UI カタログのずれを抑えやすい。
 
 ### GET /how-cards/:id
 
@@ -198,7 +200,7 @@ Home dashboard 向けにおすすめ Howカードコメント一覧を返す。`
 ### GET /users/me / PUT /users/me
 
 `GET /users/me` は現在ログイン中の `users/{uid}` を返す。
-現行 iOS では `UserSeedService` がログイン中ユーザー自身の `users/{uid}` を Firestore SDK で read/write する経路もある。Firestore rules は自分自身の get/create/update のみに制限する。
+現行 iOS では起動時や Howカード読み込み時の users seed は行わない。ユーザー情報の作成・更新は Auth トリガーと `PUT /users/me` に寄せ、iOS は必要に応じて自分自身の `users/{uid}` を読み取るだけにする。
 
 `PUT /users/me`:
 
@@ -240,8 +242,8 @@ how-cards/{cardId}
   comment: string
   song_start: number
   song_end: number
-  song_id: string            # MusicKit / Apple Music / iTunes の数値曲 ID
-  itunes_id: string          # canonical 曲 ID（song_id と同じ値）
+  song_id: string            # 新規は MusicKit / Apple Music / iTunes の数値曲 ID。既存 legacy slug も読み取り互換対象
+  itunes_id: string | null   # canonical 曲 ID（新規は song_id と同じ値）
   song_slug: string | null   # 表示・移行用 slug
   song_title: string | null
   artist_name: string | null

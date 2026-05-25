@@ -29,9 +29,9 @@ final class MusicFeedViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let howCards = try await FirebaseAPI.shared.fetchHowCards(songID: song.firestoreSongID)
+            let howCards = try await FirebaseAPI.shared.fetchHowCards(songID: song.howCardLookupSongID)
             try Task.checkCancellation()
-            let userProfiles = try await loadUserProfiles(for: howCards)
+            let userProfiles = profilesByID(try await UserProfileService.fetchUsers(ids: howCards.map(\.userID)))
             try Task.checkCancellation()
             posts = howCards.map { card in
                 FeedPost(
@@ -45,22 +45,6 @@ final class MusicFeedViewModel: ObservableObject {
         } catch {
             errorMessage = "Howカードを取得できませんでした"
             posts = []
-        }
-    }
-
-    private func loadUserProfiles(for cards: [HowCardComment]) async throws -> [String: UserProfile] {
-        guard !cards.isEmpty else {
-            return [:]
-        }
-
-        do {
-            let seededUsers = try await UserSeedService.seedUsers(for: cards)
-            return profilesByID(seededUsers)
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            let users = try await UserSeedService.fetchUsers(ids: cards.map(\.userID))
-            return profilesByID(users)
         }
     }
 
