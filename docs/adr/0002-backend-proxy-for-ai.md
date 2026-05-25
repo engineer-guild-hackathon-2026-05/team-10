@@ -1,13 +1,15 @@
 # ADR-0002: AI API キーをバックエンドプロキシで管理する
 
-- **ステータス**: 採用済み
+- **ステータス**: 置換済み（current: Functions 本番 contract には未接続）
 - **決定日**: 2026-05-23
 - **決定者**: Team 10
 
 ## 背景
 
-HowChatView（AI対話画面）では Claude API を呼び出す必要がある。
+HowChatView（AI対話画面）では、当初 Claude API を呼び出す必要があった。
 iOS アプリから直接 Anthropic API を叩く実装も技術的には可能だが、API キーの扱いが問題になる。
+
+2026-05-25 時点の現行実装では、HowChat は mock/legacy client として残っている。Firebase Functions 本番 API には `/sessions` 系 endpoint や Claude 連携は実装されていない。
 
 ## 検討した選択肢
 
@@ -19,7 +21,7 @@ iOS アプリから直接 Anthropic API を叩く実装も技術的には可能�
 
 ## 決定
 
-**Node.js (Express) のバックエンドプロキシ**を採用する。
+当時は **Node.js (Express) のバックエンドプロキシ**を採用した。
 
 - `backend/index.js` に `POST /sessions/:id/chat` エンドポイントを実装
 - API キーは `.env`（gitignore 対象）で管理し、コードにハードコードしない
@@ -27,7 +29,6 @@ iOS アプリから直接 Anthropic API を叩く実装も技術的には可能�
 
 ## 結果
 
-- API キーがクライアントバイナリに含まれない
-- プロンプトやモデル（`claude-sonnet-4-6`）をサーバー側だけで変更できる
-- Tool Use を使った構造化レスポンス（`{ question, choices }`）のパースをサーバーで完結できる
-- ローカル開発時は `npm run dev` で即起動。iOS シミュレータから `localhost:3000` に接続する
+- 旧 `backend/` には参照実装が残るが、本番 deploy 対象ではない。
+- 現行本番 API は `functions/` を正とし、`/how-cards` と `/users/me` を提供する。
+- LLM 連携を復活させる場合は、`functions/` 側に明示的に endpoint を追加し、API キーをクライアントバイナリへ含めない。

@@ -31,8 +31,8 @@ Firebase Auth で新規ユーザー作成が走ったタイミングで `users/{
 
 - 発火条件: Firebase Auth で新規ユーザーが作成された時（iOS の初回サインアップ）
 - 既存ユーザーには発火しない（onCreate なので新規のみ）
-- iOS 側の `PUT /users/me` は追加同期用。メールアドレスは ID トークンの値を正とする
-- ドキュメント内容: `{ user_id, email, display_name, created_at }`
+- iOS 側の `PUT /users/me`、または Firestore rules で許可された自分自身の `users/{uid}` 直接 read/write は追加同期用。メールアドレスは ID トークンの値を正とする
+- ドキュメント内容: `{ user_id, email, display_name, created_at, updated_at }`
 - 実装は v1 SDK（`firebase-functions/v1`）。v2 の Auth トリガーは blocking 専用なので、非同期で完了する onCreate には v1 を使う
 
 ---
@@ -118,7 +118,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | メソッド | パス | 認証 | 用途 |
 |---------|------|------|------|
 | GET | `/health` | ❌ | 死活確認 |
-| GET | `/how-cards` | ✅ | Howカードコメント一覧（最新250件） |
+| GET | `/how-cards` | ✅ | Howカードコメント一覧（デフォルト最新50件、最大250件） |
 | GET | `/how-cards?song_id=...` | ✅ | 曲ごとのHowカードコメント一覧 |
 | GET | `/how-cards/:id` | ✅ | Howカードコメント取得 |
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
@@ -170,7 +170,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 
 ### `GET /how-cards`
 
-最新の Howカードコメント一覧を返す（最大 250 件、`created_at` 降順）。
+最新の Howカードコメント一覧を返す（デフォルト 50 件、`limit` 指定時は最大 250 件、`created_at` 降順）。
 `song_id` を指定した場合は曲ごとのコメント一覧を返す。
 
 **レスポンス**
@@ -214,6 +214,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 ### `GET /users/me` / `PUT /users/me`
 
 `onUserSignup` で自動生成された `users/{uid}` を取得・追加同期する。
+現行 iOS では `UserSeedService` がログイン中ユーザー自身の `users/{uid}` を Firestore SDK で read/write する経路もある。Firestore rules は自分自身の get/create/update のみに制限する。
 `PUT /users/me` では ID トークンのメールアドレスを正とし、body の `email` が異なる場合は 400 を返す。ID トークンにメールアドレスがない場合は `null` として保存する。
 
 **リクエスト**
@@ -246,7 +247,7 @@ how-cards/{cardId}
   user_id: string
   goods: number
   created_at: timestamp
-  updated_at: timestamp
+  updated_at: timestamp | absent
 
 how-cards/{cardId}/liked-by/{uid}
   user_id: string
@@ -272,9 +273,12 @@ Functions v2 では、エクスポート名 `api` がパスに含まれる可能
 
 ## ローカル開発
 
-このディレクトリではローカル開発しない。`../backend/` を使う（ただし `backend/` のコードは古いままで凍結されている可能性が高い。`backend/README.md` の警告を参照）:
+本番 API の変更はこの `functions/` を正とする。旧 `../backend/` は deprecated な参照実装であり、編集しても本番 deploy には反映されない。
+
+Functions emulator を使う場合:
 
 ```powershell
-cd ..\backend
-npm run dev   # Express on localhost:3000
+cd functions
+npm install
+npx firebase-tools emulators:start --only functions,firestore
 ```
