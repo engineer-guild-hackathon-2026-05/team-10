@@ -1736,6 +1736,93 @@
   - `NowPlayingView.swift` の自明な `// MARK:` 区切りコメントを削除
 - **評価**：採用
 - **採用 / 不採用の理由**：既存ガイドラインの「WHY が自明でない場合のみコメントを書く」に合わせ、表示や挙動を変えずにレビュー指摘を解消できたため。
+### #010 MusicFeed の選択中表示移動
+
+- **時刻**：06:49
+- **ツール**：Codex / xcodebuild
+- **目的**：MusicFeed で他の投稿を再生した時に「選択中」表示がその投稿へ移動するようにする
+- **プロンプト**：
+  ```text
+  曲を流すと「選択中」ってのが出てくると思うんだけど、その選択中 のやつがほかの投稿をタップしてもそっちに移動しない。これを修正するPRを立てて欲しい
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `fix/selected-how-card-state` ブランチを作成
+  - `MusicFeedView` に選択中カードIDの state を追加し、再生成功後に選択IDを更新
+  - `HighlightedHowCardCommentCard` / `FeedPostCard` が `isSelected` を受け取り、該当カードだけ「選択中」を表示するよう変更
+  - `FeedPost` に選択状態判定用の安定IDを追加
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：再生中の投稿とUIの選択表示が一致し、別投稿をタップした時に意図通り表示が移動するため。
+
+### #011 PR #102 選択中 Howカード表示レビュー対応
+
+- **時刻**：07:20
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #102 のレビュー指摘に従い、未選択の highlighted Howカードが選択中に見えないよう表示を調整する
+- **プロンプト**：
+  ```text
+  pr 102のレビュー対応してpushして
+  ```
+- **出力サマリ**：
+  - PR #102 の CodeRabbit レビューコメントを確認
+  - `HighlightedHowCardCommentCard` の背景グラデーションと枠線を `isSelected` に連動
+  - 未選択時は選択中の赤い枠線を表示せず、背景の赤い強調も通常カード相当まで抑制
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：選択ラベルだけでなくカード全体の強調表示も選択状態と一致し、未選択カードが再生中に見える誤解を避けられるため。
+
+### #012 PR #102 main merge conflict 解消
+
+- **時刻**：07:29
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #102 に `origin/main` を取り込み、返信機能と選択中表示のコンフリクトを解消する
+- **プロンプト**：
+  ```text
+  mainとconflictしてるからなおしてほしい　レビューも直すものあれば直してください
+  ```
+- **出力サマリ**：
+  - PR #102 のレビューと `origin/main` の最新状態を確認
+  - `AI_USAGE_LOG.md`、`HighlightedHowCardCommentCard.swift`、`MusicFeedView.swift` の conflict を解消
+  - `main` 側の Howカード返信 sheet / reply count と、PR #102 側の選択中カード state を両立
+  - 未選択 highlighted card の強調枠抑制を維持
+- **評価**：採用
+- **採用 / 不採用の理由**：`main` の返信機能を失わず、再生中カードだけに選択表示が移る PR #102 の意図も維持できるため。
+
+### #013 Howカード投稿後のアーティストフィード再取得
+
+- **時刻**：07:21
+- **ツール**：Codex / Firebase CLI / xcodebuild
+- **目的**：再生画面から投稿した HowカードがFirestoreに存在するか確認し、アーティスト画面で即時表示されない問題を修正する
+- **プロンプト**：
+  ```text
+  howカードを再生画面から投稿しても、アーティスト画面に出てこない。「素晴らしい」というメッセージの投稿をしたんだけど、そもそもfirestoreに入っているかチェックしてみて欲しい。その後、コメントのfetchタイミング（アーティストカードとかで開いたらすぐ出てくるようにして欲しい）について見るようにしてほしい
+  ```
+- **出力サマリ**：
+  - Firestoreで `素晴らしい` 完全一致は0件、直近投稿として `すばらしい` が `song_id=1518522045` / `artist_id=radwimps` で保存済みであることを確認
+  - Howカード投稿成功時にアプリ内通知を発行し、For You / MusicFeed がFunctions経由で再取得するよう修正
+  - ダッシュボードのアーティストカードを同一アーティストの複数曲コメントで構成し、最初の1曲だけに固定される問題を修正
+  - コメントカードからアーティスト画面を開く時に、該当コメントの曲を初期選択して正しい `song_id` でfetchするよう修正
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：Firestore保存は成功していたため、表示側の再取得タイミングと曲ID選択を直すのが最小リスクで、既存のFunctions API経路も維持できたため。
+
+### #014 PR #104 main merge とレビュー対応
+
+- **時刻**：07:44
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #104 の main conflict と CodeRabbit レビュー指摘を解消する
+- **プロンプト**：
+  ```text
+  pr 104のコンフリクトを直し、レビューを直してください
+  ```
+- **出力サマリ**：
+  - `origin/main` を merge し、`AI_USAGE_LOG.md` と `MusicFeedView.swift` の conflict を解消
+  - `main` 側の返信機能・選択中表示と、PR #104 側の投稿後再取得・初期曲選択を両立
+  - For You / MusicFeed の通知起点再読込を `task(id:)` に統合し、重複ロードを抑制
+  - アーティスト集約キーを `artist.id` 優先へ変更
+  - tasklist の完了項目数をレビュー指摘に合わせて更新
+- **評価**：採用
+- **採用 / 不採用の理由**：投稿後の表示更新を維持しつつ、main の最新UI機能とレビュー指摘の競合リスクをまとめて解消できるため。
 
 ---
 

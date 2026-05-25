@@ -6,9 +6,11 @@ struct MusicFeedView: View {
     let onPlaybackContext: (NowPlayingContext) -> Void
     @ObservedObject private var playback: PlaybackViewModel
     @StateObject private var viewModel: MusicFeedViewModel
+    @State private var selectedPlaybackCardID: String?
     @Environment(\.dismiss) private var dismiss
     @State private var replyTarget: FeedPost?
     @State private var replyCountsByCardID: [String: Int] = [:]
+    @State private var reloadNonce = 0
 
     init(
         artist: Artist,
@@ -20,7 +22,15 @@ struct MusicFeedView: View {
         self.highlightedComment = highlightedComment
         self.onPlaybackContext = onPlaybackContext
         self.playback = playback
-        self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
+        self._viewModel = StateObject(
+            wrappedValue: MusicFeedViewModel(
+                artist: artist,
+                initialSong: highlightedComment?.song
+            )
+        )
+        self._selectedPlaybackCardID = State(
+            initialValue: highlightedComment.map { Self.highlightedSelectionID(for: $0) }
+        )
     }
 
     var body: some View {
@@ -33,10 +43,17 @@ struct MusicFeedView: View {
             }
         }
         .navigationBarHidden(true)
-        .task(id: viewModel.selectedSong?.howCardLookupSongID) {
+        .task(id: loadPostsTaskID) {
             await viewModel.loadPosts()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .howCardDidChange)) { _ in
+            reloadNonce &+= 1
+        }
         .preferredColorScheme(.dark)
+    }
+
+    private var loadPostsTaskID: String {
+        "\(viewModel.selectedSong?.howCardLookupSongID ?? ""):\(reloadNonce)"
     }
 
     private var navigationBar: some View {
@@ -100,11 +117,17 @@ struct MusicFeedView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if let highlightedComment {
-                    HighlightedHowCardCommentCard(item: highlightedComment, replyCount: currentReplyCount(for: highlightedComment.howCard), onSongTap: {
-                        play(comment: highlightedComment)
-                    }, onReply: {
-                        replyTarget = FeedPost(howCard: highlightedComment.howCard, song: highlightedComment.song)
-                    })
+                    HighlightedHowCardCommentCard(
+                        item: highlightedComment,
+                        isSelected: selectedPlaybackCardID == highlightedSelectionID(for: highlightedComment),
+                        replyCount: currentReplyCount(for: highlightedComment.howCard),
+                        onSongTap: {
+                            play(comment: highlightedComment)
+                        },
+                        onReply: {
+                            replyTarget = FeedPost(howCard: highlightedComment.howCard, song: highlightedComment.song)
+                        }
+                    )
                 }
 
                 if viewModel.isLoading {
@@ -118,13 +141,19 @@ struct MusicFeedView: View {
                 }
 
                 ForEach(viewModel.posts) { post in
-                    FeedPostCard(post: post, onSongTap: {
-                        play(post: post)
-                    }, onLike: {
-                        like(post: post)
-                    }, onReply: {
-                        replyTarget = post
-                    })
+                    FeedPostCard(
+                        post: post,
+                        isSelected: selectedPlaybackCardID == selectionID(for: post),
+                        onSongTap: {
+                            play(post: post)
+                        },
+                        onLike: {
+                            like(post: post)
+                        },
+                        onReply: {
+                            replyTarget = post
+                        }
+                    )
                 }
             }
             .padding(.horizontal, 16)
@@ -155,21 +184,37 @@ struct MusicFeedView: View {
     }
 
     private func play(post: FeedPost) {
+        let selectionID = selectionID(for: post)
         Task {
             let context = post.playbackContext
             guard let track = await playback.select(song: post.song, initialPlaybackTime: context.initialPlaybackTime) else { return }
             let resolvedSong = Song(playbackTrack: track, fallback: post.song)
+            selectedPlaybackCardID = selectionID
             onPlaybackContext(context.replacingSong(resolvedSong))
         }
     }
 
     private func play(comment: HomeDashboardComment) {
+        let selectionID = highlightedSelectionID(for: comment)
         Task {
             let context = NowPlayingContext(song: comment.song, howCardComment: comment.howCard)
             guard let track = await playback.select(song: comment.song, initialPlaybackTime: context.initialPlaybackTime) else { return }
             let resolvedSong = Song(playbackTrack: track, fallback: comment.song)
+            selectedPlaybackCardID = selectionID
             onPlaybackContext(context.replacingSong(resolvedSong))
         }
+    }
+
+    private func highlightedSelectionID(for comment: HomeDashboardComment) -> String {
+        Self.highlightedSelectionID(for: comment)
+    }
+
+    private static func highlightedSelectionID(for comment: HomeDashboardComment) -> String {
+        "highlight:\(comment.id)"
+    }
+
+    private func selectionID(for post: FeedPost) -> String {
+        "post:\(post.selectionID)"
     }
 
     private func like(post: FeedPost) {

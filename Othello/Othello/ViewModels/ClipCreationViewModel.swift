@@ -61,6 +61,7 @@ final class ClipCreationViewModel: ObservableObject {
                 userID: "me"
             )
             postedCardID = try await FirebaseAPI.shared.createHowCard(howCard)
+            NotificationCenter.default.post(name: .howCardDidChange, object: nil)
             return true
         } catch {
             postedCardID = nil
