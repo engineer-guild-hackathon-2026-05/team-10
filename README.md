@@ -107,41 +107,11 @@ team-10/
 └── docs/             # ドキュメント（仕様は docs/frontend-spec.md が正）
 ```
 
-## セットアップ手順
+## セットアップ
 
-### 1. バックエンドを起動する（必須）
+詳細な手順は **[`docs/setup.md`](./docs/setup.md)** を参照してください。
 
-> ⚠️ **iOS アプリを動かす前に、必ずバックエンドを起動してください。**
-> バックエンドが起動していないと、AI 対話・Howカード生成・Firestore 保存がすべて動作しません。
-
-```bash
-cd backend
-cp .env.example .env          # .env を作成し API キーを記入
-npm install
-npm start                      # localhost:3000 で起動
-```
-
-`.env` に必要なキー：
-
-| 変数名 | 説明 |
-|---|---|
-| `ANTHROPIC_API_KEY` | Claude API キー |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Firebase Admin SDK サービスアカウント JSON のパス |
-
-### 2. iOS アプリを起動する
-
-```bash
-# リポジトリのクローン
-git clone https://github.com/engineer-guild-hackathon-2026-05/team-10.git
-cd team-10
-
-# iOS アプリを Xcode で開く
-open Othello/Othello.xcodeproj
-# 署名チームを設定し、実機（iPhone）を選んで Run
-```
-
-- **実機必須**：AirPods の頭部モーション・心拍はシミュレータで取得できません（iPhone + 対応 AirPods が必要）
-- **権限**：`Info.plist` に `NSMotionUsageDescription` / `NSHealthShareUsageDescription` が必要
+> ⚠️ iOS アプリを起動する前に **バックエンドの起動が必須**です（AI 対話・Howカード生成・Firestore 保存がバックエンド経由）。
 
 ## ドキュメント
 
@@ -151,6 +121,8 @@ open Othello/Othello.xcodeproj
 | [`docs/product-requirements.md`](./docs/product-requirements.md) | プロダクト要求定義（PRD） |
 | [`docs/architecture.md`](./docs/architecture.md) | アーキテクチャ設計 |
 | [`docs/functional-design.md`](./docs/functional-design.md) | 機能設計 |
+| [`docs/setup.md`](./docs/setup.md) | ローカル開発環境のセットアップ手順 |
+| [`docs/data-model.md`](./docs/data-model.md) | データモデル設計（Firestore スキーマ・反応区間構造） |
 | [`docs/repository-structure.md`](./docs/repository-structure.md) | リポジトリ構造 |
 | [`docs/development-guidelines.md`](./docs/development-guidelines.md) | 開発ガイドライン |
 | [`docs/glossary.md`](./docs/glossary.md) | 用語集 |
