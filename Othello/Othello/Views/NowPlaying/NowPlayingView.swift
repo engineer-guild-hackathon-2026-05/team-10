@@ -6,9 +6,9 @@ enum NowPlayingTab {
 
 struct NowPlayingView: View {
     let song: Song
+    @ObservedObject var playback: PlaybackViewModel
+    @ObservedObject var airPods: AirPodsMotionViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var isPlaying: Bool = true
-    @State private var progress: Double = 0.32
     @State private var activeTab: NowPlayingTab = .playback
 
     private let lyrics: [(section: String, lines: [String])] = [
@@ -37,8 +37,9 @@ struct NowPlayingView: View {
     private var playbackContent: some View {
         VStack(spacing: 0) {
             Spacer()
-            vinylRecord
+            circularVisualizer
             songInfo
+            playbackControls
             Spacer()
             sectionChip
             lyricsCard
@@ -54,11 +55,12 @@ struct NowPlayingView: View {
 
     private var topBar: some View {
         HStack {
+            airPodsStatusPill
             Spacer()
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "waveform")
+                Image(systemName: "chevron.down")
                     .font(.title3)
                     .foregroundStyle(.white)
                     .padding(10)
@@ -69,37 +71,18 @@ struct NowPlayingView: View {
         .padding(.top, 16)
     }
 
-    private var vinylRecord: some View {
+    private var circularVisualizer: some View {
         ZStack {
-            ForEach(Array(0..<8), id: \.self) { i in
-                let ratio = Double(i) / 8.0
-                let size = CGFloat(240 - i * 24)
-                Circle()
-                    .stroke(
-                        LinearGradient(
-                            colors: song.gradientColors.map { $0.opacity(1.0 - ratio * 0.6) },
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 14
-                    )
-                    .frame(width: size, height: size)
-            }
-            Circle()
-                .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
-                .frame(width: 36, height: 36)
-            Circle()
-                .fill(Color(red: 0.25, green: 0.25, blue: 0.25))
-                .frame(width: 12, height: 12)
+            SyncBeatCircularWaveformView(isAnimating: playback.isPlaying)
+                .opacity(0.45)
+                .frame(width: 260, height: 260)
+
+            SyncBeatCircularWaveformView(isAnimating: playback.isPlaying)
+                .frame(width: 228, height: 228)
+
+            CircularArtworkView(song: song, size: 154, isPlaying: playback.isPlaying, showsCenterHole: true)
         }
-        .frame(width: 260, height: 260)
-        .rotationEffect(.degrees(isPlaying ? 360 : 0))
-        .animation(
-            isPlaying
-                ? .linear(duration: 4).repeatForever(autoreverses: false)
-                : .default,
-            value: isPlaying
-        )
+        .frame(width: 282, height: 282)
         .padding(.vertical, 12)
     }
 
@@ -114,6 +97,66 @@ struct NowPlayingView: View {
                 .foregroundStyle(.gray)
         }
         .padding(.bottom, 8)
+    }
+
+    private var playbackControls: some View {
+        VStack(spacing: 10) {
+            let duration = song.duration
+            let progress = duration > 0 ? min(max(playback.playbackTime / duration, 0), 1) : 0
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.14))
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.3, blue: 0.3), Color(red: 0.18, green: 0.68, blue: 1.0)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: proxy.size.width * progress)
+                }
+            }
+            .frame(height: 6)
+
+            HStack {
+                Text(formatTime(playback.playbackTime))
+                Spacer()
+                Button {
+                    Task { await playback.togglePlayback() }
+                } label: {
+                    Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.black)
+                        .frame(width: 44, height: 44)
+                        .background(Color.white, in: Circle())
+                        .offset(x: playback.isPlaying ? 0 : 2)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+                Text(formatTime(duration))
+            }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.white.opacity(0.64))
+        }
+        .padding(.horizontal, 28)
+        .padding(.top, 10)
+    }
+
+    private var airPodsStatusPill: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(airPods.isRecording ? Color.green : Color.white.opacity(0.34))
+                .frame(width: 7, height: 7)
+            Text(airPods.status.title)
+                .font(.caption.bold())
+                .foregroundStyle(.white.opacity(0.82))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color.white.opacity(0.10), in: Capsule())
     }
 
     private var sectionChip: some View {
@@ -185,6 +228,11 @@ struct NowPlayingView: View {
         .background(Color(red: 0.3, green: 0.2, blue: 0.5).opacity(0.3), in: Capsule())
     }
 
+    private func formatTime(_ time: TimeInterval) -> String {
+        let seconds = max(0, Int(time))
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
     // MARK: - フッター
 
     private var nowPlayingFooter: some View {
@@ -248,5 +296,5 @@ struct NowPlayingView: View {
         artistName: "Mrs. GREEN APPLE",
         gradientColors: [Color(red: 0.85, green: 0.55, blue: 0.35), Color(red: 0.65, green: 0.35, blue: 0.5)],
         durationSeconds: 272
-    ))
+    ), playback: PlaybackViewModel(), airPods: AirPodsMotionViewModel())
 }

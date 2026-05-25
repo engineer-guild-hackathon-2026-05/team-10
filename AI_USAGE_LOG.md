@@ -276,6 +276,28 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビューの実指摘を最小差分で解消しつつ、Firestore index とローカル backend の挙動も揃えられたため。
 
+### #015 最新 main への統合
+
+- **時刻**：16:21
+- **ツール**：Codex
+- **目的**：大幅に更新された main の UI を優先しつつ、既存の Firebase Functions / MusicKit / Auth / AirPods / 円形アートワーク・波形 UI を統合する
+- **プロンプト**：
+  ```text
+  mainが大幅に変更されました。ここに今までやってきた変更を上手くマージして欲しい。
+  uiは基本的にmainの物を優先し、丸いアートワークや波形表示については我々のUIを使ってください。また、エンドポイント（firebase functions）繋ぎこみや
+  MusicKitとの繋ぎ込み、Auth、Airpodsの処理についてはいい感じに繋ぎ込んでマージすること。ちゃんと動く状態になることが求められます。
+  まずはpull origin mainしてからすすめていってください
+  ```
+- **出力サマリ**：
+  - `pull origin main` で最新 main を取り込み、`feat/main-integration` ブランチで統合作業を実施
+  - main の ForYou / MusicFeed / NowPlaying UI を残しつつ、円形アートワークと `SyncBeatCircularWaveformView` を NowPlaying / mini player / clip 作成へ統合
+  - MusicFeed の曲タップを MusicKit 検索・再生に接続し、再生成功時は MusicKit の曲ID・アートワークを `Song` に反映
+  - `GET /how-cards` / like / create を iOS から Firebase Functions 経由で使うよう MusicFeed と clip 作成画面を接続
+  - Auth 済みユーザーの ID トークンを使う既存 `FirebaseAPI` 経路を維持し、曲選択時に AirPods 頭部モーションを MusicKit 再生位置 provider と同期開始するよう接続
+  - `ChatAPIClient` の optional baseURL 文字列化バグを修正
+- **評価**：採用
+- **採用 / 不採用の理由**：main の画面構成を優先したまま、既存のバックエンド経由 Firebase・MusicKit・AirPods・円形波形 UI を実利用経路に接続できたため。
+
 ---
 
 ## Day 3（2026-05-26）

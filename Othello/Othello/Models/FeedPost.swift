@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FeedPost: Identifiable {
     let id: UUID
+    let cardID: String?
     let userName: String
     let userHandle: String
     let avatarLetter: String
@@ -14,6 +15,23 @@ struct FeedPost: Identifiable {
 }
 
 extension FeedPost {
+    init(howCard: HowCardComment, song: Song) {
+        let shortUserID = String(howCard.userID.prefix(6))
+        self.init(
+            id: UUID(),
+            cardID: howCard.documentID,
+            userName: shortUserID.isEmpty ? "listener" : "user \(shortUserID)",
+            userHandle: shortUserID.isEmpty ? "@listener" : "@\(shortUserID)",
+            avatarLetter: shortUserID.first.map(String.init) ?? "H",
+            avatarColor: Color(red: 0.55, green: 0.35, blue: 0.85),
+            timeAgo: "今",
+            comment: howCard.comment,
+            song: song,
+            likeCount: howCard.goods,
+            commentCount: 0
+        )
+    }
+
     static func mockPosts(for song: Song) -> [FeedPost] {
         let comments: [(String, String, String, Color, String, Int, Int)] = [
             ("みお", "@mio_x", "今日ずっと聴いてる。サビが沁みる。", Color(red: 0.9, green: 0.4, blue: 0.4), "今", 142, 12),
@@ -26,6 +44,7 @@ extension FeedPost {
         return comments.map { (name, handle, comment, color, time, likes, comments) in
             FeedPost(
                 id: UUID(),
+                cardID: nil,
                 userName: name,
                 userHandle: handle,
                 avatarLetter: String(name.prefix(1)),
