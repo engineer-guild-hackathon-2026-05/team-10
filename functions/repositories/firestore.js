@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { isMusicKitSongId, normalizeMusicKitSongId } = require('../utils/musicKit');
 
 const db = () => admin.firestore();
 const { FieldValue } = admin.firestore;
@@ -191,9 +192,9 @@ function serializeHowCard(id, data) {
   if (!songId) return null;
 
   const songSlug = normalizeString(data.song_slug)
-    ?? (isMusicSongID(data.song_id) ? null : normalizeString(data.song_id));
+    ?? (isMusicKitSongId(data.song_id) ? null : normalizeString(data.song_id));
 
-  return {
+  const howCard = {
     id,
     comment: data.comment,
     song_start: Number.isFinite(data.song_start) ? data.song_start : 0,
@@ -208,6 +209,18 @@ function serializeHowCard(id, data) {
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
   };
+
+  if (typeof data.song_slug === 'string') {
+    howCard.song_slug = data.song_slug;
+  }
+  if (typeof data.song_title === 'string') {
+    howCard.song_title = data.song_title;
+  }
+  if (typeof data.artist_name === 'string') {
+    howCard.artist_name = data.artist_name;
+  }
+
+  return howCard;
 }
 
 async function attachUserNames(howCards) {
@@ -268,25 +281,16 @@ function isHowCardComment(data) {
     data &&
       typeof data.comment === 'string' &&
       typeof data.song_id === 'string' &&
+      isMusicKitSongId(data.song_id) &&
       typeof data.artist_id === 'string' &&
       typeof data.user_id === 'string'
   );
 }
 
 function canonicalMusicSongID(data) {
-  return normalizeMusicSongID(data.itunes_id)
-    ?? normalizeMusicSongID(data.music_kit_id)
-    ?? normalizeMusicSongID(data.song_id);
-}
-
-function normalizeMusicSongID(value) {
-  const text = normalizeString(value);
-  if (!text || !isMusicSongID(text)) return null;
-  return text;
-}
-
-function isMusicSongID(value) {
-  return typeof value === 'string' && value.length <= 64 && /^\d+$/.test(value);
+  return normalizeMusicKitSongId(data.itunes_id)
+    ?? normalizeMusicKitSongId(data.music_kit_id)
+    ?? normalizeMusicKitSongId(data.song_id);
 }
 
 function normalizeString(value) {
