@@ -295,6 +295,7 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 ```
 
 バックエンドが `user_id` を Firebase ID トークンから補完し、`goods: 0` で `how-cards/{id}` に保存する。
+`song_id` は MusicKit / Apple Music / iTunes の数値曲 ID のみ受け付ける。slug や表示用タイトルは `song_slug` / `song_title` など別フィールドに分離する。
 
 `GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` は以下の形式を返す:
 
@@ -306,6 +307,9 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
     "song_start": 78.4,
     "song_end": 84.2,
     "song_id": "1704093812",
+    "song_slug": "ado-show",
+    "song_title": "Show",
+    "artist_name": "Ado",
     "artist_id": "ado",
     "user_id": "uid123",
     "goods": 0
@@ -361,7 +365,10 @@ how-cards/{cardId}
   comment: string
   song_start: number
   song_end: number
-  song_id: string
+  song_id: string            # MusicKit / Apple Music / iTunes の数値曲 ID
+  song_slug: string | null   # 旧slugや表示用slugが必要な場合のみ
+  song_title: string | null
+  artist_name: string | null
   artist_id: string
   user_id: string
   goods: number
