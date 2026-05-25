@@ -1,15 +1,15 @@
+import Combine
+import FirebaseAuth
 import Foundation
 import SwiftUI
-import Combine
 
-// FR-COMM-01〜04: コミュニティ画面のViewModel（モックデータ）
 @MainActor
 final class CommunityViewModel: ObservableObject {
 
     // MARK: - My How
 
     struct MyHowCard: Identifiable {
-        let id = UUID()
+        let id: String
         let title: String
         let description: String
         let tag: HowTag
@@ -18,29 +18,10 @@ final class CommunityViewModel: ObservableObject {
         let createdAt: String
     }
 
-    let myHowCards: [MyHowCard] = [
-        MyHowCard(
-            title: "深夜に染み込む孤独感",
-            description: "歌詞の映像喚起力に完全に引き込まれた。コンビニの灯りの描写が刺さりすぎた。",
-            tag: .groove,
-            trackTitle: "感電",
-            trackArtist: "米津玄師",
-            createdAt: "2日前"
-        ),
-        MyHowCard(
-            title: "身体が勝手にリズムを刻む",
-            description: "イントロから頭が動いてしまう。ビートとベースラインの絡みが最高。",
-            tag: .groove,
-            trackTitle: "感電",
-            trackArtist: "米津玄師",
-            createdAt: "5日前"
-        ),
-    ]
-
     // MARK: - Community Listeners
 
     struct CommunityListener: Identifiable {
-        let id = UUID()
+        let id: String
         let name: String
         let howTag: HowTag
         let howTitle: String
@@ -48,55 +29,200 @@ final class CommunityViewModel: ObservableObject {
         let mutualCount: Int
     }
 
-    let allListeners: [CommunityListener] = [
-        CommunityListener(name: "haru___m", howTag: .groove, howTitle: "この歌詞で泣いた", trackTitle: "感電", mutualCount: 3),
-        CommunityListener(name: "nocturnalvibes", howTag: .chill, howTitle: "深夜ドライブに最高", trackTitle: "夜に駆ける", mutualCount: 1),
-        CommunityListener(name: "groove_seeker", howTag: .groove, howTitle: "ビートに乗れて最高", trackTitle: "感電", mutualCount: 5),
-        CommunityListener(name: "lyric_nerd", howTag: .chill, howTitle: "歌詞の世界に入り込む", trackTitle: "Lemon", mutualCount: 2),
-        CommunityListener(name: "afterglow99", howTag: .neutral, howTitle: "余韻が抜けない", trackTitle: "感電", mutualCount: 4),
-        CommunityListener(name: "hype_machine", howTag: .groove, howTitle: "テンションが爆上がり", trackTitle: "打上花火", mutualCount: 1),
-        CommunityListener(name: "still_water_v", howTag: .chill, howTitle: "心が落ち着く", trackTitle: "感電", mutualCount: 2),
-        CommunityListener(name: "kokoro_kizamu", howTag: .groove, howTitle: "この一節が全部", trackTitle: "愛にできることはまだあるかい", mutualCount: 6),
-    ]
-
     // MARK: - Popular Tracks by How
 
     struct HowTrack: Identifiable {
-        let id = UUID()
+        let id: String
         let trackTitle: String
         let trackArtist: String
         let howTag: HowTag
         let howCount: Int
     }
 
-    let popularTracks: [HowTrack] = [
-        HowTrack(trackTitle: "感電", trackArtist: "米津玄師", howTag: .groove, howCount: 341),
-        HowTrack(trackTitle: "夜に駆ける", trackArtist: "YOASOBI", howTag: .groove, howCount: 289),
-        HowTrack(trackTitle: "Lemon", trackArtist: "米津玄師", howTag: .neutral, howCount: 214),
-        HowTrack(trackTitle: "打上花火", trackArtist: "DAOKO×米津玄師", howTag: .groove, howCount: 198),
-        HowTrack(trackTitle: "愛にできることはまだあるかい", trackArtist: "RADWIMPS", howTag: .chill, howCount: 176),
-    ]
+    @Published var selectedTag: HowTag?
+    @Published private(set) var isLoading = false
+    @Published private(set) var errorMessage: String?
+    @Published private var cards: [HowCardComment] = []
+    @Published private var userProfilesByID: [String: UserProfile] = [:]
 
-    // MARK: - Filter
+    private let songLookup: [String: (title: String, artistName: String)] = {
+        var result: [String: (title: String, artistName: String)] = [:]
+        for artist in Artist.catalog {
+            for song in artist.songs {
+                result[song.firestoreSongID] = (song.title, song.artistName)
+                result[song.howCardLookupSongID] = (song.title, song.artistName)
+            }
+        }
+        return result
+    }()
 
-    @Published var selectedTag: HowTag? = nil
+    var myHowCards: [MyHowCard] {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            return []
+        }
+
+        return cards
+            .filter { $0.userID == uid }
+            .map { card in
+                let song = songMetadata(for: card.songID)
+                return MyHowCard(
+                    id: card.id,
+                    title: card.comment,
+                    description: card.comment,
+                    tag: tag(for: card),
+                    trackTitle: song.title,
+                    trackArtist: song.artistName,
+                    createdAt: "今"
+                )
+            }
+    }
 
     var filteredListeners: [CommunityListener] {
-        guard let tag = selectedTag else { return allListeners }
-        return allListeners.filter { $0.howTag == tag }
+        let currentUserID = Auth.auth().currentUser?.uid
+        return cards
+            .filter { $0.userID != currentUserID }
+            .filter { card in
+                guard let selectedTag else { return true }
+                return tag(for: card) == selectedTag
+            }
+            .prefix(24)
+            .map { card in
+                let song = songMetadata(for: card.songID)
+                return CommunityListener(
+                    id: card.id,
+                    name: displayName(from: card),
+                    howTag: tag(for: card),
+                    howTitle: card.comment,
+                    trackTitle: song.title,
+                    mutualCount: min(max(card.goods / 40, 0), 8)
+                )
+            }
     }
 
     var filteredTracks: [HowTrack] {
-        guard let tag = selectedTag else { return popularTracks }
-        return popularTracks.filter { $0.howTag == tag }
+        let filteredCards = cards.filter { card in
+            guard let selectedTag else { return true }
+            return tag(for: card) == selectedTag
+        }
+
+        let grouped = Dictionary(grouping: filteredCards, by: \.songID)
+        return grouped.map { songID, cards in
+            let song = songMetadata(for: songID)
+            let tagCounts = Dictionary(grouping: cards.map(tag(for:)), by: { $0 })
+                .mapValues(\.count)
+            let dominantTag = tagCounts.max { $0.value < $1.value }?.key ?? .neutral
+            return HowTrack(
+                id: songID,
+                trackTitle: song.title,
+                trackArtist: song.artistName,
+                howTag: dominantTag,
+                howCount: cards.count
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.howCount == rhs.howCount {
+                return lhs.trackTitle < rhs.trackTitle
+            }
+            return lhs.howCount > rhs.howCount
+        }
+        .prefix(10)
+        .map { $0 }
     }
 
-    // FR-COMM-03: 人気Howタグ（全リスナーの集計）
     var popularTags: [(HowTag, Int)] {
-        var counts: [HowTag: Int] = [:]
-        for listener in allListeners {
-            counts[listener.howTag, default: 0] += 1
-        }
+        let counts = Dictionary(grouping: cards.map(tag(for:)), by: { $0 })
+            .mapValues(\.count)
         return counts.sorted { $0.value > $1.value }
+    }
+
+    func load() async {
+        guard !isLoading else { return }
+
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let fetchedCards = try await FirebaseAPI.shared.fetchHowCards(limit: 250)
+            cards = fetchedCards
+            await loadUserProfiles(for: fetchedCards)
+        } catch {
+            cards = []
+            userProfilesByID = [:]
+            errorMessage = "Howカードを取得できませんでした"
+        }
+    }
+
+    private func loadUserProfiles(for cards: [HowCardComment]) async {
+        let userIDs = uniqueUserIDs(from: cards)
+        guard !userIDs.isEmpty else {
+            userProfilesByID = [:]
+            return
+        }
+
+        do {
+            let users = try await UserProfileService.fetchUsers(ids: userIDs)
+            userProfilesByID = profilesByID(users)
+        } catch {
+            userProfilesByID = [:]
+        }
+    }
+
+    private func songMetadata(for songID: String) -> (title: String, artistName: String) {
+        songLookup[songID] ?? (songID, "unknown")
+    }
+
+    private func tag(for card: HowCardComment) -> HowTag {
+        let comment = card.comment
+        if comment.contains("雨")
+            || comment.contains("沁み")
+            || comment.contains("泣")
+            || comment.contains("余韻")
+            || comment.contains("落ち着く")
+            || comment.contains("孤独") {
+            return .chill
+        }
+
+        if comment.contains("リズム")
+            || comment.contains("ビート")
+            || comment.contains("ドライブ")
+            || comment.contains("テンション")
+            || comment.contains("BGM")
+            || comment.contains("頭")
+            || comment.contains("反則") {
+            return .groove
+        }
+
+        return .neutral
+    }
+
+    private func displayName(from card: HowCardComment) -> String {
+        if let displayName = card.userName?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !displayName.isEmpty {
+            return displayName
+        }
+
+        if let displayName = userProfilesByID[card.userID]?.displayName?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !displayName.isEmpty {
+            return displayName
+        }
+
+        return "listener"
+    }
+
+    private func uniqueUserIDs(from cards: [HowCardComment]) -> [String] {
+        var seen = Set<String>()
+        return cards.compactMap { card in
+            let userID = card.userID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !userID.isEmpty, !seen.contains(userID) else { return nil }
+            seen.insert(userID)
+            return userID
+        }
+    }
+
+    private func profilesByID(_ profiles: [UserProfile]) -> [String: UserProfile] {
+        Dictionary(uniqueKeysWithValues: profiles.map { ($0.userID, $0) })
     }
 }

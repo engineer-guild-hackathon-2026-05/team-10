@@ -329,16 +329,16 @@ footer { color: rgba(240,240,245,0.32); font-size: 14px; }
 ```
    📱 iOS アプリ (SwiftUI / MusicKit)
       HomeView [歌詞 + Groove]
-      HowChatView [AI 対話]
-           │  HTTPS / SSE
+      HowCard コメント
+           │  HTTPS + Firebase ID token
            ▼
-   ☁️  backend (Node.js + Express)
-      POST /sessions/:id/chat   ← Claude API 中継
-      POST /sessions/:id/how-card
+   ☁️  Firebase Functions
+      POST /how-cards
       GET  /how-cards
+      POST /how-cards/:id/like
            │
            ▼
-      🔥  Firestore  +  🤖 Claude API (claude-sonnet-4-6)
+      🔥  Firestore
 
    ai-recognition (Create ML / TF.js) → Core ML → iOS
 ```
@@ -351,8 +351,8 @@ footer { color: rgba(240,240,245,0.32); font-size: 14px; }
 |---|---|---|
 | iOS | SwiftUI + MusicKit | ネイティブ必須（ADR-0001） |
 | 歌詞 | Musixmatch API | 時刻同期歌詞の取得 |
-| Groove | 音量 + 本体モーション | AirPods 不要でデモできる（ADR-0005） |
-| LLM | Claude claude-sonnet-4-6 | バックエンド経由でキー秘匿（ADR-0002） |
+| Groove | AirPods 頭部モーション | 身体反応を曲中時刻に同期 |
+| API | Firebase Functions | Firestore 書き込みを集約 |
 | ML | Create ML → Core ML | 端末推論、学習データ蓄積（ADR-0003） |
 | DB | Firestore | iOS SDK・リアルタイム |
 

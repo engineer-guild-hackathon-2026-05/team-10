@@ -48,14 +48,16 @@ final class FirebaseAPI {
         return response.howCard
     }
 
-    func fetchHowCards(songID: String, limit: Int = 50) async throws -> [HowCardComment] {
+    func fetchHowCards(songID: String? = nil, limit: Int = 50) async throws -> [HowCardComment] {
+        var queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+        if let songID = normalizedLookupSongID(songID) {
+            queryItems.insert(URLQueryItem(name: "song_id", value: songID), at: 0)
+        }
+
         let response: HowCardsResponseEnvelope = try await send(
             path: "how-cards",
             method: "GET",
-            queryItems: [
-                URLQueryItem(name: "song_id", value: songID),
-                URLQueryItem(name: "limit", value: String(limit))
-            ]
+            queryItems: queryItems
         )
         return response.howCards
     }
@@ -108,7 +110,11 @@ final class FirebaseAPI {
             let rawValue = EnvironmentValueProvider.value(forKey: "API_BASE_URL")?.trimmingCharacters(in: .whitespacesAndNewlines),
             !rawValue.isEmpty
         else {
+            #if DEBUG
+            preconditionFailure("API_BASE_URL is not configured in ENV.plist or process environment.")
+            #else
             return nil
+            #endif
         }
 
         return URL(string: rawValue)
@@ -171,6 +177,15 @@ final class FirebaseAPI {
             throw URLError(.badURL)
         }
         return urlWithQuery
+    }
+
+    private func normalizedLookupSongID(_ rawValue: String?) -> String? {
+        guard let trimmed = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty,
+              trimmed.count <= 120 else {
+            return nil
+        }
+        return trimmed
     }
 
     private func firebaseIDToken() async throws -> String {

@@ -8,10 +8,18 @@ const {
   updateHowCard,
   likeHowCard,
 } = require('../repositories/firestore');
+const { normalizeMusicKitSongId } = require('../utils/musicKit');
+
+const INVALID_SONG_ID_ERROR = 'song_id には MusicKit / Apple Music / iTunes の数値曲IDを指定してください';
 
 router.get('/', auth, async (req, res) => {
   try {
-    const songId = normalizeOptionalString(req.query.song_id, 120);
+    const hasSongIdQuery = Object.prototype.hasOwnProperty.call(req.query, 'song_id');
+    const songId = hasSongIdQuery ? normalizeLookupSongId(req.query.song_id) : null;
+    if (hasSongIdQuery && !songId) {
+      return res.status(400).json({ error: 'song_id は空でない文字列を指定してください' });
+    }
+
     const howCards = await getHowCards({
       songId,
       limit: parseLimit(req.query.limit),
@@ -41,7 +49,7 @@ router.post('/', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
     return res.status(400).json({
-      error: 'comment, song_start, song_end, song_id, artist_id が必要です',
+      error: `comment, song_start, song_end, artist_id が必要です。${INVALID_SONG_ID_ERROR}`,
     });
   }
 
@@ -58,7 +66,7 @@ router.patch('/:id', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
     return res.status(400).json({
-      error: 'comment, song_start, song_end, song_id, artist_id が必要です',
+      error: `comment, song_start, song_end, artist_id が必要です。${INVALID_SONG_ID_ERROR}`,
     });
   }
 
@@ -98,13 +106,23 @@ function normalizeCommentPayload(body) {
   const comment = normalizeRequiredString(body.comment, 140);
   const songStart = normalizeRangePoint(body.song_start);
   const songEnd = normalizeRangePoint(body.song_end);
-  const songId = normalizeRequiredString(body.song_id, 120);
+  const songId = normalizeMusicKitSongId(body.song_id);
   const artistId = normalizeRequiredString(body.artist_id, 120);
   if (!comment || songStart == null || songEnd == null || songEnd <= songStart || !songId || !artistId) {
     return null;
   }
 
-  return { comment, songStart, songEnd, songId, artistId };
+  const explicitSongSlug = normalizeOptionalString(body.song_slug, 120);
+
+  return {
+    comment,
+    songStart,
+    songEnd,
+    songId,
+    artistId,
+    itunesId: songId,
+    songSlug: explicitSongSlug,
+  };
 }
 
 function normalizeOptionalString(value, maxLength) {
@@ -118,6 +136,10 @@ function normalizeRequiredString(value, maxLength) {
   return normalizeOptionalString(value, maxLength);
 }
 
+function normalizeLookupSongId(value) {
+  return normalizeOptionalString(value, 120);
+}
+
 function normalizeRangePoint(value) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
   return value;
@@ -126,7 +148,7 @@ function normalizeRangePoint(value) {
 function parseLimit(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 50;
-  return Math.min(100, Math.max(1, Math.floor(number)));
+  return Math.min(250, Math.max(1, Math.floor(number)));
 }
 
 module.exports = router;

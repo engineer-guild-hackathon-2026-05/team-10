@@ -31,8 +31,8 @@ Firebase Auth で新規ユーザー作成が走ったタイミングで `users/{
 
 - 発火条件: Firebase Auth で新規ユーザーが作成された時（iOS の初回サインアップ）
 - 既存ユーザーには発火しない（onCreate なので新規のみ）
-- iOS 側の `PUT /users/me` は追加同期用。メールアドレスは ID トークンの値を正とする
-- ドキュメント内容: `{ user_id, email, display_name, created_at }`
+- iOS 側の `PUT /users/me`、または Firestore rules で許可された自分自身の `users/{uid}` 直接 read/write は追加同期用。メールアドレスは ID トークンの値を正とする
+- ドキュメント内容: `{ user_id, email, display_name, created_at, updated_at }`
 - 実装は v1 SDK（`firebase-functions/v1`）。v2 の Auth トリガーは blocking 専用なので、非同期で完了する onCreate には v1 を使う
 
 ---
@@ -49,7 +49,8 @@ functions/
 │   └── firestore.js          # Firestore 読み書き（how-cards / users）
 ├── routes/
 │   ├── how-cards.js          # /how-cards 配下
-│   └── users.js              # /users/me
+│   ├── recommended-comments.js # /recommended-comments
+│   └── users.js              # /users / /users/me
 ├── package.json
 └── .gitignore
 ```
@@ -118,12 +119,13 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | メソッド | パス | 認証 | 用途 |
 |---------|------|------|------|
 | GET | `/health` | ❌ | 死活確認 |
-| GET | `/how-cards` | ✅ | Howカードコメント一覧（最新50件） |
+| GET | `/how-cards` | ✅ | Howカードコメント一覧（デフォルト最新50件、最大250件） |
 | GET | `/how-cards?song_id=...` | ✅ | 曲ごとのHowカードコメント一覧 |
 | GET | `/how-cards/:id` | ✅ | Howカードコメント取得 |
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
 | PATCH | `/how-cards/:id` | ✅ | 自分のHowカードコメント更新 |
 | POST | `/how-cards/:id/like` | ✅ | いいね（冪等、二重防止） |
+| GET | `/recommended-comments` | ✅ | Home dashboard 向けおすすめコメント一覧 |
 | GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
 | PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
 
@@ -139,6 +141,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
   "song_start": 78.4,
   "song_end": 84.2,
   "song_id": "1704093812",
+  "song_slug": "ado-show",
   "artist_id": "ado"
 }
 ```
@@ -148,8 +151,11 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | `comment` | string | ユーザー記入のコメント（空文字不可） |
 | `song_start` | number | 区間開始（秒、0 以上） |
 | `song_end` | number | 区間終了（秒、`song_start` より大きい） |
-| `song_id` | string | 曲 ID |
+| `song_id` | string | MusicKit / Apple Music / iTunes の数値曲 ID（例: `1704093812`）。slug や表示名は不可 |
+| `song_slug` | string | 任意。表示・移行用の曲 slug。`song_id` には入れない |
 | `artist_id` | string | アーティスト ID |
+
+`song_id` は client が MusicKit metadata lookup に使う canonical ID とする。slug や曲名由来の値は `song_slug` など別フィールドで送る。
 
 **レスポンス**
 
@@ -161,6 +167,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
     "song_start": 78.4,
     "song_end": 84.2,
     "song_id": "1704093812",
+    "itunes_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
     "likes": 0
@@ -170,8 +177,10 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 
 ### `GET /how-cards`
 
-最新の Howカードコメント一覧を返す（最大 50 件、`created_at` 降順）。
+最新の Howカードコメント一覧を返す（デフォルト 50 件、`limit` 指定時は最大 250 件、`created_at` 降順）。
 `song_id` を指定した場合は曲ごとのコメント一覧を返す。
+
+新規作成・更新では `song_id` に数値の MusicKit / Apple Music / iTunes ID だけを受け付けるが、GET は既存データ互換のため `ここのっか-ここのっか` のような legacy slug も検索できる。legacy ドキュメントは canonical ID がない場合に限り、レスポンスの `song_id` へ保存済み slug を返す。
 
 **レスポンス**
 
@@ -184,9 +193,45 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "song_start": 78.4,
       "song_end": 84.2,
       "song_id": "1704093812",
+      "itunes_id": "1704093812",
+      "song_slug": "ado-show",
+      "song_title": "Show",
+      "artist_name": "Ado",
       "artist_id": "ado",
       "user_id": "uid123",
+      "user_name": "Atsushi",
       "likes": 3
+    }
+  ]
+}
+```
+
+`user_name` は `users/{user_id}.display_name` から Admin SDK で参照した表示用フィールド。メールアドレスなどの user 詳細は返さない。
+
+### `GET /recommended-comments`
+
+Home dashboard 向けのおすすめ Howカードコメント一覧を返す。`created_at` が新しいコメントと `likes` が多いコメントから候補を取り、Functions 側でスコアリングして混ぜる。
+
+`limit` は 1〜50。未指定時は 12 件。
+
+**レスポンス**
+
+```json
+{
+  "comments": [
+    {
+      "id": "card456",
+      "comment": "...",
+      "song_start": 78.4,
+      "song_end": 84.2,
+      "song_id": "1704093812",
+      "itunes_id": "1704093812",
+      "song_slug": "ado-show",
+      "artist_id": "ado",
+      "user_id": "uid123",
+      "user_name": "Atsushi",
+      "likes": 12,
+      "created_at": "2026-05-25T12:00:00.000Z"
     }
   ]
 }
@@ -211,13 +256,14 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 ### `GET /users/me` / `PUT /users/me`
 
 `onUserSignup` で自動生成された `users/{uid}` を取得・追加同期する。
-`PUT /users/me` では ID トークンのメールアドレスを正とし、body の `email` が異なる場合は 400 を返す。
+現行 iOS では起動時や Howカード読み込み時の users seed は行わない。ユーザー情報の作成・更新は Auth トリガーと `PUT /users/me` に寄せ、iOS は必要に応じて自分自身の `users/{uid}` を読み取るだけにする。
+`PUT /users/me` では ID トークンのメールアドレスを正とし、body の `email` が異なる場合は 400 を返す。ID トークンにメールアドレスがない場合は `null` として保存する。
 
 **リクエスト**
 
 ```json
 {
-  "email": "user@example.com",
+  "email": null,
   "display_name": "Atsushi"
 }
 ```
@@ -238,17 +284,38 @@ how-cards/{cardId}
   comment: string
   song_start: number
   song_end: number
-  song_id: string
+  song_id: string          # 新規は MusicKit / Apple Music / iTunes の数値曲 ID。既存 legacy slug も読み取り互換対象
+  itunes_id: string | null # canonical 曲 ID（新規は song_id と同じ値）
+  song_slug: string | null # 表示・移行用 slug
+  song_title: string | null
+  artist_name: string | null
   artist_id: string
   user_id: string
   likes: number
   created_at: timestamp
-  updated_at: timestamp
+  updated_at: timestamp | absent
 
 how-cards/{cardId}/liked-by/{uid}
   user_id: string
   liked_at: timestamp
 ```
+
+### `song_id` 契約と migration
+
+`POST /how-cards` と `PATCH /how-cards/:id` の `song_id` は MusicKit の catalog song ID として iOS がそのまま解決できる数値文字列だけを受け付ける。
+`radwimps-愛にできることはまだあるかい` のような slug / 表示名由来の値は write API では `400` として拒否する。
+
+ただし、既存 Firestore には legacy slug が残っているため、`GET /how-cards` と `GET /how-cards?song_id=...` は読み取り互換として legacy slug のドキュメントも返す。MusicKit metadata を解決できる `itunes_id` がある場合は `itunes_id` を canonical ID として返し、ない場合は保存済み `song_id` を表示・検索用 ID として返す。
+
+既存データに slug が残っている場合は migration script を使う。デフォルトは dry-run:
+
+```powershell
+cd functions
+npm run migrate:how-card-song-ids
+npm run migrate:how-card-song-ids -- --write
+```
+
+既知の legacy slug は `song_slug` に退避し、`song_id` を MusicKit ID に置換する。
 
 ---
 
@@ -269,9 +336,12 @@ Functions v2 では、エクスポート名 `api` がパスに含まれる可能
 
 ## ローカル開発
 
-このディレクトリではローカル開発しない。`../backend/` を使う（ただし `backend/` のコードは古いままで凍結されている可能性が高い。`backend/README.md` の警告を参照）:
+本番 API の変更はこの `functions/` を正とする。旧 `../backend/` は deprecated な参照実装であり、編集しても本番 deploy には反映されない。
+
+Functions emulator を使う場合:
 
 ```powershell
-cd ..\backend
-npm run dev   # Express on localhost:3000
+cd functions
+npm install
+npx firebase-tools emulators:start --only functions,firestore
 ```

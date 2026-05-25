@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { isMusicKitSongId } = require('../utils/musicKit');
 
 const db = () => admin.firestore();
 const { FieldValue } = admin.firestore;
@@ -21,6 +22,61 @@ async function getSession(sessionId) {
   const doc = await db().collection('sessions').doc(sessionId).get();
   if (!doc.exists) return null;
   return { id: doc.id, ...doc.data() };
+}
+
+async function upsertChatSession({
+  sessionId,
+  uid,
+  startTime,
+  tags,
+  intensity,
+  lyric,
+  history,
+  scores,
+  dominantAxis,
+}) {
+  const sessionRef = db().collection('sessions').doc(sessionId);
+  const now = FieldValue.serverTimestamp();
+  const hasOwner = typeof uid === 'string' && uid.length > 0;
+
+  await db().runTransaction(async transaction => {
+    const snapshot = await transaction.get(sessionRef);
+    const existingData = snapshot.exists ? snapshot.data() : {};
+
+    if (snapshot.exists && hasOwner && existingData.userId && existingData.userId !== uid) {
+      const error = new Error('このセッションへのアクセス権がありません');
+      error.code = 'session-forbidden';
+      throw error;
+    }
+
+    const data = {
+      reactionStartTime: startTime,
+      reactionTags: tags,
+      reactionIntensity: intensity,
+      chatHistory: history,
+      status: existingData.status === 'done' ? 'done' : 'chatting',
+      updatedAt: now,
+    };
+
+    if (hasOwner) {
+      data.userId = uid;
+    }
+    if (lyric !== undefined) {
+      data.lyric = lyric;
+    }
+    if (scores !== undefined) {
+      data.reactionScores = scores;
+    }
+    if (dominantAxis !== undefined) {
+      data.dominantAxis = dominantAxis;
+    }
+
+    if (!snapshot.exists || !isFirestoreTimestamp(existingData.createdAt)) {
+      data.createdAt = now;
+    }
+
+    transaction.set(sessionRef, data, { merge: true });
+  });
 }
 
 async function saveHowCard({
@@ -52,7 +108,11 @@ async function saveHowCard({
     createdAt: FieldValue.serverTimestamp(),
   });
 
-  batch.set(sessionRef, { status: 'done' }, { merge: true });
+  batch.set(
+    sessionRef,
+    { status: 'done', userId: uid, updatedAt: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
 
   const userUpdate = {};
   if (email) userUpdate.email = email;
@@ -211,7 +271,7 @@ async function getHowCardsByTag(tag) {
 function serializeHowCardComment(id, data) {
   if (!isHowCardComment(data)) return null;
 
-  return {
+  const howCard = {
     id,
     comment: data.comment,
     song_start: Number.isFinite(data.song_start) ? data.song_start : 0,
@@ -223,6 +283,18 @@ function serializeHowCardComment(id, data) {
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
   };
+
+  if (typeof data.song_slug === 'string') {
+    howCard.song_slug = data.song_slug;
+  }
+  if (typeof data.song_title === 'string') {
+    howCard.song_title = data.song_title;
+  }
+  if (typeof data.artist_name === 'string') {
+    howCard.artist_name = data.artist_name;
+  }
+
+  return howCard;
 }
 
 function isHowCardComment(data) {
@@ -230,6 +302,7 @@ function isHowCardComment(data) {
     data &&
       typeof data.comment === 'string' &&
       typeof data.song_id === 'string' &&
+      isMusicKitSongId(data.song_id) &&
       typeof data.artist_id === 'string' &&
       typeof data.user_id === 'string'
   );
@@ -261,6 +334,7 @@ function isFirestoreTimestamp(value) {
 module.exports = {
   createSession,
   getSession,
+  upsertChatSession,
   saveHowCard,
   upsertUserProfile,
   getUserProfile,

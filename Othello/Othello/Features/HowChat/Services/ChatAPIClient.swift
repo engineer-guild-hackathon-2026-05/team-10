@@ -1,3 +1,4 @@
+import FirebaseAuth
 import Foundation
 
 struct ChatResponse: Decodable {
@@ -27,20 +28,17 @@ final class ChatAPIClient {
     static let shared = ChatAPIClient()
     private init() {}
 
-    func chat(event: ReactionEvent, messages: [HowChatMessage]) async throws -> ChatResponse {
+    func chat(sessionID: String, event: ReactionEvent, messages: [HowChatMessage]) async throws -> ChatResponse {
         if isMockMode {
             return mockResponse(event: event, turn: messages.filter { $0.sender == .ai }.count)
         }
 
-        guard let baseURL else {
-            throw URLError(.badURL)
-        }
-
-        guard let url = URL(string: "/sessions/default/chat", relativeTo: baseURL)?.absoluteURL else {
-            throw URLError(.badURL)
-        }
-
-        var req = URLRequest(url: url, timeoutInterval: 10)
+        var req = try await makeRequest(
+            sessionID: sessionID,
+            endpoint: "chat",
+            timeoutInterval: 10,
+            authRequired: false
+        )
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let payload = buildPayload(event: event, messages: messages)
@@ -63,7 +61,12 @@ final class ChatAPIClient {
         return URL(string: rawValue)
     }
 
-    func postHowCard(event: ReactionEvent, messages: [HowChatMessage], selectedTags: [HowTag]) async throws -> HowCardResponse {
+    func postHowCard(
+        sessionID: String,
+        event: ReactionEvent,
+        messages: [HowChatMessage],
+        selectedTags: [HowTag]
+    ) async throws -> HowCardResponse {
         if isMockMode {
             return HowCardResponse(
                 howTags: selectedTags.map(\.label),
@@ -72,8 +75,7 @@ final class ChatAPIClient {
                 highlightSec: event.startTime
             )
         }
-        let url = URL(string: "\(baseURL)/sessions/demo/how-card")!
-        var req = URLRequest(url: url, timeoutInterval: 15)
+        var req = try await makeRequest(sessionID: sessionID, endpoint: "how-card", timeoutInterval: 15)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -94,6 +96,51 @@ final class ChatAPIClient {
         let wrapper = try JSONDecoder().decode([String: HowCardResponse].self, from: data)
         guard let card = wrapper["howCard"] else { throw URLError(.cannotParseResponse) }
         return card
+    }
+
+    private func makeRequest(
+        sessionID: String,
+        endpoint: String,
+        timeoutInterval: TimeInterval,
+        authRequired: Bool = true
+    ) async throws -> URLRequest {
+        let url = try makeURL(sessionID: sessionID, endpoint: endpoint)
+        var request = URLRequest(url: url, timeoutInterval: timeoutInterval)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if authRequired {
+            let token = try await firebaseIDToken()
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        return request
+    }
+
+    private func makeURL(sessionID: String, endpoint: String) throws -> URL {
+        guard var url = baseURL else {
+            throw URLError(.badURL)
+        }
+
+        url.appendPathComponent("sessions")
+        url.appendPathComponent(sessionID)
+        url.appendPathComponent(endpoint)
+        return url
+    }
+
+    private func firebaseIDToken() async throws -> String {
+        guard let user = Auth.auth().currentUser else {
+            throw FirebaseAPIError.notAuthenticated
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            user.getIDToken { token, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let token {
+                    continuation.resume(returning: token)
+                } else {
+                    continuation.resume(throwing: FirebaseAPIError.notAuthenticated)
+                }
+            }
+        }
     }
 
     private var isMockMode: Bool {

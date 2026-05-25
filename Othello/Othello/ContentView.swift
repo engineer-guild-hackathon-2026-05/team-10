@@ -3,9 +3,10 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var authVM = AuthViewModel()
     @StateObject private var onboardingVM = OnboardingViewModel()
-    @State private var nowPlayingSong: Song?
+    @StateObject private var playback = PlaybackViewModel()
+    @StateObject private var airPods = AirPodsMotionViewModel()
+    @State private var nowPlayingContext: NowPlayingContext?
     @State private var showNowPlaying: Bool = false
-    @State private var miniPlayerIsPlaying: Bool = true
 
     var body: some View {
         if !authVM.isLoggedIn {
@@ -32,27 +33,41 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
 
-            ForYouView(nowPlayingSong: $nowPlayingSong)
+            ForYouView(nowPlayingContext: $nowPlayingContext, playback: playback)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if nowPlayingSong != nil {
-                GlobalMiniPlayerView(song: nowPlayingSong, onTap: {
+            if nowPlayingContext != nil {
+                GlobalMiniPlayerView(song: nowPlayingContext?.song, onTap: {
                     showNowPlaying = true
-                }, isPlaying: $miniPlayerIsPlaying)
+                }, playback: playback)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
             }
         }
         .preferredColorScheme(.dark)
-        .onChange(of: nowPlayingSong) { _, newSong in
-            if newSong != nil { showNowPlaying = true }
+        .task {
+            await playback.onAppear()
+        }
+        .onChange(of: nowPlayingContext?.id) { _, newValue in
+            if newValue != nil {
+                airPods.start(playbackPositionProvider: playback.playbackPositionProvider())
+            } else {
+                airPods.stop()
+                showNowPlaying = false
+            }
+        }
+        .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(playback.positionUnavailableMessage)
         }
         .fullScreenCover(isPresented: $showNowPlaying) {
-            if let song = nowPlayingSong {
-                NowPlayingView(song: song)
+            if let context = nowPlayingContext {
+                NowPlayingView(context: context, playback: playback, airPods: airPods)
             }
         }
     }
+
 }
 
 #Preview {
