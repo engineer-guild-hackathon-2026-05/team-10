@@ -91,7 +91,6 @@ struct MusicFeedView: View {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.posts) { post in
                     FeedPostCard(post: post, onSongTap: {
-                        clipSong = post.song
                         onSongTap(post.song)
                     })
                 }
