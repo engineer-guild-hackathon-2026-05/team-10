@@ -117,9 +117,54 @@ iOS クライアントからの直接アクセスは、ログイン中ユーザ�
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function hasValidUserCreateShape(uid) {
+      return request.resource.data.keys().hasOnly([
+        'user_id',
+        'email',
+        'display_name',
+        'created_at',
+        'updated_at'
+      ])
+        && request.resource.data.user_id == uid
+        && (request.resource.data.email == null || request.resource.data.email is string)
+        && (request.resource.data.display_name == null || (
+          request.resource.data.display_name is string
+          && request.resource.data.display_name.size() <= 80
+        ))
+        && request.resource.data.created_at is timestamp
+        && request.resource.data.updated_at == request.time;
+    }
+
+    function hasValidUserUpdateShape(uid) {
+      return request.resource.data.user_id == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'user_id',
+          'email',
+          'display_name',
+          'updated_at'
+        ])
+        && (request.resource.data.email == null || request.resource.data.email is string)
+        && (request.resource.data.display_name == null || (
+          request.resource.data.display_name is string
+          && request.resource.data.display_name.size() <= 80
+        ))
+        && request.resource.data.updated_at == request.time;
+    }
+
     match /users/{uid} {
-      allow get, create, update: if request.auth != null && request.auth.uid == uid;
-      allow list, delete: if false;
+      allow get: if isOwnUser(uid);
+      allow list: if false;
+      allow create: if isOwnUser(uid) && hasValidUserCreateShape(uid);
+      allow update: if isOwnUser(uid) && hasValidUserUpdateShape(uid);
+      allow delete: if false;
     }
 
     match /{document=**} {
@@ -330,11 +375,12 @@ iOS は `how-cards` へ直接アクセスせず、Firebase ID トークン付き
 
 ```json
 {
-  "email": "user@example.com",
+  "email": null,
   "display_name": null
 }
 ```
 
+`email` は nullable。ID トークンにメールアドレスがある場合はそれを正とし、body の `email` が異なる場合は 400 を返す。ID トークンにメールアドレスがない場合は `null` として扱う。
 `GET /users/me` / `PUT /users/me` は `{ "user": ... }` を返す。
 
 ---

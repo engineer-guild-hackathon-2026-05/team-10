@@ -21,9 +21,9 @@ enum StaticLyricsParser {
             return []
         }
 
-        var parsedLines: [(startTime: TimeInterval, text: String)] = []
+        var parsedLines: [(startTime: TimeInterval, order: Int, text: String)] = []
 
-        for rawLine in body.components(separatedBy: .newlines) {
+        for (order, rawLine) in body.components(separatedBy: .newlines).enumerated() {
             let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
             let range = NSRange(line.startIndex..<line.endIndex, in: line)
             let matches = regex.matches(in: line, range: range)
@@ -36,13 +36,13 @@ enum StaticLyricsParser {
 
             for match in matches {
                 guard let startTime = timestamp(from: match, in: line) else { continue }
-                parsedLines.append((startTime, text))
+                parsedLines.append((startTime, order, text))
             }
         }
 
         let sortedLines = parsedLines.sorted { lhs, rhs in
             if lhs.startTime == rhs.startTime {
-                return lhs.text < rhs.text
+                return lhs.order < rhs.order
             }
             return lhs.startTime < rhs.startTime
         }
@@ -108,7 +108,9 @@ enum StaticLyricsParser {
     private nonisolated static func cleanedLyricText(_ rawText: String) -> String? {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
-        guard !(text.hasPrefix("[") && text.hasSuffix("]")) else { return nil }
+        let metadataPrefixes = ["[ar:", "[ti:", "[al:", "[by:", "[offset:", "[length:"]
+        let lowercased = text.lowercased()
+        guard !metadataPrefixes.contains(where: { lowercased.hasPrefix($0) }) else { return nil }
         guard !text.hasPrefix("*******") else { return nil }
         guard !text.localizedCaseInsensitiveContains("This Lyrics is NOT for Commercial use") else {
             return nil

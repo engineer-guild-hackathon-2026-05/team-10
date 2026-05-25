@@ -65,6 +65,8 @@ final class ClipCreationViewModel: ObservableObject {
 
     @discardableResult
     func postHowCard() async -> Bool {
+        guard !isPosting else { return false }
+
         let comment = commentText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !comment.isEmpty else {
             postErrorMessage = "コメントを入力してください"
@@ -73,6 +75,7 @@ final class ClipCreationViewModel: ObservableObject {
 
         isPosting = true
         postErrorMessage = nil
+        postedCardID = nil
         defer { isPosting = false }
 
         do {
@@ -87,6 +90,7 @@ final class ClipCreationViewModel: ObservableObject {
             postedCardID = try await FirebaseAPI.shared.createHowCard(howCard)
             return true
         } catch {
+            postedCardID = nil
             postErrorMessage = "Howカードを投稿できませんでした"
             return false
         }

@@ -55,15 +55,26 @@ struct CircularArtworkView: View {
 
     private var fallbackArtwork: some View {
         ZStack {
+            fallbackBackground
+
+            Image(systemName: "music.note")
+                .font(.system(size: max(16, size * 0.22), weight: .semibold))
+                .foregroundStyle(.white.opacity(0.42))
+        }
+    }
+
+    @ViewBuilder
+    private var fallbackBackground: some View {
+        if song.gradientColors.count >= 2 {
             LinearGradient(
                 colors: song.gradientColors,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            Image(systemName: "music.note")
-                .font(.system(size: max(16, size * 0.22), weight: .semibold))
-                .foregroundStyle(.white.opacity(0.42))
+        } else if let color = song.gradientColors.first {
+            color
+        } else {
+            Color.white.opacity(0.08)
         }
     }
 

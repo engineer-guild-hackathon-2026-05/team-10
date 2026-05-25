@@ -7,7 +7,6 @@ final class FirebaseAPI {
     private let session: URLSession
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
-    private static let defaultBaseURL = URL(string: "https://asia-northeast1-egh-howtune.cloudfunctions.net/api")
 
     init(session: URLSession = .shared) {
         self.session = session
@@ -72,14 +71,10 @@ final class FirebaseAPI {
 
     @discardableResult
     func upsertUser(_ user: UserProfile) async throws -> UserProfile {
-        guard let email = user.email, !email.isEmpty else {
-            throw FirebaseAPIError.missingEmail
-        }
-
         let response: UserResponseEnvelope = try await send(
             path: "users/me",
             method: "PUT",
-            body: UserProfilePayload(email: email, displayName: user.displayName)
+            body: UserProfilePayload(email: user.email, displayName: user.displayName)
         )
         return response.user
     }
@@ -115,7 +110,11 @@ final class FirebaseAPI {
             let rawValue = EnvironmentValueProvider.value(forKey: "API_BASE_URL")?.trimmingCharacters(in: .whitespacesAndNewlines),
             !rawValue.isEmpty
         else {
-            return Self.defaultBaseURL
+            #if DEBUG
+            preconditionFailure("API_BASE_URL is not configured in ENV.plist or process environment.")
+            #else
+            return nil
+            #endif
         }
 
         return URL(string: rawValue)

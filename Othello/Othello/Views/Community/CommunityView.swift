@@ -13,9 +13,11 @@ struct CommunityView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         tagFilterSection
                         statusSection
-                        myHowSection
-                        listenersSection
-                        popularTracksSection
+                        if !viewModel.isLoading && viewModel.errorMessage == nil {
+                            myHowSection
+                            listenersSection
+                            popularTracksSection
+                        }
                     }
                     .padding(.bottom, 40)
                 }

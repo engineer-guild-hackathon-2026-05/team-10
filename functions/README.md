@@ -214,13 +214,13 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 ### `GET /users/me` / `PUT /users/me`
 
 `onUserSignup` で自動生成された `users/{uid}` を取得・追加同期する。
-`PUT /users/me` では ID トークンのメールアドレスを正とし、body の `email` が異なる場合は 400 を返す。
+`PUT /users/me` では ID トークンのメールアドレスを正とし、body の `email` が異なる場合は 400 を返す。ID トークンにメールアドレスがない場合は `null` として保存する。
 
 **リクエスト**
 
 ```json
 {
-  "email": "user@example.com",
+  "email": null,
   "display_name": "Atsushi"
 }
 ```

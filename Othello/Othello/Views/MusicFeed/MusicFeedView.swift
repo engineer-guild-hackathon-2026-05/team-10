@@ -128,13 +128,8 @@ struct MusicFeedView: View {
 
     private func play(post: FeedPost) {
         Task {
-            let resolvedSong: Song
-            if let track = await playback.select(song: post.song) {
-                resolvedSong = Song(playbackTrack: track, fallback: post.song)
-            } else {
-                resolvedSong = post.song
-            }
-
+            guard let track = await playback.select(song: post.song) else { return }
+            let resolvedSong = Song(playbackTrack: track, fallback: post.song)
             onSongTap(resolvedSong)
         }
     }
@@ -196,12 +191,11 @@ private struct FeedPostCard: View {
 
             HStack(spacing: 20) {
                 Button {
+                    guard !isLiked else { return }
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        isLiked.toggle()
+                        isLiked = true
                     }
-                    if isLiked {
-                        onLike()
-                    }
+                    onLike()
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: isLiked ? "heart.fill" : "heart")

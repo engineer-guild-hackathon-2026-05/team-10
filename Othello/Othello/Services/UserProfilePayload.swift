@@ -1,5 +1,5 @@
 struct UserProfilePayload: Encodable {
-    let email: String
+    let email: String?
     let displayName: String?
 
     enum CodingKeys: String, CodingKey {

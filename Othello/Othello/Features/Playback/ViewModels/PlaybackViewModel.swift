@@ -145,6 +145,6 @@ final class PlaybackViewModel: ObservableObject {
                 && $0.artistName.localizedCaseInsensitiveContains(song.artistName)
         } ?? tracks.first {
             $0.title.localizedCaseInsensitiveContains(song.title)
-        } ?? tracks.first
+        }
     }
 }

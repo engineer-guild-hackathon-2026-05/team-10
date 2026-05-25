@@ -828,6 +828,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：iOS の `users/{uid}` direct access に必要な Firestore rules を Firebase project に反映できたため。
 
+### #043 PR #72レビュー対応
+
+- **時刻**：21:25
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #72 の CodeRabbit review comments を確認し、現在の `feat/main-integration` で有効な指摘を修正する
+- **プロンプト**：
+  ```text
+  #72のレビューを見て、修正して
+  ```
+- **出力サマリ**：
+  - 再生トラック未一致時の `tracks.first` fallback と `onSongTap` 遷移を止め、誤再生・誤遷移を防止
+  - Clip 投稿の再入 guard、`postedCardID` reset、いいね重複送信防止、artwork fallback の空 gradient 対応を追加
+  - Community loading/error 表示、MusicFeed load cancellation、LRC parser の同時刻順序と bracketed lyric heading の扱いを修正
+  - `UserSeedService` を差分がある時だけ Firestore write する実装にし、nullable email 契約に合わせて client / Functions / docs を更新
+  - 現在のブランチに存在しない古い `HowCardSeedService.swift` と README seed metadata 指摘は対象外として確認
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘のうち現在も有効な不具合を、表示・投稿・再生・データ同期の各境界で最小差分に分けて解消できたため。
+
 ---
 
 ## Day 3（2026-05-26）

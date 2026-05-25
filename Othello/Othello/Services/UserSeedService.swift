@@ -86,18 +86,20 @@ enum UserSeedService {
         let snapshot = try await getDocument(ref)
         let existingData = snapshot.data() ?? [:]
 
-        var data: [String: Any] = [
-            "user_id": seed.userID,
-            "updated_at": FieldValue.serverTimestamp()
-        ]
+        var data: [String: Any] = [:]
 
-        if !snapshot.exists || stringValue(existingData["display_name"]) == nil {
+        if stringValue(existingData["user_id"]) != seed.userID {
+            data["user_id"] = seed.userID
+        }
+
+        if stringValue(existingData["display_name"]) != seed.displayName {
             data["display_name"] = seed.displayName
         }
 
-        if let email = normalizedString(seed.email),
-           !snapshot.exists || stringValue(existingData["email"]) == nil {
-            data["email"] = email
+        if let email = normalizedString(seed.email) {
+            if stringValue(existingData["email"]) != email {
+                data["email"] = email
+            }
         } else if !snapshot.exists {
             data["email"] = NSNull()
         }
@@ -106,7 +108,11 @@ enum UserSeedService {
             data["created_at"] = FieldValue.serverTimestamp()
         }
 
-        try await setData(data, for: ref)
+        if !data.isEmpty {
+            data["updated_at"] = FieldValue.serverTimestamp()
+            try await setData(data, for: ref)
+        }
+
         let refreshedSnapshot = try await getDocument(ref)
 
         if let profile = userProfile(from: refreshedSnapshot) {

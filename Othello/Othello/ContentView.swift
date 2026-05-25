@@ -82,6 +82,7 @@ struct ContentView: View {
             print("[HowCards] seeded \(seededUsers.count) users for existing How cards")
             #endif
         } catch {
+            didSeedHowCardUsers = false
             #if DEBUG
             print("[HowCards] user seed failed: \(error)")
             #endif
