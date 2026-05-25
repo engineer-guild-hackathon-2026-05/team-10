@@ -13,7 +13,8 @@ backend/
 │   └── auth.js               # Firebase ID トークン検証 → req.uid / email / displayName をセット
 ├── routes/
 │   ├── sessions.js           # POST /sessions、POST /sessions/:id/chat、POST /sessions/:id/how-card
-│   └── how-cards.js          # GET /how-cards
+│   ├── how-cards.js          # /how-cards 配下
+│   └── users.js              # GET/PUT /users/me
 ├── services/
 │   └── claude.js             # Anthropic SDK ラッパー（対話・Howカード生成）
 ├── repositories/
@@ -54,8 +55,15 @@ PORT=3000
 
 ```
 users/{uid}
-  email: string            ← トークンから自動取得
-  displayName: string      ← トークンから自動取得（iOS で profile に設定したもの）
+  user_id: string
+  email: string
+  display_name: string | null
+  created_at: timestamp
+  updated_at: timestamp
+
+users/{uid}                ← 既存Howカード生成API用
+  email: string
+  displayName: string
   howTags: string[]        ← HowCard 生成時に追記される
   updatedAt: timestamp
 
@@ -69,6 +77,13 @@ sessions/{sessionId}
   createdAt: timestamp
 
 how-cards/{cardId}
+  comment: string
+  song_id: string
+  artist_id: string
+  user_id: string
+  goods: number
+
+how-cards/{cardId}         ← 既存Howカード生成API用
   userId: string
   displayName: string      ← 非正規化（コミュニティ表示用に user 参照不要）
   sessionId: string
@@ -118,7 +133,7 @@ service cloud.firestore {
    Authorization: Bearer <firebase-id-token>
    ```
 4. `middleware/auth.js` が Admin SDK でトークンを検証 → `req.uid` / `req.email` / `req.displayName` をセット
-5. **`users/{uid}` ドキュメントは初回 HowCard 生成時に自動作成される**（明示的な登録 API は不要）
+5. サインアップ後、iOS が `PUT /users/me` を呼び、`users/{uid}` をバックエンド経由で作成・更新する
 
 ### 認証が必要なエンドポイント
 
@@ -128,6 +143,11 @@ service cloud.firestore {
 | `POST /sessions/:id/chat` | ✅ 必須 |
 | `POST /sessions/:id/how-card` | ✅ 必須 |
 | `GET /how-cards` | ✅ 必須 |
+| `POST /how-cards` | ✅ 必須 |
+| `PATCH /how-cards/:id` | ✅ 必須 |
+| `POST /how-cards/:id/goods` | ✅ 必須 |
+| `GET /users/me` | ✅ 必須 |
+| `PUT /users/me` | ✅ 必須 |
 | `GET /health` | ❌ 不要 |
 
 ---
@@ -251,6 +271,54 @@ Core ML がオンデバイスで計算した反応区間を受け取り、セッ
 ```
 
 最大50件、`createdAt` 降順。
+
+---
+
+### Howカードコメント API
+
+iOS は Firestore に直接アクセスせず、Firebase ID トークン付きでこのAPIを呼び出す。
+
+`POST /how-cards`:
+
+```json
+{
+  "comment": "このベースラインの入りが好き",
+  "song_id": "1704093812",
+  "artist_id": "ado"
+}
+```
+
+バックエンドは `user_id` をトークンから補完し、`goods: 0` で保存する。
+
+`GET /how-cards?song_id=1704093812` は `{ "howCards": [...] }`、`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` / `POST /how-cards/:id/goods` は `{ "howCard": ... }` を返す。
+
+```json
+{
+  "howCard": {
+    "id": "card789",
+    "comment": "このベースラインの入りが好き",
+    "song_id": "1704093812",
+    "artist_id": "ado",
+    "user_id": "uid123",
+    "goods": 0
+  }
+}
+```
+
+---
+
+### ユーザー API
+
+`PUT /users/me`:
+
+```json
+{
+  "email": "user@example.com",
+  "display_name": null
+}
+```
+
+`GET /users/me` / `PUT /users/me` は `{ "user": ... }` を返す。
 
 ---
 

@@ -38,7 +38,8 @@ functions/
 │   └── claude.js             # Claude API ラッパー
 ├── routes/
 │   ├── sessions.js           # /sessions 配下
-│   └── how-cards.js          # GET /how-cards
+│   ├── how-cards.js          # /how-cards 配下
+│   └── users.js              # /users/me
 ├── package.json
 └── .gitignore
 ```
@@ -114,6 +115,12 @@ API 仕様は [`../backend/README.md`](../backend/README.md) と [`../docs/backe
 | POST | `/sessions/:id/chat` | ✅ | AI 対話 |
 | POST | `/sessions/:id/how-card` | ✅ | Howカード生成・保存 |
 | GET | `/how-cards?tag=...` | ✅ | Howカード一覧 |
+| GET | `/how-cards?song_id=...` | ✅ | Howカードコメント一覧 |
+| POST | `/how-cards` | ✅ | Howカードコメント作成 |
+| PATCH | `/how-cards/:id` | ✅ | 自分のHowカードコメント更新 |
+| POST | `/how-cards/:id/goods` | ✅ | Howカードコメントのいいね加算 |
+| GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
+| PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
 
 ---
 

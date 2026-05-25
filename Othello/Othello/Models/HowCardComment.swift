@@ -1,8 +1,7 @@
-import FirebaseFirestore
 import Foundation
 
 struct HowCardComment: Codable, Equatable, Identifiable {
-    @DocumentID var documentID: String?
+    var documentID: String?
     var comment: String
     var songID: String
     var artistID: String
@@ -18,10 +17,10 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         comment: String,
         songID: String,
         artistID: String,
-        userID: String,
+        userID: String = "",
         goods: Int = 0
     ) {
-        self._documentID = DocumentID(wrappedValue: documentID)
+        self.documentID = documentID
         self.comment = comment
         self.songID = songID
         self.artistID = artistID
@@ -30,7 +29,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case documentID
+        case documentID = "id"
         case comment
         case songID = "song_id"
         case artistID = "artist_id"

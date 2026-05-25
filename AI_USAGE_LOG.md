@@ -205,6 +205,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘4件をすべて反映し、Firestore Rules と iOS 書き込み実装の整合性を保ったままビルド通過できたため。
 
+### #011 PR #60 Firestoreアクセスのバックエンド経由化
+
+- **時刻**：13:55
+- **ツール**：Codex
+- **目的**：iOS から Firestore を直接呼ばず、既存 backend/functions API 経由で Howカードコメントとユーザー保存を扱う構成へ変更する
+- **プロンプト**：
+  ```text
+  ごめん、現在でているPRをみてみると、バックエンドサーバーを通してFirebaseの色々をいじるような構成になってますよね。それを使えるような繋ぎ込みを先にやった方がいいかもしれない。よくPRの変更を見ながら、直接Firestoreを呼び出さないように変更してもらってもいいですか？
+  ```
+- **出力サマリ**：
+  - `backend/` と `functions/` に `POST/GET/PATCH /how-cards`、`POST /how-cards/:id/goods`、`GET/PUT /users/me` を追加
+  - iOS の `FirebaseAPI` を Firestore SDK 直呼びから Firebase ID トークン付き URLSession API クライアントへ変更
+  - `HowCardComment` / `UserProfile` を backend response/request 用 Codable model に変更し、`FirebaseFirestore` 依存を削除
+  - Firestore Rules を deny-all に戻し、Firestore 書き込みは Admin SDK を持つバックエンドに集約
+  - data model / backend docs / steering docs をバックエンド経由構成に更新
+- **評価**：採用
+- **採用 / 不採用の理由**：既存の backend/functions 構成に合わせ、クライアントがFirestoreに直接触らない境界へ整理できたため。
+
 ---
 
 ## Day 3（2026-05-26）
