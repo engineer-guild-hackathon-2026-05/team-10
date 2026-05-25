@@ -1351,6 +1351,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：最新 main のドキュメント更新を残しつつ、PR #86 の canonical song ID 契約とレビュー指摘を最小差分で反映できたため。
 
+### #060 Issue #84 デモ表示文言の日本語化
+
+- **時刻**：22:52
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：Issue #84 の英語デモ曲タイトル・タグ・fallback 文言を日本語中心に揃え、PRを作成する
+- **プロンプト**：
+  ```text
+  issue84を実装するPRをたてて。
+  ```
+- **出力サマリ**：
+  - Issue #84 の受け入れ条件を確認し、最新 `main` から `fix/issue-84-japanese-demo-copy` を作成
+  - `Artist.catalog` のデモ曲タイトル、タグ、反応数表示を日本語中心に差し替え
+  - `HomeDashboardComment` の `reactions` 表示を `件の反応` に変更
+  - `HomeDashboardViewModel` の fallback を `不明なアーティスト` / `不明な曲` / `曲ID ...` / `アーティストID ...` に日本語化
+  - Issue に挙がった英語 placeholder の `rg` 確認、`git diff --check`、iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：実データ由来の正式名は変えず、デモ固定データと fallback 表示だけを絞って日本語化できたため。
 ### #060 Issue #81 再生ボタンのNowPlaying自動表示停止
 
 - **時刻**：22:50

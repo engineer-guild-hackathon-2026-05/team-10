@@ -36,7 +36,7 @@ struct HomeDashboardComment: Identifiable, Equatable {
                 key: Self.identityKey(howCard.artistID, fallback: "\(artistName)-\(howCard.id)")
             ),
             name: artistName,
-            listeningCount: "\(max(howCard.goods, 0)) reactions",
+            listeningCount: "\(max(howCard.goods, 0))件の反応",
             tag: "コメント",
             gradientColors: gradientColors,
             artworkURL: artworkURL,
