@@ -6,7 +6,7 @@
 
 ## ディレクトリ構成
 
-```
+```text
 backend/
 ├── index.js                  # Express アプリのエントリーポイント
 ├── middleware/
@@ -28,7 +28,7 @@ backend/
 
 ## 環境変数（`.env`）
 
-```
+```bash
 ANTHROPIC_API_KEY=
 PORT=3000
 ```
@@ -53,7 +53,7 @@ PORT=3000
 
 ### コレクション
 
-```
+```text
 users/{uid}
   user_id: string
   email: string
@@ -111,7 +111,7 @@ how-cards/{cardId}         ← 既存Howカード生成API用
 
 バックエンドはすべて Admin SDK 経由（ルールをバイパス）。iOS クライアントからの直接アクセスは禁止。
 
-```
+```text
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -147,7 +147,7 @@ service cloud.firestore {
 | `GET /how-cards` | ✅ 必須 |
 | `POST /how-cards` | ✅ 必須 |
 | `PATCH /how-cards/:id` | ✅ 必須 |
-| `POST /how-cards/:id/goods` | ✅ 必須 |
+| `POST /how-cards/:id/like` | ✅ 必須 |
 | `GET /users/me` | ✅ 必須 |
 | `PUT /users/me` | ✅ 必須 |
 | `GET /health` | ❌ 不要 |
@@ -294,7 +294,7 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 
 バックエンドは `user_id` をトークンから補完し、`goods: 0` で保存する。
 
-`GET /how-cards?song_id=1704093812` は `{ "howCards": [...] }`、`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` / `POST /how-cards/:id/goods` は `{ "howCard": ... }` を返す。
+`GET /how-cards?song_id=1704093812` は `{ "howCards": [...] }`、`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` は `{ "howCard": ... }` を返す。
 
 ```json
 {
@@ -310,6 +310,8 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
   }
 }
 ```
+
+`POST /how-cards/:id/like` は同じユーザーの二重いいねを防ぎ、`{ "goods": 4, "likes": 4 }` を返す。
 
 ---
 

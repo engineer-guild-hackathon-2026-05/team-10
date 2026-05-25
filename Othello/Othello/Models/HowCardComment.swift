@@ -21,7 +21,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         songEnd: TimeInterval = 0,
         songID: String,
         artistID: String,
-        userID: String = "",
+        userID: String = UUID().uuidString,
         goods: Int = 0
     ) {
         self.documentID = documentID

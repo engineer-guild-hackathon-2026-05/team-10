@@ -3,7 +3,6 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const { upsertUserProfile, getUserProfile } = require('../repositories/firestore');
 
-// GET /users/me
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await getUserProfile(req.uid);
@@ -18,10 +17,15 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
-// PUT /users/me
 router.put('/me', auth, async (req, res) => {
   const displayName = normalizeDisplayName(req.body?.display_name ?? req.displayName);
-  const email = normalizeEmail(req.body?.email ?? req.email);
+  const tokenEmail = normalizeEmail(req.email);
+  const requestedEmail = normalizeEmail(req.body?.email);
+  if (tokenEmail && requestedEmail && tokenEmail !== requestedEmail) {
+    return res.status(400).json({ error: 'email が認証情報と一致しません' });
+  }
+
+  const email = tokenEmail;
   if (!email) {
     return res.status(400).json({ error: 'email が必要です' });
   }

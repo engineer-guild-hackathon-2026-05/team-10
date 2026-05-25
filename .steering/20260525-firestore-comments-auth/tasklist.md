@@ -37,3 +37,11 @@
 - [x] `backend/` と `functions/` のコメント API 入出力を新スキーマに更新
 - [x] docs と AI usage log を新スキーマに更新
 - [x] ビルドと差分確認を実行
+
+## PRレビュー・main conflict 対応
+
+- [x] `origin/main` の functions 変更を取り込み、競合ファイルを解消
+- [x] main 側の `onUserSignup` と冪等な `/how-cards/:id/like` を保持
+- [x] Howカードコメントの functions 実装を `comment/song_start/song_end/song_id/artist_id/user_id/goods` に統一
+- [x] PRレビュー指摘（email の token 優先、401/403、non-comment card の 404、Markdown fence、route コメント、fallback ID）を反映
+- [x] iOS から直接 Firestore を呼び出す依存が戻っていないことを確認

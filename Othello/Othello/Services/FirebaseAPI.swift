@@ -71,8 +71,8 @@ final class FirebaseAPI {
     }
 
     func incrementGoods(cardID: String) async throws {
-        let _: HowCardResponseEnvelope = try await send(
-            path: "how-cards/\(cardID)/goods",
+        let _: LikeResponseEnvelope = try await send(
+            path: "how-cards/\(cardID)/like",
             method: "POST"
         )
     }
@@ -207,6 +207,10 @@ final class FirebaseAPI {
             throw URLError(.badServerResponse)
         }
 
+        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+            throw FirebaseAPIError.notAuthenticated
+        }
+
         if httpResponse.statusCode == 404 {
             throw FirebaseAPIError.documentNotFound
         }
@@ -225,6 +229,10 @@ private struct HowCardResponseEnvelope: Decodable {
 
 private struct HowCardsResponseEnvelope: Decodable {
     let howCards: [HowCardComment]
+}
+
+private struct LikeResponseEnvelope: Decodable {
+    let goods: Int
 }
 
 private struct UserResponseEnvelope: Decodable {

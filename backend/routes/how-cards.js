@@ -6,12 +6,10 @@ const {
   updateHowCardComment,
   getHowCardComment,
   getHowCardCommentsBySong,
-  incrementHowCardGoods,
+  likeHowCardComment,
   getHowCardsByTag,
 } = require('../repositories/firestore');
 
-// GET /how-cards?song_id=1704093812
-// GET /how-cards?tag=groove (legacy generated-card search)
 router.get('/', auth, async (req, res) => {
   const { song_id: songId, tag } = req.query;
 
@@ -34,7 +32,6 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// GET /how-cards/:id
 router.get('/:id', auth, async (req, res) => {
   try {
     const howCard = await getHowCardComment(req.params.id);
@@ -49,7 +46,6 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /how-cards
 router.post('/', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
@@ -65,7 +61,6 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// PATCH /how-cards/:id
 router.patch('/:id', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
@@ -88,16 +83,15 @@ router.patch('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /how-cards/:id/goods
-router.post('/:id/goods', auth, async (req, res) => {
+router.post('/:id/like', auth, async (req, res) => {
   try {
-    const howCard = await incrementHowCardGoods(req.params.id);
-    res.json({ howCard });
-  } catch (err) {
-    if (err.code === 'not-found') {
-      return res.status(404).json({ error: err.message });
+    const goods = await likeHowCardComment({ cardId: req.params.id, uid: req.uid });
+    if (goods === null) {
+      return res.status(404).json({ error: 'Howカードが見つかりません' });
     }
 
+    res.json({ goods, likes: goods });
+  } catch (err) {
     console.error(err?.message ?? err);
     res.status(500).json({ error: 'Howカードのいいね更新に失敗しました' });
   }
@@ -111,7 +105,7 @@ function normalizeCommentPayload(body) {
   const songEnd = normalizeRangePoint(body.song_end);
   const songId = normalizeString(body.song_id, 120);
   const artistId = normalizeString(body.artist_id, 120);
-  if (!comment || songStart == null || songEnd == null || songEnd < songStart || !songId || !artistId) {
+  if (!comment || songStart == null || songEnd == null || songEnd <= songStart || !songId || !artistId) {
     return null;
   }
 
@@ -132,9 +126,8 @@ function parseLimit(value) {
 }
 
 function normalizeRangePoint(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number) || number < 0) return null;
-  return number;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
+  return value;
 }
 
 module.exports = router;

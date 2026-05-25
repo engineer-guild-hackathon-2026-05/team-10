@@ -241,6 +241,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：iOS の Codable model / API payload と backend/functions の入出力スキーマを同じ `song_start` / `song_end` 前提に揃えられたため。
 
+### #013 PR #63 レビュー対応と main conflict 解消
+
+- **時刻**：14:35
+- **ツール**：Codex
+- **目的**：PR #63 のレビューコメント反映、`origin/main` 取り込みによる functions 競合解消、main 側 backend(functions) 機能との整合性確認
+- **プロンプト**：
+  ```text
+  レビューコメントがついているのと、main conflictがあるから、そこをなおして。現状のmainのbackend(functions)の機能と競合していないかどうかについてもチェックして欲しい
+  ```
+- **出力サマリ**：
+  - `origin/main` を取り込み、`functions/README.md` / `functions/repositories/firestore.js` / `functions/routes/how-cards.js` の競合を解消
+  - main 側の `onUserSignup` と冪等な `/how-cards/:id/like` を残しつつ、Howカードコメントの Firestore スキーマを `comment/song_start/song_end/song_id/artist_id/user_id/goods` に統一
+  - `users/me` の email は Firebase ID トークンを正とし、body の email が異なる場合は 400 を返すよう修正
+  - iOS の API クライアントを `/how-cards/:id/like` と 401/403 ハンドリングに合わせ、直接 Firestore 依存が戻っていないことを確認
+  - Markdown fence の言語指定、review nit の route コメント削除、deprecated backend 側の同等修正も反映
+- **評価**：採用
+- **採用 / 不採用の理由**：main 側 functions の Auth トリガーと idempotent like を保持したまま、PR の新スキーマ・レビュー指摘・競合解消を同時に成立させられたため。
+
 ---
 
 ## Day 3（2026-05-26）

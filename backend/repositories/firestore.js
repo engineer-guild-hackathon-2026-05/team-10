@@ -108,10 +108,11 @@ async function createHowCardComment({ uid, comment, songStart, songEnd, songId, 
     artist_id: artistId,
     user_id: uid,
     goods: 0,
+    created_at: FieldValue.serverTimestamp(),
   };
 
   await ref.set(data);
-  return { id: ref.id, ...data };
+  return serializeHowCardComment(ref.id, { ...data, created_at: null });
 }
 
 async function updateHowCardComment({ uid, cardId, comment, songStart, songEnd, songId, artistId }) {
@@ -126,6 +127,12 @@ async function updateHowCardComment({ uid, cardId, comment, songStart, songEnd, 
     }
 
     const data = snapshot.data();
+    if (!isHowCardComment(data)) {
+      const error = new Error('Howカードが見つかりません');
+      error.code = 'not-found';
+      throw error;
+    }
+
     if (data.user_id !== uid) {
       const error = new Error('このHowカードへのアクセス権がありません');
       error.code = 'permission-denied';
@@ -138,6 +145,7 @@ async function updateHowCardComment({ uid, cardId, comment, songStart, songEnd, 
       song_end: songEnd,
       song_id: songId,
       artist_id: artistId,
+      updated_at: FieldValue.serverTimestamp(),
     });
   });
 
@@ -162,28 +170,31 @@ async function getHowCardCommentsBySong(songId, limit = 50) {
     .filter(Boolean);
 }
 
-async function incrementHowCardGoods(cardId) {
-  const ref = db().collection('how-cards').doc(cardId);
+async function likeHowCardComment({ cardId, uid }) {
+  const cardRef = db().collection('how-cards').doc(cardId);
+  const likeRef = cardRef.collection('liked-by').doc(uid);
 
-  await db().runTransaction(async transaction => {
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists) {
-      const error = new Error('Howカードが見つかりません');
-      error.code = 'not-found';
-      throw error;
-    }
+  return db().runTransaction(async transaction => {
+    const cardDoc = await transaction.get(cardRef);
+    if (!cardDoc.exists) return null;
 
-    if (typeof snapshot.data().comment !== 'string') {
-      const error = new Error('Howカードが見つかりません');
-      error.code = 'not-found';
-      throw error;
-    }
+    const data = cardDoc.data();
+    if (!isHowCardComment(data)) return null;
 
-    transaction.update(ref, { goods: FieldValue.increment(1) });
+    const likeDoc = await transaction.get(likeRef);
+    const currentGoods = Number.isInteger(data.goods) ? data.goods : 0;
+    if (likeDoc.exists) return currentGoods;
+
+    transaction.set(likeRef, {
+      user_id: uid,
+      liked_at: FieldValue.serverTimestamp(),
+    });
+    transaction.update(cardRef, {
+      goods: FieldValue.increment(1),
+      updated_at: FieldValue.serverTimestamp(),
+    });
+    return currentGoods + 1;
   });
-
-  const updated = await ref.get();
-  return serializeHowCardComment(updated.id, updated.data());
 }
 
 async function getHowCardsByTag(tag) {
@@ -197,7 +208,7 @@ async function getHowCardsByTag(tag) {
 }
 
 function serializeHowCardComment(id, data) {
-  if (!data || typeof data.comment !== 'string') return null;
+  if (!isHowCardComment(data)) return null;
 
   return {
     id,
@@ -208,7 +219,19 @@ function serializeHowCardComment(id, data) {
     artist_id: data.artist_id,
     user_id: data.user_id,
     goods: Number.isInteger(data.goods) ? data.goods : 0,
+    created_at: timestampToISOString(data.created_at),
+    updated_at: timestampToISOString(data.updated_at),
   };
+}
+
+function isHowCardComment(data) {
+  return Boolean(
+    data &&
+      typeof data.comment === 'string' &&
+      typeof data.song_id === 'string' &&
+      typeof data.artist_id === 'string' &&
+      typeof data.user_id === 'string'
+  );
 }
 
 function serializeUser(id, data) {
@@ -224,6 +247,7 @@ function serializeUser(id, data) {
 
 function timestampToISOString(value) {
   if (!value) return null;
+  if (typeof value === 'string') return value;
   if (typeof value.toDate === 'function') return value.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
   return null;
@@ -239,6 +263,6 @@ module.exports = {
   updateHowCardComment,
   getHowCardComment,
   getHowCardCommentsBySong,
-  incrementHowCardGoods,
+  likeHowCardComment,
   getHowCardsByTag,
 };

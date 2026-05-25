@@ -18,7 +18,7 @@ LLM プロキシ + データ API。Node.js + Express + Firestore + Anthropic SDK
 
 ## ディレクトリ構成
 
-```
+```text
 backend/
 ├── index.js                  # エントリーポイント（Firebase 初期化・ルートマウント）
 ├── middleware/
@@ -67,7 +67,7 @@ Firebase の認証情報は `serviceAccountKey.json`（Firebase コンソール 
 
 iOS 側は Firebase Auth（Email/Password）でサインイン後、すべてのリクエストに以下のヘッダーを付与する:
 
-```
+```http
 Authorization: Bearer <firebase-id-token>
 ```
 
@@ -97,7 +97,7 @@ iOS チーム向けの実装例は [`docs/backend.md` の「iOS 実装ガイド�
 | GET | `/how-cards?song_id=...` | ✅ | Howカードコメント一覧 |
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
 | PATCH | `/how-cards/:id` | ✅ | 自分のHowカードコメント更新 |
-| POST | `/how-cards/:id/goods` | ✅ | Howカードコメントのいいね加算 |
+| POST | `/how-cards/:id/like` | ✅ | Howカードコメントのいいね（冪等、二重防止） |
 | GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
 | PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
 
@@ -296,7 +296,7 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 
 バックエンドが `user_id` を Firebase ID トークンから補完し、`goods: 0` で `how-cards/{id}` に保存する。
 
-`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` / `POST /how-cards/:id/goods` は以下の形式を返す:
+`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` は以下の形式を返す:
 
 ```json
 {
@@ -315,6 +315,8 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 
 `GET /how-cards?song_id=1704093812` は同じオブジェクト配列を `{ "howCards": [...] }` で返す。
 
+`POST /how-cards/:id/like` は同じユーザーの二重いいねを防ぎ、`{ "goods": 4, "likes": 4 }` を返す。
+
 ---
 
 ### `GET /users/me` / `PUT /users/me`
@@ -332,7 +334,7 @@ Firebase Auth で作成したユーザーを、バックエンド経由で `user
 
 ## Firestore データモデル
 
-```
+```text
 users/{uid}
   user_id: string
   email: string
@@ -363,6 +365,12 @@ how-cards/{cardId}
   artist_id: string
   user_id: string
   goods: number
+  created_at: timestamp
+  updated_at: timestamp
+
+how-cards/{cardId}/liked-by/{uid}
+  user_id: string
+  liked_at: timestamp
 
 how-cards/{cardId}           ← 既存Howカード生成API用
   userId: string

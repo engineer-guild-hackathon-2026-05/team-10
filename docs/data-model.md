@@ -28,13 +28,19 @@ how-cards/{cardId}
   artist_id:    string       // アーティスト ID
   user_id:      string       // Firebase Auth uid
   goods:        integer      // いいね数
+  created_at:   Timestamp
+  updated_at:   Timestamp
+
+how-cards/{cardId}/liked-by/{uid}
+  user_id:      string       // Firebase Auth uid
+  liked_at:     Timestamp
 ```
 
 ### `sessions`
 
 リスニングセッション1回を1ドキュメントで管理する。
 
-```
+```text
 sessions/{sessionId}
   uid:          string
   songTitle:    string
@@ -47,7 +53,7 @@ sessions/{sessionId}
 
 ### `users`
 
-```
+```text
 users/{uid}
   user_id:      string       // Firebase Auth uid
   email:        string
@@ -116,6 +122,6 @@ Firebase Auth で作成したユーザーを、`PUT /users/me` 経由で `users/
 - 心拍の生データは HealthKit 内に留め、Firestore には書き込まない
 - センサー生ログ（全フレーム）は Cloud Storage に保存し、Firestore には反応区間サマリのみ持つ（DECISION-04）
 - iOS クライアントは Firestore に直接アクセスしない。Firestore Rules は deny-all とし、読み書きは Admin SDK を持つバックエンドに集約する
-- `song_start` / `song_end` は秒単位の数値として扱い、`song_end >= song_start` を前提にする
+- `song_start` / `song_end` は秒単位の数値として扱い、`song_end > song_start` を前提にする
 - `how-cards.user_id` は Firebase Auth の `uid` と一致させる
 - `goods` はクライアント上では `Int`、Firestore 上では integer として扱う
