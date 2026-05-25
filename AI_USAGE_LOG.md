@@ -1495,6 +1495,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：実害のあるスクロール競合を解消し、軽微な可読性・アニメーション指摘も小さな差分で改善できたため。
 
+### #002 Howカード取得失敗の修正
+
+- **時刻**：00:45
+- **ツール**：Codex / curl / xcodebuild
+- **目的**：Howカード画面で「Howカードを取得できませんでした」と表示される原因を調査し、取得処理を修正する
+- **プロンプト**：
+  ```text
+  どうやって起動してもHowカードを取得できませんでしたと表示されるんだけど、ちゃんと処理を見直して欲しい。ENV.plistとGoogleService-Info.plistはあるから、機能のバグなんだと思うんだけど。呼んだらわかったりしませんか？修正して下さい。修正用のブランチでやってください
+  ```
+- **出力サマリ**：
+  - `fix/how-cards-fetch-failure` ブランチを作成
+  - Functions `/how-cards` を実際に呼び、全件取得は 200、slug `song_id` 指定は 400 になることを確認
+  - Artist catalog の `musicKitID` 未設定時に `Song.firestoreSongID` が slug を返し、それを曲別 Howカード取得へ送っていたことを特定
+  - `FirebaseAPI.fetchHowCards(songID:limit:)` で numeric MusicKit / iTunes ID 以外の曲別取得をネットワークに送らず空配列にするよう修正
+- **評価**：採用
+- **採用 / 不採用の理由**：Functions の `song_id` 契約を維持しつつ、iOS 側の fallback slug が 400 エラーとして UI に出る問題を解消できるため。
+
 ---
 
 ## 全体振り返り
