@@ -2,13 +2,20 @@ import SwiftUI
 
 struct MusicFeedView: View {
     let artist: Artist
+    let highlightedComment: HomeDashboardComment?
     let onSongTap: (Song) -> Void
     @ObservedObject private var playback: PlaybackViewModel
     @StateObject private var viewModel: MusicFeedViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(artist: Artist, onSongTap: @escaping (Song) -> Void, playback: PlaybackViewModel) {
+    init(
+        artist: Artist,
+        highlightedComment: HomeDashboardComment? = nil,
+        onSongTap: @escaping (Song) -> Void,
+        playback: PlaybackViewModel
+    ) {
         self.artist = artist
+        self.highlightedComment = highlightedComment
         self.onSongTap = onSongTap
         self.playback = playback
         self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
@@ -90,6 +97,12 @@ struct MusicFeedView: View {
     private var feedList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
+                if let highlightedComment {
+                    HighlightedHowCardCommentCard(item: highlightedComment) {
+                        onSongTap(highlightedComment.song)
+                    }
+                }
+
                 if viewModel.isLoading {
                     ProgressView()
                         .tint(.white)
