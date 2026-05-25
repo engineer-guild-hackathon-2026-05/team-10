@@ -66,14 +66,6 @@ struct LyricHowCardComposerView: View {
                 Text(rangeText)
                     .font(.caption.monospacedDigit().weight(.bold))
                     .foregroundStyle(.white.opacity(0.72))
-                if draft.isEstimatedRange {
-                    Text("推定")
-                        .font(.caption2.weight(.heavy))
-                        .foregroundStyle(.white.opacity(0.62))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.10), in: Capsule())
-                }
                 Spacer()
             }
 
@@ -240,4 +232,3 @@ struct LyricHowCardComposerView: View {
         return String(format: "%d:%02d", value / 60, value % 60)
     }
 }
-
