@@ -1,16 +1,6 @@
 import FirebaseAuth
 import Foundation
 
-enum FirebaseAPIError: Error {
-    case missingBaseURL
-    case notAuthenticated
-    case missingDocumentID
-    case documentNotFound
-    case missingEmail
-    case badServerResponse(statusCode: Int)
-    case signOutRollbackFailed(original: Error, signOut: Error)
-}
-
 final class FirebaseAPI {
     static let shared = FirebaseAPI()
 
@@ -220,55 +210,5 @@ final class FirebaseAPI {
         }
 
         return try decoder.decode(Response.self, from: data)
-    }
-}
-
-private struct HowCardResponseEnvelope: Decodable {
-    let howCard: HowCardComment
-}
-
-private struct HowCardsResponseEnvelope: Decodable {
-    let howCards: [HowCardComment]
-}
-
-private struct LikeResponseEnvelope: Decodable {
-    let goods: Int
-}
-
-private struct UserResponseEnvelope: Decodable {
-    let user: UserProfile
-}
-
-private struct HowCardCommentPayload: Encodable {
-    let comment: String
-    let songStart: TimeInterval
-    let songEnd: TimeInterval
-    let songID: String
-    let artistID: String
-
-    init(_ howCard: HowCardComment) {
-        self.comment = howCard.comment
-        self.songStart = howCard.songStart
-        self.songEnd = howCard.songEnd
-        self.songID = howCard.songID
-        self.artistID = howCard.artistID
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case comment
-        case songStart = "song_start"
-        case songEnd = "song_end"
-        case songID = "song_id"
-        case artistID = "artist_id"
-    }
-}
-
-private struct UserProfilePayload: Encodable {
-    let email: String
-    let displayName: String?
-
-    enum CodingKeys: String, CodingKey {
-        case email
-        case displayName = "display_name"
     }
 }

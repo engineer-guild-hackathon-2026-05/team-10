@@ -45,3 +45,10 @@
 - [x] Howカードコメントの functions 実装を `comment/song_start/song_end/song_id/artist_id/user_id/goods` に統一
 - [x] PRレビュー指摘（email の token 優先、401/403、non-comment card の 404、Markdown fence、route コメント、fallback ID）を反映
 - [x] iOS から直接 Firestore を呼び出す依存が戻っていないことを確認
+
+## PR再レビュー対応
+
+- [x] `song_id` 指定時の Howカード取得を `created_at` 降順に統一
+- [x] `users.created_at` は snake_case の Timestamp のみを維持し、legacy camelCase 値を流用しないよう修正
+- [x] `FirebaseAPI.swift` 内の補助型を 1ファイル1型へ分割
+- [x] `song_id + created_at` の Firestore composite index を追加

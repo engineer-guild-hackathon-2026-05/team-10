@@ -24,7 +24,7 @@ async function getHowCards({ songId, limit = 50 } = {}) {
   let query = db().collection('how-cards');
 
   if (songId) {
-    query = query.where('song_id', '==', songId);
+    query = query.where('song_id', '==', songId).orderBy('created_at', 'desc');
   } else {
     query = query.orderBy('created_at', 'desc');
   }
@@ -113,8 +113,8 @@ async function upsertUserProfile({ uid, email, displayName }) {
       updated_at: now,
     };
 
-    if (!snapshot.exists || !existingData.created_at) {
-      data.created_at = existingData.createdAt ?? now;
+    if (!snapshot.exists || !isFirestoreTimestamp(existingData.created_at)) {
+      data.created_at = now;
     }
 
     transaction.set(userRef, data, { merge: true });
@@ -174,6 +174,10 @@ function timestampToISOString(value) {
   if (typeof value.toDate === 'function') return value.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
   return null;
+}
+
+function isFirestoreTimestamp(value) {
+  return Boolean(value && typeof value.toDate === 'function');
 }
 
 function throwFirestoreError(message, code) {

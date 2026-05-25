@@ -81,8 +81,8 @@ async function upsertUserProfile({ uid, email, displayName }) {
       updated_at: now,
     };
 
-    if (!snapshot.exists || !existingData.created_at) {
-      data.created_at = existingData.createdAt ?? now;
+    if (!snapshot.exists || !isFirestoreTimestamp(existingData.created_at)) {
+      data.created_at = now;
     }
 
     transaction.set(userRef, data, { merge: true });
@@ -163,6 +163,7 @@ async function getHowCardCommentsBySong(songId, limit = 50) {
   const snapshot = await db()
     .collection('how-cards')
     .where('song_id', '==', songId)
+    .orderBy('created_at', 'desc')
     .limit(limit)
     .get();
   return snapshot.docs
@@ -251,6 +252,10 @@ function timestampToISOString(value) {
   if (typeof value.toDate === 'function') return value.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
   return null;
+}
+
+function isFirestoreTimestamp(value) {
+  return Boolean(value && typeof value.toDate === 'function');
 }
 
 module.exports = {

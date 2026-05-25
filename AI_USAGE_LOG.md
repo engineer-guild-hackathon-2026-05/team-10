@@ -259,6 +259,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：main 側 functions の Auth トリガーと idempotent like を保持したまま、PR の新スキーマ・レビュー指摘・競合解消を同時に成立させられたため。
 
+### #014 PR #63 再レビュー対応
+
+- **時刻**：14:47
+- **ツール**：Codex
+- **目的**：CodeRabbit の追加レビュー指摘を反映し、再検証して push する
+- **プロンプト**：
+  ```text
+  再度レビューがつけられた。修正してpushして
+  ```
+- **出力サマリ**：
+  - functions の `GET /how-cards?song_id=...` を `created_at` 降順にし、対応する Firestore composite index を追加
+  - `users.created_at` は有効な snake_case Timestamp のみ保持し、legacy `createdAt` を流用しないよう修正
+  - `FirebaseAPI.swift` から `FirebaseAPIError` / Envelope / Payload 型を分割し、Swift の 1ファイル1型ルールへ合わせた
+  - deprecated backend 側も同じ timestamp/order 方針へ合わせた
+- **評価**：採用
+- **採用 / 不採用の理由**：レビューの実指摘を最小差分で解消しつつ、Firestore index とローカル backend の挙動も揃えられたため。
+
 ---
 
 ## Day 3（2026-05-26）
