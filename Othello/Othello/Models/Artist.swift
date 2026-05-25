@@ -15,9 +15,10 @@ extension Artist: Hashable {
 }
 
 extension Artist {
-    static let mock: [Artist] = mockArtists()
+    static let catalog: [Artist] = makeCatalog()
+    static let mock: [Artist] = catalog
 
-    private static func mockArtists() -> [Artist] {
+    private static func makeCatalog() -> [Artist] {
         [
             Artist(
                 id: UUID(),

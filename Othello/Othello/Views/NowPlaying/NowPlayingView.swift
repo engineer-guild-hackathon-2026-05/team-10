@@ -11,9 +11,11 @@ struct NowPlayingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var activeTab: NowPlayingTab = .playback
 
-    private let lyrics: [(section: String, lines: [String])] = [
-        ("Intro", ["ふと見上げた空に咲いた", "小さな花のように"]),
-        ("Verse 1", ["風が運ぶ 街の音", "君と歩いた あの坂道"])
+    private let lyrics: [String] = [
+        "ふと見上げた空に咲いた",
+        "小さな花のように",
+        "風が運ぶ 街の音",
+        "君と歩いた あの坂道"
     ]
 
     var body: some View {
@@ -51,9 +53,8 @@ struct NowPlayingView: View {
                     .padding(.top, 8)
                 songInfo
                 playbackControls
-                sectionChip
-                    .padding(.top, 24)
                 lyricsCard
+                    .padding(.top, 24)
                 Color.clear.frame(height: 104)
             }
         }
@@ -79,8 +80,6 @@ struct NowPlayingView: View {
             .accessibilityLabel("戻る")
 
             Spacer()
-
-            airPodsStatusPill
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -163,87 +162,20 @@ struct NowPlayingView: View {
         .padding(.top, 10)
     }
 
-    private var airPodsStatusPill: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(airPods.isRecording ? Color.green : Color.white.opacity(0.34))
-                .frame(width: 7, height: 7)
-            Text(airPods.status.title)
-                .font(.caption.bold())
-                .foregroundStyle(.white.opacity(0.82))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(Color.white.opacity(0.10), in: Capsule())
-    }
-
-    private var sectionChip: some View {
-        HStack {
-            Text("● Section 1・イントロ")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color(red: 0.3, green: 0.2, blue: 0.5), in: Capsule())
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 8)
-    }
-
     private var lyricsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("歌詞")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(lyrics.enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .font(.body)
                     .foregroundStyle(.white)
-                Spacer()
-                Button {} label: {
-                    HStack(spacing: 4) {
-                        Text("全文表示")
-                            .font(.caption)
-                            .foregroundStyle(Color(red: 0.5, green: 0.4, blue: 0.9))
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .foregroundStyle(Color(red: 0.5, green: 0.4, blue: 0.9))
-                    }
-                }
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            ForEach(Array(lyrics.enumerated()), id: \.offset) { _, section in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("[\(section.section)]")
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                    ForEach(Array(section.lines.enumerated()), id: \.offset) { lineIndex, line in
-                        Text(line)
-                            .font(lineIndex == 0 ? .body.bold() : .body)
-                            .foregroundStyle(lineIndex == 0 ? .white : Color.white.opacity(0.5))
-                    }
-                }
-            }
-
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
         .padding(.horizontal, 16)
-    }
-
-    private func actionButtonAccent(icon: String, label: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(Color(red: 0.5, green: 0.4, blue: 0.9))
-            Text(label)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color(red: 0.5, green: 0.4, blue: 0.9))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color(red: 0.3, green: 0.2, blue: 0.5).opacity(0.3), in: Capsule())
     }
 
     private func formatTime(_ time: TimeInterval) -> String {

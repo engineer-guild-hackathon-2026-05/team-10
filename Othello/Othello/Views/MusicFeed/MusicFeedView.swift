@@ -94,6 +94,10 @@ struct MusicFeedView: View {
                     ProgressView()
                         .tint(.white)
                         .padding(.vertical, 24)
+                } else if let errorMessage = viewModel.errorMessage {
+                    feedStatusMessage(errorMessage, systemImage: "wifi.exclamationmark")
+                } else if viewModel.posts.isEmpty {
+                    feedStatusMessage("この曲のHowカードはまだありません", systemImage: "music.note.list")
                 }
 
                 ForEach(viewModel.posts) { post in
@@ -107,6 +111,19 @@ struct MusicFeedView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
+    }
+
+    private func feedStatusMessage(_ message: String, systemImage: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.title2)
+                .foregroundStyle(.gray)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.gray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
     }
 
     private func play(post: FeedPost) {

@@ -1,7 +1,9 @@
 const admin = require('firebase-admin');
+const { seedHowCardsIfNeeded } = require('../seed/howCardSeedData');
 
 const db = () => admin.firestore();
 const { FieldValue } = admin.firestore;
+let seedPromise;
 
 async function createHowCard({ uid, comment, songStart, songEnd, songId, artistId }) {
   const ref = db().collection('how-cards').doc();
@@ -12,7 +14,7 @@ async function createHowCard({ uid, comment, songStart, songEnd, songId, artistI
     song_id: songId,
     artist_id: artistId,
     user_id: uid,
-    likes: 0,
+    goods: 0,
     created_at: FieldValue.serverTimestamp(),
   };
 
@@ -21,6 +23,8 @@ async function createHowCard({ uid, comment, songStart, songEnd, songId, artistI
 }
 
 async function getHowCards({ songId, limit = 50 } = {}) {
+  await ensureSeededHowCards();
+
   let query = db().collection('how-cards');
 
   if (songId) {
@@ -84,18 +88,18 @@ async function likeHowCard({ cardId, uid }) {
     if (!isHowCardComment(data)) return null;
 
     const likeDoc = await transaction.get(likeRef);
-    const currentLikes = Number.isInteger(data.likes) ? data.likes : 0;
-    if (likeDoc.exists) return currentLikes;
+    const currentGoods = currentGoodsCount(data);
+    if (likeDoc.exists) return currentGoods;
 
     transaction.set(likeRef, {
       user_id: uid,
       liked_at: FieldValue.serverTimestamp(),
     });
     transaction.update(cardRef, {
-      likes: FieldValue.increment(1),
+      goods: FieldValue.increment(1),
       updated_at: FieldValue.serverTimestamp(),
     });
-    return currentLikes + 1;
+    return currentGoods + 1;
   });
 }
 
@@ -141,10 +145,32 @@ function serializeHowCard(id, data) {
     song_id: data.song_id,
     artist_id: data.artist_id,
     user_id: data.user_id,
-    likes: Number.isInteger(data.likes) ? data.likes : 0,
+    goods: currentGoodsCount(data),
+    likes: currentGoodsCount(data),
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
   };
+}
+
+async function ensureSeededHowCards() {
+  if (process.env.HOWTUNE_DISABLE_HOW_CARD_SEED === 'true') {
+    return;
+  }
+
+  if (!seedPromise) {
+    seedPromise = seedHowCardsIfNeeded(db(), FieldValue).catch(error => {
+      seedPromise = null;
+      throw error;
+    });
+  }
+
+  await seedPromise;
+}
+
+function currentGoodsCount(data) {
+  if (Number.isInteger(data.goods)) return data.goods;
+  if (Number.isInteger(data.likes)) return data.likes;
+  return 0;
 }
 
 function serializeUser(id, data = {}) {

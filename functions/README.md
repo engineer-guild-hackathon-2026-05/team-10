@@ -127,6 +127,20 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
 | PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
 
+### 初期 Howカード seed
+
+フィードの初期表示用データは `functions/seed/howCardSeedData.js` に定義し、`how-cards` コレクションへ保存する。
+`GET /how-cards` 実行時に `app-metadata/how-card-seed-*` を確認し、未投入なら一度だけ seed を投入する。
+
+ローカルから明示実行する場合:
+
+```powershell
+cd functions
+npm run seed:how-cards
+```
+
+再投入したい場合は `node scripts/seed-how-cards.js --force` を使う。
+
 ### `POST /how-cards`
 
 ユーザー入力の Howカードコメントを作成する。
@@ -163,14 +177,14 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
     "song_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
-    "likes": 0
+    "goods": 0
   }
 }
 ```
 
 ### `GET /how-cards`
 
-最新の Howカードコメント一覧を返す（最大 50 件、`created_at` 降順）。
+最新の Howカードコメント一覧を返す（最大 250 件、`created_at` 降順）。
 `song_id` を指定した場合は曲ごとのコメント一覧を返す。
 
 **レスポンス**
@@ -186,7 +200,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "song_id": "1704093812",
       "artist_id": "ado",
       "user_id": "uid123",
-      "likes": 3
+      "goods": 3
     }
   ]
 }
@@ -199,14 +213,14 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 **レスポンス**
 
 ```json
-{ "likes": 4 }
+{ "goods": 4, "likes": 4 }
 ```
 
 **動作:**
 
 - `how-cards/{id}/liked-by/{uid}` の存在を確認
-- 未いいねなら: `liked-by/{uid}` 作成 + `likes` を +1
-- 既いいねなら: ノーオペ（現在の `likes` を返す）
+- 未いいねなら: `liked-by/{uid}` 作成 + `goods` を +1
+- 既いいねなら: ノーオペ（現在の `goods` を返す）
 
 ### `GET /users/me` / `PUT /users/me`
 
@@ -241,7 +255,7 @@ how-cards/{cardId}
   song_id: string
   artist_id: string
   user_id: string
-  likes: number
+  goods: number
   created_at: timestamp
   updated_at: timestamp
 

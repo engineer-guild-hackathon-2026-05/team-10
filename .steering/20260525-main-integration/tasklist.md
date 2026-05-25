@@ -29,3 +29,26 @@
 - [x] NowPlaying の歌詞表示をスクロール可能にする
 - [x] 検証後に `AI_USAGE_LOG.md` を更新する
 - [x] 変更をコミットして push する
+
+## フェーズ5: NowPlaying 歌詞 UI 簡素化
+
+- [x] `Section 1・イントロ` の表示を削除する
+- [x] 歌詞カードの全文表示ボタンを削除する
+- [x] `[Intro]` / `[Verse 1]` などの section 見出しを表示しないようにする
+- [x] 歌詞を常時フラットに全行表示し、文字色を `.white` に統一する
+- [x] NowPlaying 右上の接続状態 UI を削除する
+- [x] 検証後に `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する
+
+## フェーズ6: Howカード実データ接続
+
+- [x] Functions の `how-cards` レスポンスを `goods` に統一する
+- [x] 既存 UI モックコメントを `how-cards` seed データとして定義する
+- [x] Functions 初回取得時に seed データを Firestore へ投入する
+- [x] iOS の Howカード取得先を Functions の本番 URL に向ける
+- [x] MusicFeed の mock fallback を削除し、Functions 取得結果だけで表示する
+- [x] Community を `GET /how-cards` の取得結果から構成する
+- [x] ローカル seed スクリプトを実行し、ADC 不在で手元からの投入はできないことを確認する
+- [x] Node 構文チェックと iOS ビルドを実行する
+- [x] 検証後に `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する

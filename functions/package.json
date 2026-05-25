@@ -6,7 +6,8 @@
   "scripts": {
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "serve": "firebase emulators:start --only functions"
+    "serve": "firebase emulators:start --only functions",
+    "seed:how-cards": "node scripts/seed-how-cards.js"
   },
   "engines": {
     "node": "20"

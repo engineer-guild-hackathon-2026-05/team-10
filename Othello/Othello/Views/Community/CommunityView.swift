@@ -12,6 +12,7 @@ struct CommunityView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         tagFilterSection
+                        statusSection
                         myHowSection
                         listenersSection
                         popularTracksSection
@@ -23,6 +24,9 @@ struct CommunityView: View {
             .navigationTitle("コミュニティ")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .task {
+                await viewModel.load()
+            }
         }
     }
 
@@ -63,6 +67,19 @@ struct CommunityView: View {
         }
         .padding(.top, 16)
         .padding(.bottom, 20)
+    }
+
+    @ViewBuilder
+    private var statusSection: some View {
+        if viewModel.isLoading {
+            ProgressView()
+                .tint(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+        } else if let errorMessage = viewModel.errorMessage {
+            emptyState(message: errorMessage, icon: "wifi.exclamationmark")
+                .padding(.bottom, 20)
+        }
     }
 
     // MARK: - FR-COMM-01: 自分のHowカード

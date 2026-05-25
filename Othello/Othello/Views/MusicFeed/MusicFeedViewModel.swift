@@ -30,12 +30,10 @@ final class MusicFeedViewModel: ObservableObject {
 
         do {
             let howCards = try await FirebaseAPI.shared.fetchHowCards(songID: song.firestoreSongID)
-            posts = howCards.isEmpty
-                ? FeedPost.mockPosts(for: song)
-                : howCards.map { FeedPost(howCard: $0, song: song) }
+            posts = howCards.map { FeedPost(howCard: $0, song: song) }
         } catch {
             errorMessage = "Howカードを取得できませんでした"
-            posts = FeedPost.mockPosts(for: song)
+            posts = []
         }
     }
 }

@@ -16,13 +16,14 @@ struct FeedPost: Identifiable {
 
 extension FeedPost {
     init(howCard: HowCardComment, song: Song) {
-        let shortUserID = String(howCard.userID.prefix(6))
+        let displayHandle = FeedPost.displayHandle(from: howCard.userID)
+        let displayName = FeedPost.displayName(from: howCard.userID)
         self.init(
             id: UUID(),
             cardID: howCard.documentID,
-            userName: shortUserID.isEmpty ? "listener" : "user \(shortUserID)",
-            userHandle: shortUserID.isEmpty ? "@listener" : "@\(shortUserID)",
-            avatarLetter: shortUserID.first.map(String.init) ?? "H",
+            userName: displayName,
+            userHandle: displayHandle,
+            avatarLetter: displayName.first.map(String.init) ?? "H",
             avatarColor: Color(red: 0.55, green: 0.35, blue: 0.85),
             timeAgo: "今",
             comment: howCard.comment,
@@ -32,29 +33,20 @@ extension FeedPost {
         )
     }
 
-    static func mockPosts(for song: Song) -> [FeedPost] {
-        let comments: [(String, String, String, Color, String, Int, Int)] = [
-            ("みお", "@mio_x", "今日ずっと聴いてる。サビが沁みる。", Color(red: 0.9, green: 0.4, blue: 0.4), "今", 142, 12),
-            ("ren", "@ren.fm", "雨の朝にぴったり🎵", Color(red: 0.4, green: 0.5, blue: 0.9), "4分前", 88, 7),
-            ("Sora", "@sora_24", "ドライブBGM決定。", Color(red: 0.5, green: 0.8, blue: 0.5), "12分前", 231, 24),
-            ("hana", "@hana_music", "このメロディ反則すぎる…", Color(red: 0.85, green: 0.55, blue: 0.35), "18分前", 67, 5),
-            ("kai", "@kai_waves", "この曲で泣いた笑", Color(red: 0.55, green: 0.35, blue: 0.85), "32分前", 304, 41),
-            ("yuki", "@yuki_beats", "何回でも聴ける。", Color(red: 0.35, green: 0.7, blue: 0.75), "1時間前", 189, 18)
-        ]
-        return comments.map { (name, handle, comment, color, time, likes, comments) in
-            FeedPost(
-                id: UUID(),
-                cardID: nil,
-                userName: name,
-                userHandle: handle,
-                avatarLetter: String(name.prefix(1)),
-                avatarColor: color,
-                timeAgo: time,
-                comment: comment,
-                song: song,
-                likeCount: likes,
-                commentCount: comments
-            )
+    private static func displayHandle(from userID: String) -> String {
+        let handle = userID
+            .replacingOccurrences(of: "seed_", with: "")
+            .replacingOccurrences(of: "_", with: ".")
+        return handle.isEmpty ? "@listener" : "@\(handle)"
+    }
+
+    private static func displayName(from userID: String) -> String {
+        let normalized = userID
+            .replacingOccurrences(of: "seed_", with: "")
+            .replacingOccurrences(of: "_", with: " ")
+        guard let firstWord = normalized.split(separator: " ").first else {
+            return "listener"
         }
+        return String(firstWord)
     }
 }

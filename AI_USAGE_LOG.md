@@ -655,6 +655,46 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：main の playback 更新を維持しながら、ユーザーが指摘した戻る導線と歌詞スクロールの実操作上の問題を解消できたため。
 
+### #034 NowPlaying 歌詞 UI の簡素化
+
+- **時刻**：18:25
+- **ツール**：Codex / xcodebuild
+- **目的**：NowPlaying の歌詞表示から section 表示・全文表示ボタン・接続状態 pill を削除し、歌詞を常時同じスタイルで表示する
+- **プロンプト**：
+  ```text
+  setion1 イントロ みたいな感じで表示されてるところがあると思うんだけど、そこは必要ない。全文表示ボタンもいらない。歌詞全体がいつも表示されるようにして欲しい。あと[intro]とかもいらないし[verse1]みたいなのも。文字の色は全部.whiteに固定して欲しい。全部同じように表示されるように。
+
+  右上の「接続確認中」みたいなUIも必要ない。
+  ```
+- **出力サマリ**：
+  - NowPlaying の `Section 1・イントロ` chip を削除
+  - 歌詞カードの `全文表示` ボタンと `[Intro]` / `[Verse 1]` 表示を削除
+  - 歌詞データをフラットな行リストとして表示し、全行を `.white` / `.body` に統一
+  - 右上の AirPods 接続状態 pill を削除
+  - `git diff --check` と `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：不要な補助 UI を外し、歌詞本文だけが常時同じ見た目で読める表示にできたため。
+
+### #035 Howカード UI の Functions 実データ接続
+
+- **時刻**：18:38
+- **ツール**：Codex / npm / xcodebuild
+- **目的**：Howカード表示を iOS 内のモック fallback から Firebase Functions 経由の `how-cards` 取得へ切り替える
+- **プロンプト**：
+  ```text
+  あと今ってUIが全部モックデータだよね？じっさいにfunctions叩いて取得するように変更できないですか。今書かれているモックデータを全部how-cardsコレクションに追加してからやって欲しい。
+  ```
+- **出力サマリ**：
+  - Functions の Howカード schema を `goods` に統一し、旧 `likes` も互換 decode / response できるようにした
+  - 既存フィード / コミュニティのコメントを 202 件の seed データとして `functions/seed/howCardSeedData.js` に移した
+  - `GET /how-cards` 初回実行時に `app-metadata` を見て、未投入なら `how-cards` コレクションへ idempotent に seed 投入するようにした
+  - iOS の `FirebaseAPI` に Functions 本番 URL fallback を追加し、MusicFeed / Community を Functions 取得結果から表示するよう変更
+  - MusicFeed の `FeedPost.mockPosts` fallback を削除
+  - ローカル seed スクリプトは ADC / service account 不在で投入不可だったため、デプロイ後の Functions 初回取得で投入される形にした
+  - Node 構文チェック、seed 件数確認、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：iOS が直接 Firestore やローカル mock に依存せず、Functions 経由で `how-cards` を取得する実データ経路に寄せられたため。
+
 ---
 
 ## Day 3（2026-05-26）
