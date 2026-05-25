@@ -101,7 +101,7 @@ how-cards/{cardId}         ← 既存Howカード生成API用
 
 ```js
 // ReactionSpan
-{ startSec, endSec, scores: { groove, hype, chill, immersion, hit, afterglow } }
+{ startSec, endSec, scores: { groove, chill, neutral } }
 
 // ChatMessage
 { role: "user" | "assistant", content: string }
@@ -169,7 +169,7 @@ Core ML がオンデバイスで計算した反応区間を受け取り、セッ
     {
       "startSec": 78,
       "endSec": 84,
-      "scores": { "groove": 0.82, "hype": 0.31, "chill": 0.05, "immersion": 0.12, "hit": 0.44, "afterglow": 0.08 }
+      "scores": { "groove": 0.82, "chill": 0.05, "neutral": 0.13 }
     }
   ]
 }
@@ -190,7 +190,7 @@ Core ML がオンデバイスで計算した反応区間を受け取り、セッ
 ```json
 {
   "startTime": 78,
-  "tags": ["groove", "hit"],
+  "tags": ["groove"],
   "intensity": 0.82,
   "lyric": "歌詞行",
   "history": [

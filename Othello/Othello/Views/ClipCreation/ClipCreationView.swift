@@ -24,7 +24,7 @@ struct ClipCreationView: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 110)
                 }
                 tabSelector
             }
@@ -248,12 +248,13 @@ struct ClipCreationView: View {
         .padding(.vertical, 5)
         .background(Color(red: 0.1, green: 0.1, blue: 0.12), in: RoundedRectangle(cornerRadius: 30))
         .padding(.horizontal, 20)
-        .padding(.bottom, 28)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+        .background(Color.black)
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(Color.white.opacity(0.07))
                 .frame(height: 0.5)
-                .padding(.bottom, 28)
         }
     }
 }

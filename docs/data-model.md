@@ -98,19 +98,16 @@ Firebase Auth で作成したユーザーを、`PUT /users/me` 経由で `users/
 
 ## 反応区間（ReactionEvent）構造
 
-6軸スコアと時刻を持つ、センサー検出の最小単位。
+3状態スコアと時刻を持つ、センサー検出の最小単位。
 
 ```json
 {
   "timestamp": 78.4,
   "durationSec": 2.0,
   "scores": {
-    "groove":     0.82,
-    "hype":       0.41,
-    "chill":      0.15,
-    "immersion":  0.67,
-    "hit":        0.90,
-    "afterglow":  0.55
+    "groove":  0.82,
+    "chill":   0.05,
+    "neutral": 0.13
   }
 }
 ```

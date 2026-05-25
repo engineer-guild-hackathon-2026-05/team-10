@@ -12,7 +12,7 @@ async function createHowCard({ uid, comment, songStart, songEnd, songId, artistI
     song_id: songId,
     artist_id: artistId,
     user_id: uid,
-    goods: 0,
+    likes: 0,
     created_at: FieldValue.serverTimestamp(),
   };
 
@@ -84,18 +84,18 @@ async function likeHowCard({ cardId, uid }) {
     if (!isHowCardComment(data)) return null;
 
     const likeDoc = await transaction.get(likeRef);
-    const currentGoods = Number.isInteger(data.goods) ? data.goods : 0;
-    if (likeDoc.exists) return currentGoods;
+    const currentLikes = Number.isInteger(data.likes) ? data.likes : 0;
+    if (likeDoc.exists) return currentLikes;
 
     transaction.set(likeRef, {
       user_id: uid,
       liked_at: FieldValue.serverTimestamp(),
     });
     transaction.update(cardRef, {
-      goods: FieldValue.increment(1),
+      likes: FieldValue.increment(1),
       updated_at: FieldValue.serverTimestamp(),
     });
-    return currentGoods + 1;
+    return currentLikes + 1;
   });
 }
 
@@ -141,7 +141,7 @@ function serializeHowCard(id, data) {
     song_id: data.song_id,
     artist_id: data.artist_id,
     user_id: data.user_id,
-    goods: Number.isInteger(data.goods) ? data.goods : 0,
+    likes: Number.isInteger(data.likes) ? data.likes : 0,
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
   };

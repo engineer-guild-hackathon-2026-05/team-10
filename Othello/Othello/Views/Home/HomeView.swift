@@ -14,7 +14,8 @@ struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var playback = PlaybackViewModel()
     @StateObject private var lyrics = LyricsViewModel()
-    @StateObject private var motionViewModel = AirPodsMotionViewModel()
+    @StateObject private var airPodsMotion = AirPodsMotionViewModel()
+    @StateObject private var reactionDetector = ReactionDetectionViewModel()
 
     @State private var showSearchSheet = false
     @State private var showReactionDisplay = false
@@ -88,11 +89,27 @@ struct HomeView: View {
             RealtimeReactionDisplayView(isSensorAvailable: !viewModel.useManualMode)
         }
         .sensoryFeedback(.selection, trigger: selectedHowChatEvent?.id)
-        .onChange(of: displayIsPlaying) { _, isPlaying in
-            if isPlaying { motionViewModel.start() } else { motionViewModel.stop() }
-        }
         .onReceive(volumeTimer) { _ in
             outputVolume = AVAudioSession.sharedInstance().outputVolume
+        }
+        .onChange(of: displayIsPlaying) { _, _ in
+            syncAirPodsMotionCapture()
+        }
+        .onChange(of: displayTrackIdentifier) { _, _ in
+            stopAirPodsMotionCapture(reason: "track changed")
+            reactionDetector.stopSession(finalPlaybackTime: displayPlaybackTime)
+            syncAirPodsMotionCapture()
+        }
+        .onChange(of: viewModel.useManualMode) { _, _ in
+            syncAirPodsMotionCapture()
+        }
+        .onChange(of: airPodsMotion.latestSample) { _, sample in
+            guard let sample else { return }
+            reactionDetector.ingest(sample)
+        }
+        .onDisappear {
+            airPodsMotion.stop()
+            reactionDetector.stopSession(finalPlaybackTime: displayPlaybackTime)
         }
         .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
             Button("OK", role: .cancel) {}
@@ -119,6 +136,10 @@ struct HomeView: View {
 
     private var displayIsPlaying: Bool {
         previewData?.isPlaying ?? playback.isPlaying
+    }
+
+    private var displayTrackIdentifier: String? {
+        displayTrack?.musicKitID ?? displayTrack?.id.rawValue
     }
 
     private var playerBackdrop: some View {
@@ -176,7 +197,6 @@ struct HomeView: View {
             visualizerSection
             trackInfoSection
             playerControlsSection
-            grooveInsightSection
             lyricsSection
         }
         .padding(.horizontal, 20)
@@ -215,16 +235,15 @@ struct HomeView: View {
     private var visualizerSection: some View {
         ZStack(alignment: .top) {
             ZStack {
-                SyncBeatCircularWaveformView(isAnimating: displayIsPlaying)
-                    .opacity(0.45)
-                    .frame(width: 218, height: 218)
-
-                SyncBeatCircularWaveformView(isAnimating: displayIsPlaying)
-                    .opacity(0.45)
-                    .frame(width: 206, height: 206)
-
-                SyncBeatCircularWaveformView(isAnimating: displayIsPlaying)
-                    .frame(width: 194, height: 194)
+                AirPodsReactiveWaveformView(
+                    isAnimating: displayIsPlaying,
+                    playbackTime: displayPlaybackTime,
+                    audioLevel: musicPulseLevel,
+                    motionIntensity: airPodsMotionIntensity,
+                    trackSeed: visualizerTrackSeed,
+                    reactionState: waveformReactionState
+                )
+                .frame(width: 264, height: 264)
 
                 artworkDisk(size: 132)
             }
@@ -359,62 +378,6 @@ struct HomeView: View {
             .font(.caption.monospacedDigit())
             .foregroundStyle(.white.opacity(0.62))
         }
-    }
-
-    private var grooveInsightSection: some View {
-        let level = grooveLevel
-
-        return HStack(spacing: 12) {
-            Image(systemName: "waveform")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(grooveBlue)
-
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(spacing: 8) {
-                    Text("Groove")
-                        .font(.subheadline.weight(.heavy))
-                        .foregroundStyle(.white)
-
-                    Text("\(Int(level * 100))%")
-                        .font(.caption.monospacedDigit().weight(.bold))
-                        .foregroundStyle(.white.opacity(0.72))
-
-                    Spacer(minLength: 4)
-
-                    Text("音量 \(Int(Double(outputVolume) * 100))%")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.52))
-
-                    Text(grooveTasteLabel)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.72))
-                }
-
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.white.opacity(0.10))
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [grooveBlue, Color.purple.opacity(0.86), accent],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: proxy.size.width * level)
-                    }
-                }
-                .frame(height: 6)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.07), lineWidth: 1)
-        )
     }
 
     private func transportButton(
@@ -795,21 +758,14 @@ struct HomeView: View {
         let startTime = line.startTime
         let endTime = line.endTime ?? min(startTime + 6, displayTrack?.duration ?? startTime + 6)
 
-        let score: ReactionScore
-        let intensity: Double
-        let tags: [HowTag]
-
-        if let sample = motionViewModel.latestSample {
-            score = MotionReactionScoreEstimator.score(from: sample)
-            intensity = min(max(score.intensity, 0.28), 1.0)
-            tags = score.activeTags(threshold: 0.35).isEmpty
-                ? grooveTags(for: intensity)
-                : score.activeTags(threshold: 0.35)
-        } else {
-            score = .empty
-            intensity = min(max(grooveLevel, 0.28), 1.0)
-            tags = grooveTags(for: intensity)
-        }
+        let detectorScore = reactionDetector.currentScore
+        let sampleScore = airPodsMotion.latestSample.map { MotionReactionScoreEstimator.score(from: $0) }
+        let score = detectorScore.intensity > 0 ? detectorScore : (sampleScore ?? .empty)
+        let intensity = min(max(max(score.intensity, reactionLevel), 0.28), 1.0)
+        let activeTags = score.activeTags(threshold: 0.35)
+        let tags = activeTags.isEmpty
+            ? fallbackTags(for: intensity, state: waveformReactionState)
+            : activeTags
 
         return ReactionEvent(
             id: UUID(),
@@ -824,7 +780,26 @@ struct HomeView: View {
         )
     }
 
-    private var grooveLevel: Double {
+    private var reactionLevel: Double {
+        min(max(musicPulseLevel * 0.72 + airPodsMotionIntensity * 0.44, 0.08), 1.0)
+    }
+
+    private func fallbackTags(for level: Double, state: HowTag) -> [HowTag] {
+        if HowTag.scoreCases.contains(state) {
+            return [state]
+        }
+
+        switch level {
+        case 0.72...:
+            return [.groove, .hype]
+        case 0.46..<0.72:
+            return [.groove, .immersion]
+        default:
+            return [.afterglow]
+        }
+    }
+
+    private var musicPulseLevel: Double {
         guard displayIsPlaying else {
             return max(0.12, Double(outputVolume) * 0.35)
         }
@@ -835,26 +810,100 @@ struct HomeView: View {
         return min(max(Double(outputVolume) * 0.42 + pulse * 0.58, 0.08), 1.0)
     }
 
-    private var grooveTasteLabel: String {
-        switch grooveLevel {
-        case 0.72...:
-            return "跳ね"
-        case 0.46..<0.72:
-            return "揺れ"
-        default:
-            return "余韻"
+    private var airPodsMotionIntensity: Double {
+        if previewData != nil {
+            return 0.34
+        }
+
+        return airPodsMotion.recentInteractionIntensity
+    }
+
+    private var visualizerTrackSeed: Int {
+        let key = [
+            displayTrack?.musicKitID,
+            displayTrack?.title,
+            displayTrack?.artistName
+        ]
+        .compactMap { $0 }
+        .joined(separator: "|")
+
+        return key.unicodeScalars.reduce(17) { partialResult, scalar in
+            partialResult &* 31 &+ Int(scalar.value)
         }
     }
 
-    private func grooveTags(for level: Double) -> [HowTag] {
-        switch level {
-        case 0.72...:
-            return [.groove, .hype]
-        case 0.46..<0.72:
-            return [.groove, .immersion]
-        default:
-            return [.afterglow]
+    private func syncAirPodsMotionCapture() {
+        guard previewData == nil else {
+            debugAirPodsMotion("preview data active; skip motion capture")
+            return
         }
+
+        guard !viewModel.useManualMode else {
+            stopAirPodsMotionCapture(reason: "manual mode active")
+            reactionDetector.stopSession(finalPlaybackTime: displayPlaybackTime)
+            return
+        }
+
+        debugAirPodsMotion(
+            "sync requested isPlaying=\(displayIsPlaying) "
+                + "hasTrack=\(displayTrack != nil) "
+                + "trackID=\(displayTrackIdentifier ?? "nil") "
+                + "manualMode=\(viewModel.useManualMode) "
+                + "status=\(airPodsMotion.status.title)"
+        )
+
+        guard displayIsPlaying, displayTrack != nil else {
+            if airPodsMotion.isRecording {
+                stopAirPodsMotionCapture(reason: "playback/track condition is not satisfied")
+                reactionDetector.stopSession(finalPlaybackTime: displayPlaybackTime)
+            } else {
+                debugAirPodsMotion("capture not started because playback/track condition is not satisfied")
+            }
+            return
+        }
+
+        guard !airPodsMotion.isRecording else {
+            debugAirPodsMotion("capture already recording")
+            return
+        }
+
+        debugAirPodsMotion("starting capture")
+        reactionDetector.startSession()
+        airPodsMotion.start(playbackPositionProvider: playback.playbackPositionProvider())
+    }
+
+    private func stopAirPodsMotionCapture(reason: String) {
+        guard airPodsMotion.isRecording else {
+            debugAirPodsMotion("capture not recording; skip stop for \(reason)")
+            return
+        }
+
+        debugAirPodsMotion("stopping capture because \(reason)")
+        airPodsMotion.stop()
+    }
+
+    private func debugAirPodsMotion(_ message: String) {
+        #if DEBUG
+        print("[AirPodsMotion][Home] \(message)")
+        #endif
+    }
+
+    private var waveformReactionState: HowTag {
+        guard displayIsPlaying else {
+            return .neutral
+        }
+
+        let score = reactionDetector.currentScore
+        guard score.intensity > 0 else {
+            return .neutral
+        }
+
+        if airPodsMotion.recentInteractionIntensity < 0.12,
+           score.intensity < 0.32 {
+            return .neutral
+        }
+
+        return score.dominantTag
     }
 
     private func lyricSkeletonWidth(index: Int) -> CGFloat {

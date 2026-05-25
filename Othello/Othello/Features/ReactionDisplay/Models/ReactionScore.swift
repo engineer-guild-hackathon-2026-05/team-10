@@ -14,18 +14,30 @@ struct ReactionScore: Equatable {
 
     var axes: [ReactionAxis] {
         [
-            ReactionAxis(id: "groove",    label: "ノってる",  emoji: "🎵", value: groove,    color: Color(red: 1.0, green: 0.55, blue: 0.1)),
-            ReactionAxis(id: "hype",      label: "上がった",  emoji: "🔥", value: hype,      color: Color(red: 1.0, green: 0.3,  blue: 0.3)),
-            ReactionAxis(id: "chill",     label: "チル",      emoji: "❄️", value: chill,     color: Color(red: 0.3, green: 0.7,  blue: 1.0)),
-            ReactionAxis(id: "immersion", label: "聴き入り",  emoji: "🎧", value: immersion,  color: Color(red: 0.6, green: 0.4,  blue: 1.0)),
-            ReactionAxis(id: "hit",       label: "刺さった",  emoji: "💫", value: hit,        color: Color(red: 1.0, green: 0.85, blue: 0.2)),
-            ReactionAxis(id: "afterglow", label: "余韻",      emoji: "✨", value: afterglow,  color: Color(red: 0.8, green: 0.5,  blue: 1.0)),
+            ReactionAxis(id: "groove", label: "ノってる", emoji: "🎵", value: groove, color: HowTag.groove.color),
+            ReactionAxis(id: "hype", label: "上がった", emoji: "🔥", value: hype, color: HowTag.hype.color),
+            ReactionAxis(id: "chill", label: "チル", emoji: "❄️", value: chill, color: HowTag.chill.color),
+            ReactionAxis(id: "immersion", label: "聴き入り", emoji: "🎧", value: immersion, color: HowTag.immersion.color),
+            ReactionAxis(id: "hit", label: "刺さった", emoji: "💫", value: hit, color: HowTag.hit.color),
+            ReactionAxis(id: "afterglow", label: "余韻", emoji: "✨", value: afterglow, color: HowTag.afterglow.color),
         ]
     }
 
     /// 最も強い軸（dominant state）
     var dominant: ReactionAxis? {
         axes.max(by: { $0.value < $1.value }).flatMap { $0.value > 0.1 ? $0 : nil }
+    }
+
+    var dominantTag: HowTag {
+        let values: [(HowTag, Double)] = [
+            (.groove, groove),
+            (.hype, hype),
+            (.chill, chill),
+            (.immersion, immersion),
+            (.hit, hit),
+            (.afterglow, afterglow)
+        ]
+        return values.max(by: { $0.1 < $1.1 })?.0 ?? .neutral
     }
 }
 

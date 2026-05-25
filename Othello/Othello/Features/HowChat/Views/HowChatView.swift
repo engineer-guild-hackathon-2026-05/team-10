@@ -334,6 +334,7 @@ struct HowChatView: View {
         case .immersion: return "🎧"
         case .hit:       return "💫"
         case .afterglow: return "✨"
+        case .neutral:   return "○"
         }
     }
 }

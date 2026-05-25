@@ -163,7 +163,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
     "song_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
-    "goods": 0
+    "likes": 0
   }
 }
 ```
@@ -186,7 +186,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "song_id": "1704093812",
       "artist_id": "ado",
       "user_id": "uid123",
-      "goods": 3
+      "likes": 3
     }
   ]
 }
@@ -199,14 +199,14 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 **レスポンス**
 
 ```json
-{ "goods": 4, "likes": 4 }
+{ "likes": 4 }
 ```
 
 **動作:**
 
 - `how-cards/{id}/liked-by/{uid}` の存在を確認
-- 未いいねなら: `liked-by/{uid}` 作成 + `goods` を +1
-- 既いいねなら: ノーオペ（現在の `goods` を返す）
+- 未いいねなら: `liked-by/{uid}` 作成 + `likes` を +1
+- 既いいねなら: ノーオペ（現在の `likes` を返す）
 
 ### `GET /users/me` / `PUT /users/me`
 
@@ -241,7 +241,7 @@ how-cards/{cardId}
   song_id: string
   artist_id: string
   user_id: string
-  goods: number
+  likes: number
   created_at: timestamp
   updated_at: timestamp
 

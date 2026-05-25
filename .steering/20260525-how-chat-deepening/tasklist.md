@@ -73,6 +73,15 @@
 - [x] バックエンドのコンテキストログ確認（コード確認済み）
   - [x] `buildContextMessage` で dominant軸と6軸スコアをコンテキストに含める実装済み
 
+## フェーズ6: PR #73 main conflict 解消
+
+- [x] `origin/main` を `feat/how-chat-deepening` に merge する
+- [x] `AI_USAGE_LOG.md` の conflict を両方の作業ログを残して解消する
+- [x] `ReactionEvent.swift` の conflict を6軸タグと main の `neutral` 待機状態が共存する形で解消する
+- [x] `HomeView.swift` の conflict を main 側 AirPods / ReactionDetection セッション管理を使いながら、HowChat には6軸 `ReactionScore` を渡す形で解消する
+- [x] 6軸タグ追加に伴う switch / selector / Metal waveform mapping を更新する
+- [x] Node 構文チェック、`git diff --check`、iOS ビルドを実行する
+
 ---
 
 ## 実装後の振り返り
