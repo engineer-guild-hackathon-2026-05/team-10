@@ -1,0 +1,31 @@
+{
+  "activityEntities" : [
+    "dataSourceCreated",
+    [
+      {
+        "createdDate" : "2026-05-24T09:29:48Z",
+        "event" : "dataSourceCreated",
+        "id" : "3E9624C9-A160-41FF-A415-09096E24F00D",
+        "subtitle" : "data",
+        "title" : "Data Source Created"
+      }
+    ]
+  ],
+  "createdDate" : "2026-05-24T09:29:48Z",
+  "dataPathRelativeToProjectURL" : "../../../../../../Downloads/data/",
+  "dataResult" : {
+    "createdDate" : "2026-05-24T09:29:48Z",
+    "dataSourceID" : "1BA44CA8-9386-42F8-AD19-95AB413CBEDE",
+    "dataURL" : "file:///Users/atsushi/Downloads/data/"
+  },
+  "dataURL" : "file:///Users/atsushi/Downloads/data/",
+  "experimentIDs" : [
+    "2927DD50-DCE2-4C21-90D6-19E8267FF43E"
+  ],
+  "id" : "1BA44CA8-9386-42F8-AD19-95AB413CBEDE",
+  "modifiedDate" : "2026-05-24T09:29:48Z",
+  "pathType" : 0,
+  "preferredFilename" : "data",
+  "title" : "data",
+  "version" : "1.0"
+}

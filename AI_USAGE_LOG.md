@@ -149,6 +149,25 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：GitHub上の競合原因を解消し、main優先のUI構成を保ったままPRブランチがビルド可能になったため。
 
+### #008 PR #57 の docs コンフリクト解消
+
+- **時刻**：12:57
+- **ツール**：Codex
+- **目的**：PR #57（feature/tensorflow）の docs コンフリクトを、現状のiOSアプリ・ai-recognition構成に合わせて自然に統合する
+- **プロンプト**：
+  ```
+  今度は https://github.com/engineer-guild-hackathon-2026-05/team-10/pull/57 のPRでコンフリクトしている。docsだから、内容が自然に（現状の内容を）表すように編集して欲しい
+  ```
+- **出力サマリ**：
+  - PR #57 の head が `feature/tensorflow`、base が `main` であることを確認
+  - `origin/main` を取り込み、`docs/architecture.md`、`docs/functional-design.md`、`docs/slides/howtune.md` の競合を解消
+  - `ai-recognition` は groove / chill / neutral の3状態収集・学習、iOSアプリは6軸 `ReactionScore` 表示という二層構造として説明を整理
+  - スライド内に残っていたWeb前提の技術構成を、SwiftUI / MusicKit / Core Motion / Firebase Functions / Firestore / Core ML 構成へ更新
+  - `docs/product-requirements.md` も3状態候補から6軸可視化する表現に合わせた
+  - `rg` による競合マーカー確認、`git diff --check`、`git diff --cached --check` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：3状態と6軸のどちらか一方を消すのではなく、現在の実装と学習データ収集の関係として自然に読める内容に統合できたため。
+
 ---
 
 ## Day 3（2026-05-26）

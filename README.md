@@ -47,7 +47,7 @@
 ### コア機能
 
 - AirPods 頭部モーション・心拍 / iPhone 本体モーションの取得（曲中時刻に同期）
-- 6軸聴取状態スコア（groove / hype / chill / immersion / hit / afterglow）の推定
+- 3状態スコア（groove / chill / neutral）の推定
 - 反応地点に基づく AI 対話（断定せず問いかけ、ユーザー自身が言語化）
 - Howカードの生成・編集・共有
 - 同じ How を持つ人・曲・リスナーの表示
