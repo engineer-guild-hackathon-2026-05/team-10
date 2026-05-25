@@ -4,7 +4,7 @@
 
 MLモデル訓練は不要。`MotionReactionScoreEstimator`（ルールベース、加速度/回転の四則演算）で6軸スコアを算出し、AIのコンテキストに渡す。
 
-```
+```text
 AirPods/iPhone
    ↓ CMHeadphoneMotionManager / CMMotionManager
 AirPodsMotionViewModel (HomeView が @StateObject で保持)
@@ -14,13 +14,15 @@ MotionReactionScoreEstimator.score(from:)   ← ルールベース、ML不要
 reactionEvent(for: TimedLyricLine)  ← ReactionEvent.score に埋め込む
    ↓
 ChatAPIClient.chat(event:messages:)
-   ↓ ChatPayload { ..., scores: [String:Double], dominantAxis: String }
+   ↓ ChatPayload { ..., scores: [String:Double], dominantAxis: String? }
 backend POST /sessions/:id/chat
    ↓ buildContextMessage に6軸スコアを追加
 Claude API (system prompt: dominant軸ごとの問いかけアングル)
    ↓ question + choices (dominant軸に関連した選択肢)
-HowChatViewModel (turnCount < 2 → 2ターンで done)
+HowChatViewModel (maximumDialogueTurns = 2 → 2ターンで done)
 ```
+
+`dominantAxis` はスコアが空または有意な軸がない場合に `nil` を許容するため、iOS/backend/docs の契約は `String?` に統一する。
 
 ## コンポーネント設計
 
@@ -87,7 +89,7 @@ extension ReactionScore {
 }
 ```
 
-### 4. backend/index.js — buildContextMessage + system prompt 改善
+### 4. backend/services/claude.js — buildContextMessage + system prompt 改善
 
 **buildContextMessage の変更**:
 ```javascript
@@ -116,7 +118,8 @@ function buildContextMessage({ startTime, tags, intensity, lyric, scores, domina
 // 変更前
 guard turnCount < 3 else {
 // 変更後
-guard turnCount < 2 else {
+private let maximumDialogueTurns = 2
+guard turnCount < maximumDialogueTurns else {
 ```
 
 ### 6. ChatAPIClient.mockResponse — 動的選択肢
@@ -131,7 +134,7 @@ private func mockResponse(event: ReactionEvent, turn: Int) -> ChatResponse {
 ## データフロー
 
 ### lyric タップ → HowChat 起動
-```
+```text
 1. ユーザーが歌詞行をタップ
 2. HomeView.reactionEvent(for: line) を呼ぶ
 3. motionViewModel.latestSample があれば MotionReactionScoreEstimator.score(from:) でスコア計算
@@ -159,7 +162,7 @@ private func mockResponse(event: ReactionEvent, turn: Int) -> ChatResponse {
 ## ディレクトリ構造
 
 変更ファイル:
-```
+```text
 Othello/Othello/
 ├── Models/ReactionEvent.swift                    # score: ReactionScore 追加
 ├── Features/ReactionDisplay/Models/ReactionScore.swift  # asDictionary 拡張追加
@@ -170,7 +173,8 @@ Othello/Othello/
     ├── Services/ChatAPIClient.swift              # ChatPayload 拡充、mockResponse 動的化
     └── ViewModels/HowChatViewModel.swift         # turnCount < 3 → < 2
 backend/
-└── index.js                                      # buildContextMessage, systemPrompt 改善
+├── routes/sessions.js                           # chat route で scores/dominantAxis を受け取る
+└── services/claude.js                           # buildContextMessage, systemPrompt 改善
 ```
 
 ## 実装の順序
@@ -182,7 +186,7 @@ backend/
 5. `ChatPayload` に `scores/dominantAxis` 追加
 6. `mockResponse` を dominant 軸ベースに動的化
 7. `HowChatViewModel` のターン数削減
-8. `backend/index.js` の `buildContextMessage` + `systemPrompt` 改善
+8. `backend/services/claude.js` の `buildContextMessage` + `systemPrompt` 改善
 
 ## パフォーマンス考慮事項
 
