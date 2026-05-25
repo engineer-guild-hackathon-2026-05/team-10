@@ -1,384 +1,495 @@
+"""
+HowTune — 統合プレゼンデッキ (6分 / 11スライド)
+デザイン: Apple Style (black #000000, blue #0071E3, Inter font)
+"""
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
-from pptx.util import Inches, Pt
+from pptx.oxml.ns import qn
+from lxml import etree
 
-# Colors
-BG       = RGBColor(0x0a, 0x0a, 0x0f)
-WHITE    = RGBColor(0xFF, 0xFF, 0xFF)
-DIM      = RGBColor(0xA0, 0xA0, 0xB0)
-RED      = RGBColor(0xFF, 0x4D, 0x4D)
-BLUE     = RGBColor(0x3D, 0xB8, 0xFF)
-CARD_BG  = RGBColor(0x14, 0x14, 0x20)
+# ── Colors (Apple-style) ──────────────────────────────────────
+BLACK   = RGBColor(0x00, 0x00, 0x00)
+WHITE   = RGBColor(0xFF, 0xFF, 0xFF)
+DIM     = RGBColor(0x88, 0x88, 0x99)
+BLUE    = RGBColor(0x00, 0x71, 0xE3)   # Apple blue
+LGRAY   = RGBColor(0x1C, 0x1C, 0x1E)   # card bg
+BORDER  = RGBColor(0x38, 0x38, 0x3A)   # subtle border
 
 W = Inches(13.33)
 H = Inches(7.5)
+MARGIN_L = Inches(1.1)
+MARGIN_R = Inches(1.1)
+CONTENT_W = W - MARGIN_L - MARGIN_R
 
 prs = Presentation()
 prs.slide_width  = W
 prs.slide_height = H
+blank_layout = prs.slide_layouts[6]
 
-blank_layout = prs.slide_layouts[6]  # completely blank
+# ── Helpers ───────────────────────────────────────────────────
 
 def add_slide():
     slide = prs.slides.add_slide(blank_layout)
     bg = slide.background.fill
     bg.solid()
-    bg.fore_color.rgb = BG
+    bg.fore_color.rgb = BLACK
     return slide
 
-def txb(slide, text, x, y, w, h,
-        size=24, bold=False, color=WHITE, align=PP_ALIGN.LEFT,
-        italic=False, wrap=True):
-    tf_box = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
-    tf = tf_box.text_frame
+def txb(slide, text, x, y, w, h, *, size=18, bold=False, color=WHITE,
+        align=PP_ALIGN.LEFT, font="Inter", wrap=True):
+    tf = slide.shapes.add_textbox(x, y, w, h).text_frame
     tf.word_wrap = wrap
     p = tf.paragraphs[0]
     p.alignment = align
     run = p.add_run()
     run.text = text
-    run.font.size = Pt(size)
-    run.font.bold = bold
-    run.font.italic = italic
-    run.font.color.rgb = color
-    return tf_box
+    f = run.font
+    f.name = font
+    f.size = Pt(size)
+    f.bold = bold
+    f.color.rgb = color
 
-def multiline(slide, lines, x, y, w, h, size=20, color=WHITE, bold_first=False):
-    """lines: list of (text, bold, color_override)"""
-    tf_box = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
-    tf = tf_box.text_frame
+def multiline(slide, lines, x, y, w, h, *, default_size=16, default_color=WHITE, font="Inter"):
+    """lines: list of (text, size, bold, color) or just str"""
+    from pptx.shapes.base import BaseShape
+    tf = slide.shapes.add_textbox(x, y, w, h).text_frame
     tf.word_wrap = True
     first = True
     for item in lines:
         if isinstance(item, str):
-            text, bold, col = item, False, color
+            text, size, bold, color = item, default_size, False, default_color
         else:
             text = item[0]
-            bold = item[1] if len(item) > 1 else False
-            col  = item[2] if len(item) > 2 else color
-        if first:
-            p = tf.paragraphs[0]
-            first = False
-        else:
-            p = tf.add_paragraph()
-        p.space_before = Pt(2)
+            size = item[1] if len(item) > 1 else default_size
+            bold = item[2] if len(item) > 2 else False
+            color = item[3] if len(item) > 3 else default_color
+        p = tf.paragraphs[0] if first else tf.add_paragraph()
+        first = False
         run = p.add_run()
         run.text = text
-        run.font.size = Pt(size)
-        run.font.bold = bold
-        run.font.color.rgb = col
-    return tf_box
+        f = run.font
+        f.name = font
+        f.size = Pt(size)
+        f.bold = bold
+        f.color.rgb = color
 
-def divider(slide, y, color=RED):
-    from pptx.util import Pt as UPt
+def chapter_label(slide, text):
+    txb(slide, text, MARGIN_L, Inches(0.45), Inches(6), Inches(0.35),
+        size=11, bold=False, color=BLUE, font="Inter SemiBold")
+
+def big_title(slide, text, y=Inches(1.05), w=None, size=52):
+    txb(slide, text, MARGIN_L, y, w or CONTENT_W, Inches(1.5),
+        size=size, bold=True, color=WHITE)
+
+def body_text(slide, text, y=Inches(2.5), w=None, size=17):
+    txb(slide, text, MARGIN_L, y, w or CONTENT_W, Inches(3.0),
+        size=size, bold=False, color=WHITE)
+
+def dim_text(slide, text, y, w=None, size=14):
+    txb(slide, text, MARGIN_L, y, w or CONTENT_W, Inches(0.5),
+        size=size, bold=False, color=DIM)
+
+def divider(slide, y, color=BLUE, width=None):
+    from pptx.util import Pt as _Pt
+    from pptx.oxml import parse_xml
+    line_w = width or Inches(1.2)
     line = slide.shapes.add_shape(
-        1,  # MSO_SHAPE_TYPE.LINE → use freeform workaround via connector
-        Inches(0.6), Inches(y), Inches(12.13), Inches(0.01)
+        1,  # MSO_SHAPE_TYPE.RECTANGLE
+        MARGIN_L, y, line_w, Inches(0.025)
     )
     line.fill.solid()
     line.fill.fore_color.rgb = color
-    line.line.color.rgb = color
+    line.line.fill.background()
 
-def card_box(slide, x, y, w, h):
-    box = slide.shapes.add_shape(1, Inches(x), Inches(y), Inches(w), Inches(h))
+def card_box(slide, x, y, w, h, bg=LGRAY):
+    box = slide.shapes.add_shape(1, x, y, w, h)
     box.fill.solid()
-    box.fill.fore_color.rgb = CARD_BG
-    box.line.color.rgb = RGBColor(0x30, 0x30, 0x50)
-    box.line.width = Pt(1)
-    return box
+    box.fill.fore_color.rgb = bg
+    box.line.color.rgb = BORDER
 
-# ─────────────────────────────────────────────
-# Slide 1: Title
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "HowTune", 1, 1.8, 11, 1.8, size=72, bold=True, color=RED, align=PP_ALIGN.CENTER)
-txb(s, "音楽は、どう聴くかだ。", 1, 3.7, 11, 0.8, size=28, color=DIM, align=PP_ALIGN.CENTER)
-txb(s, "Engineer Guild Hackathon 2026/05 — Team 10", 1, 6.2, 11, 0.6, size=18, color=DIM, align=PP_ALIGN.CENTER)
 
-# ─────────────────────────────────────────────
-# Slide 2: Agenda
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# Slide 1 — Title
+# ════════════════════════════════════════════════════════════════
 s = add_slide()
-txb(s, "アジェンダ", 0.6, 0.4, 8, 0.7, size=32, bold=True, color=WHITE)
-divider(s, 1.25)
-multiline(s, [
-    ("1.  課題 — なぜ偏愛は伝わらないのか", True, WHITE),
-    ("2.  解決策 — 歌詞 × How でつながる", False, DIM),
-    ("3.  プロダクト体験 — コアフロー", False, DIM),
-    ("4.  技術スタック", False, DIM),
-    ("5.  MVP スコープ・今後の展望", False, DIM),
-], 0.8, 1.5, 11, 5, size=24)
 
-# ─────────────────────────────────────────────
-# Slide 3: 課題
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "音楽の「好き」は伝わらない", 0.6, 0.4, 11, 0.7, size=32, bold=True)
-divider(s, 1.25)
-txb(s, "今のプラットフォームでは What（何を聴くか）しか共有できない", 0.6, 1.4, 11, 0.6, size=20, color=DIM)
-multiline(s, [
-    ("同じ曲を好きでも、楽しみ方は人それぞれ：", False, WHITE),
-    ("", False, WHITE),
-    ("・歌詞の一節に心が止まる", False, DIM),
-    ("・ベースラインが体を動かす", False, DIM),
-    ("・サビ前の「溜め」で上がる", False, DIM),
-    ("・余韻にいつまでも浸る", False, DIM),
-], 0.8, 2.1, 5.5, 4, size=22)
-card_box(s, 7.0, 2.0, 5.7, 2.8)
-multiline(s, [
-    ("その楽しみ方（How）を", False, WHITE),
-    ("うまく言語化できない", True, RED),
-    ("", False, WHITE),
-    ("だから共有できず、", False, DIM),
-    ("同じ聴き方の人と出会えない", True, WHITE),
-], 7.3, 2.1, 5.1, 2.6, size=20)
+txb(s, "HowTune",
+    MARGIN_L, Inches(1.8), Inches(9), Inches(1.8),
+    size=80, bold=True, color=WHITE)
 
-# ─────────────────────────────────────────────
-# Slide 4: ターゲット
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "ターゲット", 0.6, 0.4, 8, 0.7, size=32, bold=True)
-divider(s, 1.25)
-card_box(s, 0.6, 1.5, 5.8, 3.5)
-multiline(s, [
-    ("田中音（22歳）大学生 / 音楽好き", True, WHITE),
-    ("", False, WHITE),
-    ("毎日1〜2時間音楽を聴く", False, DIM),
-    ("「なぜ好きか」を説明できない", False, DIM),
-    ("曲名以上の会話ができない", False, DIM),
-], 0.9, 1.7, 5.2, 3.1, size=20)
-card_box(s, 6.9, 1.5, 5.8, 3.5)
-multiline(s, [
-    ("鈴木聴（28歳）社会人 / 音楽マニア", True, WHITE),
-    ("", False, WHITE),
-    ("年500枚聴くヘビーリスナー", False, DIM),
-    ("楽しみ方は言語化できる", False, DIM),
-    ("でも語れる相手がいない", True, RED),
-], 7.2, 1.7, 5.2, 3.1, size=20)
-txb(s, "→ どちらも「同じ聴き方の人と出会えない」という共通課題", 0.6, 5.3, 12, 0.6, size=20, color=BLUE, bold=True)
+txb(s, "何を聴くかではなく、どう聴いているかでつながる。",
+    MARGIN_L, Inches(3.4), Inches(9), Inches(0.7),
+    size=20, bold=False, color=DIM)
 
-# ─────────────────────────────────────────────
-# Slide 5: 解決策
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "歌詞を「鏡」にする", 0.6, 0.4, 11, 0.7, size=32, bold=True)
-divider(s, 1.25)
-card_box(s, 0.6, 1.5, 5.8, 3.8)
-multiline(s, [
-    ("従来の音楽 SNS", True, DIM),
-    ("What 中心", False, DIM),
-    ("", False, WHITE),
-    ("曲・アーティスト・ジャンル", False, DIM),
-    ("再生回数・いいね数が価値の指標", False, DIM),
-], 0.9, 1.7, 5.2, 3.4, size=20)
-card_box(s, 6.9, 1.5, 5.8, 3.8)
-multiline(s, [
-    ("HowTune", True, RED),
-    ("How 中心", False, RED),
-    ("", False, WHITE),
-    ("この歌詞の、ここで、どう感じたか", True, WHITE),
-    ("「1:18 のあの一節が刺さった」", False, DIM),
-    ("が価値の指標", False, DIM),
-], 7.2, 1.7, 5.2, 3.4, size=20)
-txb(s, "音楽の熱狂が本当に伝わるのは「どう聴いているか」が共有されたとき", 0.6, 5.6, 12, 0.7, size=19, color=DIM, italic=True)
+divider(s, Inches(4.3))
 
-# ─────────────────────────────────────────────
-# Slide 6: AI は鏡であること
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "AI は「断定」しない — 鏡であること", 0.6, 0.4, 12, 0.7, size=30, bold=True)
-divider(s, 1.25)
-card_box(s, 0.6, 1.5, 5.8, 3.5)
-multiline(s, [
-    ("❌  断定する AI", True, RGBColor(0xFF,0x66,0x66)),
-    ("", False, WHITE),
-    ("あなたはここで感動しました", False, DIM),
-    ("あなたはベースが好きです", False, DIM),
-    ("", False, WHITE),
-    ("→ 断定は対話を閉じる", False, DIM),
-], 0.9, 1.7, 5.2, 3.1, size=20)
-card_box(s, 6.9, 1.5, 5.8, 3.5)
-multiline(s, [
-    ("✅  HowTune の AI", True, BLUE),
-    ("", False, WHITE),
-    ("ここで反応していましたね", False, WHITE),
-    ("リズムに乗っていた感じ？", False, WHITE),
-    ("それとも歌詞が刺さった？", False, WHITE),
-    ("", False, WHITE),
-    ("→ 問いかけが言語化を引き出す", True, BLUE),
-], 7.2, 1.7, 5.2, 3.1, size=20)
-txb(s, "センサーは事実を捉える。AI は断面を差し出す。意味はユーザーが発見する。", 0.6, 5.3, 12, 0.6, size=18, color=DIM, italic=True)
+txb(s, "Engineer Guild Hackathon 2026/05  ·  Team Othello",
+    MARGIN_L, Inches(4.55), Inches(8), Inches(0.45),
+    size=13, bold=False, color=BLUE, font="Inter SemiBold")
 
-# ─────────────────────────────────────────────
-# Slide 7: コアフロー
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "コアフロー", 0.6, 0.4, 8, 0.7, size=32, bold=True)
-divider(s, 1.25)
-multiline(s, [
-    ("🎵  曲を選んで再生する", False, WHITE),
-    ("       ↓", False, DIM),
-    ("📜  歌詞が時刻同期で流れる（Musixmatch API）", False, BLUE),
-    ("       ↓", False, DIM),
-    ("👆  「この歌詞だ」とタップする", True, WHITE),
-    ("       ↓", False, DIM),
-    ("🌊  Groove レベル（音量 × 盛り上がり）が自動記録", False, BLUE),
-    ("       ↓", False, DIM),
-    ("💬  AI が歌詞と Groove を起点に問いかける", False, WHITE),
-    ("       ↓", False, DIM),
-    ("🪪  対話が「Howカード」になる", True, RED),
-    ("       ↓", False, DIM),
-    ("🤝  同じ歌詞に同じ How で反応した人と出会う", False, WHITE),
-], 1.5, 1.4, 10, 5.8, size=19)
 
-# ─────────────────────────────────────────────
-# Slide 8: 歌詞 × Groove UI
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# Slide 2 — Problem: Labeling is not enough
+# ════════════════════════════════════════════════════════════════
 s = add_slide()
-txb(s, "歌詞 × Groove インターフェース", 0.6, 0.4, 11, 0.7, size=30, bold=True)
-divider(s, 1.25)
-card_box(s, 1.5, 1.5, 10, 4.5)
-multiline(s, [
-    ("▶  Blinding Lights — 1:18", True, WHITE),
-    ("Groove 78%  ·  揺れ", False, BLUE),
-    ("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", False, RGBColor(0x30,0x30,0x50)),
-    ("", False, WHITE),
-    ("「 I said, ooh, I'm blinded by the lights 」", False, WHITE),
-    ("", False, WHITE),
-    ("💬 4 How        コメント        ✨ AIと深掘り →", False, BLUE),
-], 1.9, 1.7, 9.2, 4.0, size=22)
-txb(s, "→ 歌詞行をタップすると AI 対話が始まる", 0.6, 6.3, 12, 0.6, size=18, color=DIM)
+chapter_label(s, "CHAPTER 01 — THE PROBLEM")
 
-# ─────────────────────────────────────────────
-# Slide 9: Howカード
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "Howカード — 聴き方が、あなたを語る", 0.6, 0.4, 12, 0.7, size=30, bold=True)
-divider(s, 1.25)
-card_box(s, 2.5, 1.5, 8.3, 4.6)
-multiline(s, [
-    ("🎵  Blinding Lights", False, DIM),
-    ("", False, WHITE),
-    ("余韻に浸るリスナー", True, WHITE),
-    ("", False, WHITE),
-    ("曲が終わっても世界に残り続けるタイプ。", False, DIM),
-    ("サビの後の静寂に、一番の意味を感じている。", False, DIM),
-    ("", False, WHITE),
-    ("#余韻派   #immersion   #afterglow", False, BLUE),
-    ("", False, WHITE),
-    ("📍 1:18 — \"ooh, I'm blinded by the lights\"", False, DIM),
-], 2.9, 1.7, 7.5, 4.2, size=20)
-txb(s, "→ 同じ How の人 / 同じ歌詞に反応した人を表示", 0.6, 6.3, 12, 0.6, size=18, color=DIM)
+big_title(s, "Labeling is not enough.")
 
-# ─────────────────────────────────────────────
-# Slide 10: アーキテクチャ
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "アーキテクチャ", 0.6, 0.4, 8, 0.7, size=32, bold=True)
-divider(s, 1.25)
-card_box(s, 0.6, 1.4, 12.13, 4.8)
-multiline(s, [
-    ("📱  iOS アプリ (SwiftUI / MusicKit)", True, WHITE),
-    ("      HomeView [歌詞 + Groove]  /  HowChatView [AI 対話]", False, DIM),
-    ("                │  HTTPS / SSE", False, DIM),
-    ("                ▼", False, DIM),
-    ("☁️  backend (Node.js + Express)", True, BLUE),
-    ("      POST /sessions/:id/chat  ← Claude API 中継", False, DIM),
-    ("      POST /sessions/:id/how-card  /  GET /how-cards", False, DIM),
-    ("                │", False, DIM),
-    ("                ▼", False, DIM),
-    ("🔥  Firestore   +   🤖  Claude API (claude-sonnet-4-6)", True, WHITE),
-    ("", False, WHITE),
-    ("ai-recognition (Create ML / TF.js)  →  Core ML  →  iOS", False, DIM),
-], 1.0, 1.6, 11.3, 4.4, size=18)
+body_text(s,
+    "既存の音楽サービスは「What（曲名・ジャンル・再生回数）」でしか人を繋げません。\n"
+    "しかし、本当に心が動く瞬間は、聴き方（How）の中にあります。",
+    y=Inches(2.55), size=18)
 
-# ─────────────────────────────────────────────
-# Slide 11: 技術選定
-# ─────────────────────────────────────────────
+# Two column cards
+card_box(s, MARGIN_L, Inches(4.2), Inches(5.4), Inches(2.4))
+txb(s, "既存サービス",
+    MARGIN_L + Inches(0.3), Inches(4.35), Inches(4.8), Inches(0.45),
+    size=14, bold=True, color=DIM)
+multiline(s, [
+    ("What 中心：曲名・ジャンル・再生回数", 15, False, WHITE),
+    ("✗  「この瞬間の感動」は共有できない", 15, False, DIM),
+    ("✗  同じ聴き方の人とは出会えない",    15, False, DIM),
+], MARGIN_L + Inches(0.3), Inches(4.8), Inches(4.8), Inches(1.6))
+
+card_box(s, MARGIN_L + Inches(5.8), Inches(4.2), Inches(5.4), Inches(2.4), bg=RGBColor(0x00, 0x18, 0x32))
+txb(s, "HowTune",
+    MARGIN_L + Inches(6.1), Inches(4.35), Inches(4.8), Inches(0.45),
+    size=14, bold=True, color=BLUE, font="Inter SemiBold")
+multiline(s, [
+    ("How 中心：歌詞 × 反応 × 聴き方",          15, False, WHITE),
+    ("✓  「1:18のあの一節が刺さった」を共有",    15, False, WHITE),
+    ("✓  同じ波形を持つ見知らぬ人と出会える",    15, False, WHITE),
+], MARGIN_L + Inches(6.1), Inches(4.8), Inches(4.8), Inches(1.6))
+
+
+# ════════════════════════════════════════════════════════════════
+# Slide 3 — Why Now: The Great Inversion
+# ════════════════════════════════════════════════════════════════
 s = add_slide()
-txb(s, "技術選定", 0.6, 0.4, 8, 0.7, size=32, bold=True)
-divider(s, 1.25)
+chapter_label(s, "CHAPTER 02 — WHY NOW")
+
+big_title(s, "The Great Inversion", size=54)
+
+txb(s, "AIはスキルの希少価値をゼロに近づける",
+    MARGIN_L, Inches(2.35), CONTENT_W, Inches(0.5),
+    size=20, bold=False, color=DIM)
+
+divider(s, Inches(3.05))
+
+multiline(s, [
+    ("旧時代の価値：「何を作れるか」（スキル） → AIが代替", 17, False, DIM),
+    ("",),
+    ("新時代の価値：「誰と・どう楽しむか」（コミュニティ・体験）", 19, True, WHITE),
+], MARGIN_L, Inches(3.2), CONTENT_W, Inches(1.5))
+
+txb(s, "HowTuneはこのパラダイムシフトのど真ん中にいる。",
+    MARGIN_L, Inches(4.55), CONTENT_W, Inches(0.6),
+    size=17, bold=False, color=BLUE, font="Inter SemiBold")
+
+# Arrow visual: pyramid → circle
+card_box(s, MARGIN_L, Inches(5.25), Inches(5.4), Inches(1.6))
+multiline(s, [
+    ("旧：ピラミッド型", 13, True, DIM),
+    ("アーティストが頂点・ファンは消費者", 13, False, DIM),
+], MARGIN_L + Inches(0.2), Inches(5.4), Inches(5.0), Inches(1.4))
+
+txb(s, "→", MARGIN_L + Inches(5.6), Inches(5.8), Inches(0.6), Inches(0.6),
+    size=28, bold=True, color=BLUE, align=PP_ALIGN.CENTER)
+
+card_box(s, MARGIN_L + Inches(6.4), Inches(5.25), Inches(5.4), Inches(1.6), bg=RGBColor(0x00, 0x18, 0x32))
+multiline(s, [
+    ("新：円環型エコシステム", 13, True, BLUE),
+    ("ファンの「How」が価値の源泉になる", 13, False, WHITE),
+], MARGIN_L + Inches(6.6), Inches(5.4), Inches(5.0), Inches(1.4))
+
+
+# ════════════════════════════════════════════════════════════════
+# Slide 4 — Solution: Lyrics × AI
+# ════════════════════════════════════════════════════════════════
+s = add_slide()
+chapter_label(s, "CHAPTER 03 — SOLUTION")
+
+big_title(s, "歌詞を「鏡」にする。", size=58)
+
+txb(s, "身体が動いた瞬間に歌詞をタップ → AIが問いかける → How が言語化される",
+    MARGIN_L, Inches(2.45), CONTENT_W, Inches(0.6),
+    size=17, bold=False, color=DIM)
+
+divider(s, Inches(3.2))
+
+# Flow steps
+steps = [
+    ("01", "歌詞タップ",      "「この一節だ」と感じた瞬間にタップ"),
+    ("02", "Groove 記録",    "音量 × モーションで盛り上がりを自動算出"),
+    ("03", "AI 問いかけ",    "Claude がリズム・歌詞を起点に質問。断定しない"),
+    ("04", "How カード",      "対話の結果が一生モノの「聴き方カード」に"),
+    ("05", "マッチング",      "同じ歌詞・同じ How に反応した人と出会う"),
+]
+step_w = Inches(2.2)
+for i, (num, title, desc) in enumerate(steps):
+    x = MARGIN_L + i * (step_w + Inches(0.12))
+    card_box(s, x, Inches(3.45), step_w, Inches(2.9))
+    txb(s, num, x + Inches(0.2), Inches(3.6), step_w - Inches(0.3), Inches(0.4),
+        size=11, bold=False, color=BLUE, font="Inter SemiBold")
+    txb(s, title, x + Inches(0.2), Inches(3.95), step_w - Inches(0.3), Inches(0.45),
+        size=16, bold=True, color=WHITE)
+    txb(s, desc, x + Inches(0.2), Inches(4.45), step_w - Inches(0.3), Inches(1.7),
+        size=13, bold=False, color=DIM)
+
+
+# ════════════════════════════════════════════════════════════════
+# Slide 5 — AI: Mirror Principle
+# ════════════════════════════════════════════════════════════════
+s = add_slide()
+chapter_label(s, "CHAPTER 04 — AI DESIGN PHILOSOPHY")
+
+big_title(s, "AIは断定しない。\n鏡であること。", size=48)
+
+txb(s, "センサーは事実を捉える。AIは断面を差し出す。意味はユーザーが発見する。",
+    MARGIN_L, Inches(3.05), CONTENT_W, Inches(0.55),
+    size=15, bold=False, color=DIM)
+
+divider(s, Inches(3.7))
+
+# Two panels
+card_box(s, MARGIN_L, Inches(3.9), Inches(5.2), Inches(2.7))
+txb(s, "❌  断定する AI", MARGIN_L + Inches(0.3), Inches(4.05), Inches(4.6), Inches(0.45),
+    size=15, bold=True, color=RGBColor(0xFF, 0x3B, 0x30))
+multiline(s, [
+    ("「あなたはここで感動しました」", 15, False, DIM),
+    ("「あなたはベースが好きです」", 15, False, DIM),
+    ("→ 断定は対話を閉じる", 14, False, DIM),
+], MARGIN_L + Inches(0.3), Inches(4.55), Inches(4.6), Inches(2.0))
+
+card_box(s, MARGIN_L + Inches(5.6), Inches(3.9), Inches(5.2), Inches(2.7), bg=RGBColor(0x00, 0x18, 0x32))
+txb(s, "✅  HowTune の AI", MARGIN_L + Inches(5.9), Inches(4.05), Inches(4.6), Inches(0.45),
+    size=15, bold=True, color=BLUE, font="Inter SemiBold")
+multiline(s, [
+    ("「ここで反応していましたね」", 15, False, WHITE),
+    ("「リズムに乗っていた感じ？」", 15, False, WHITE),
+    ("「それとも歌詞が刺さった？」", 15, False, WHITE),
+    ("→ 問いかけが言語化を引き出す", 14, True, BLUE),
+], MARGIN_L + Inches(5.9), Inches(4.55), Inches(4.6), Inches(2.0))
+
+
+# ════════════════════════════════════════════════════════════════
+# Slide 6 — Technology Stack
+# ════════════════════════════════════════════════════════════════
+s = add_slide()
+chapter_label(s, "CHAPTER 05 — TECHNOLOGY")
+
+big_title(s, "Apple Ecosystem × Claude API", size=46)
+
+txb(s, "iOS ネイティブに一本化（ADR-0001）。センサーからモデルまでオンデバイス優先。",
+    MARGIN_L, Inches(2.35), CONTENT_W, Inches(0.5),
+    size=16, bold=False, color=DIM)
+
+divider(s, Inches(3.0))
+
 rows = [
-    ("iOS",    "SwiftUI + MusicKit",         "ネイティブ必須（ADR-0001）"),
-    ("歌詞",   "Musixmatch API",              "時刻同期歌詞の取得"),
-    ("Groove", "音量 + 本体モーション",       "AirPods 不要でデモできる（ADR-0005）"),
-    ("LLM",    "Claude claude-sonnet-4-6",  "バックエンド経由でキー秘匿（ADR-0002）"),
-    ("ML",     "Create ML → Core ML",        "端末推論・学習データ蓄積（ADR-0003）"),
-    ("DB",     "Firestore",                   "iOS SDK・リアルタイム"),
+    ("iOS / UI",       "SwiftUI + MusicKit",           "ネイティブ必須、Apple Music 連携"),
+    ("歌詞",            "Musixmatch API",                "時刻同期歌詞（ADR-0004 解決）"),
+    ("Groove センサー", "音量 + 本体モーション",         "AirPods 不要でデモ可（ADR-0005）"),
+    ("LLM",             "Claude claude-sonnet-4-6",      "バックエンド経由でキー秘匿（ADR-0002）"),
+    ("ML",              "Create ML → Core ML",           "端末推論、対話がラベルに（データフライホイール）"),
+    ("DB",              "Firestore + Node.js",           "iOS SDK・リアルタイム同期"),
 ]
-y = 1.5
-for layer, tech, reason in rows:
-    txb(s, layer,   0.6, y, 1.8, 0.45, size=18, bold=True, color=BLUE)
-    txb(s, tech,    2.5, y, 4.0, 0.45, size=18, color=WHITE)
-    txb(s, reason,  6.6, y, 6.1, 0.45, size=16, color=DIM)
-    y += 0.55
+col_x = [MARGIN_L, MARGIN_L + Inches(2.0), MARGIN_L + Inches(5.0)]
+col_w = [Inches(1.8), Inches(2.8), Inches(5.3)]
+y = Inches(3.2)
+row_h = Inches(0.52)
+for i, (layer, tech, reason) in enumerate(rows):
+    bg = RGBColor(0x0A, 0x0A, 0x0A) if i % 2 == 0 else BLACK
+    card_box(s, MARGIN_L, y + i * row_h, CONTENT_W, row_h, bg=bg)
+    txb(s, layer, col_x[0] + Inches(0.1), y + i*row_h + Inches(0.1),
+        col_w[0], row_h, size=13, bold=False, color=DIM)
+    txb(s, tech,  col_x[1], y + i*row_h + Inches(0.1),
+        col_w[1], row_h, size=13, bold=True, color=WHITE)
+    txb(s, reason,col_x[2], y + i*row_h + Inches(0.1),
+        col_w[2], row_h, size=12, bold=False, color=DIM)
 
-# ─────────────────────────────────────────────
-# Slide 12: データフライホイール
-# ─────────────────────────────────────────────
+
+# ════════════════════════════════════════════════════════════════
+# Slide 7 — Data Flywheel
+# ════════════════════════════════════════════════════════════════
 s = add_slide()
-txb(s, "データフライホイール", 0.6, 0.4, 10, 0.7, size=32, bold=True)
-divider(s, 1.25)
-multiline(s, [
-    ("音量 + モーション  →  Groove レベル（今）", False, WHITE),
-    ("    ↓  歌詞タップで文脈付き反応を記録", False, DIM),
-    ("AI 対話の回答  →  ラベル付きデータが蓄積", False, BLUE),
-    ("    ↓", False, DIM),
-    ("Create ML で精度向上  →  より良い問いかけ", False, WHITE),
-    ("    ↓", False, DIM),
-    ("より良い HowCard  →  より多くの共鳴", True, RED),
-], 0.8, 1.5, 7, 4, size=21)
-rows2 = [
-    ("MVP",     "ルールベース Groove",   "今"),
-    ("Phase 1", "学習モデル 32次元",     "〜6ヶ月"),
-    ("Phase 2", "個人最適化 128次元",    "〜1年"),
+chapter_label(s, "CHAPTER 06 — DATA STRATEGY")
+
+big_title(s, "対話がデータになる。\nデータが精度になる。", size=48)
+
+txb(s, "AI 対話の回答が暗黙のラベルとなり、モデルが使えば使うほど賢くなる設計。",
+    MARGIN_L, Inches(2.9), CONTENT_W, Inches(0.5),
+    size=16, bold=False, color=DIM)
+
+divider(s, Inches(3.5))
+
+# Flywheel steps
+fw = [
+    ("音量 + モーション", "Groove レベルをリアルタイム算出"),
+    ("歌詞タップ",        "文脈付きの反応ポイントを記録"),
+    ("AI 対話の回答",     "暗黙のラベルとして蓄積"),
+    ("Create ML 学習",   "Groove 精度が向上"),
+    ("より良い HowCard", "より多くの共鳴 → ユーザー増加"),
 ]
-y = 1.8
-for phase, model, timing in rows2:
-    txb(s, phase,  8.0, y, 2.0, 0.45, size=18, bold=True, color=BLUE)
-    txb(s, model,  10.1, y, 2.8, 0.45, size=17, color=WHITE)
-    txb(s, timing, 10.1, y+0.35, 2.8, 0.35, size=15, color=DIM)
-    y += 1.1
+fw_w = Inches(2.15)
+fw_y = Inches(3.7)
+for i, (title, desc) in enumerate(fw):
+    x = MARGIN_L + i * (fw_w + Inches(0.08))
+    card_box(s, x, fw_y, fw_w, Inches(2.6))
+    txb(s, f"0{i+1}", x + Inches(0.2), fw_y + Inches(0.15), fw_w, Inches(0.35),
+        size=11, bold=False, color=BLUE, font="Inter SemiBold")
+    txb(s, title, x + Inches(0.2), fw_y + Inches(0.5), fw_w - Inches(0.3), Inches(0.55),
+        size=15, bold=True, color=WHITE)
+    txb(s, desc, x + Inches(0.2), fw_y + Inches(1.1), fw_w - Inches(0.3), Inches(1.3),
+        size=13, bold=False, color=DIM)
+    if i < 4:
+        txb(s, "→", x + fw_w - Inches(0.05), fw_y + Inches(0.9), Inches(0.25), Inches(0.4),
+            size=18, bold=True, color=BLUE, align=PP_ALIGN.CENTER)
 
-# ─────────────────────────────────────────────
-# Slide 13: MVP スコープ
-# ─────────────────────────────────────────────
-s = add_slide()
-txb(s, "MVP スコープ", 0.6, 0.4, 8, 0.7, size=32, bold=True)
-divider(s, 1.25)
-card_box(s, 0.6, 1.5, 5.8, 4.5)
+# Phase table
+card_box(s, MARGIN_L, Inches(6.45), CONTENT_W, Inches(0.72), bg=LGRAY)
 multiline(s, [
-    ("✅  作ったもの（P0）", True, RGBColor(0x4D,0xFF,0x91)),
-    ("", False, WHITE),
-    ("・曲再生 × MusicKit", False, WHITE),
-    ("・時刻同期歌詞（Musixmatch）", False, WHITE),
-    ("・歌詞タップ → AI 対話", False, WHITE),
-    ("・Howカード生成・保存", False, WHITE),
-    ("・Groove レベル表示", False, WHITE),
-    ("・コミュニティ画面（ダミー）", False, WHITE),
-], 0.9, 1.7, 5.2, 4.1, size=20)
-card_box(s, 6.9, 1.5, 5.8, 4.5)
-multiline(s, [
-    ("🚫  スコープ外", True, DIM),
-    ("", False, WHITE),
-    ("・DM・フォロー・タイムライン", False, DIM),
-    ("・Spotify 連携", False, DIM),
-    ("・AirPods 必須のセンサー精度", False, DIM),
-    ("・完全な認証フロー", False, DIM),
-    ("・歌詞コメントのリアルタイム同期", False, DIM),
-], 7.2, 1.7, 5.2, 4.1, size=20)
+    ("MVP（今）: ルールベース Groove  →  Phase 1（〜6ヶ月）: 学習モデル 32次元  →  Phase 2（〜1年）: 個人最適化 128次元", 14, False, DIM),
+], MARGIN_L + Inches(0.3), Inches(6.57), CONTENT_W - Inches(0.5), Inches(0.5))
 
-# ─────────────────────────────────────────────
-# Slide 14: クロージング
-# ─────────────────────────────────────────────
+
+# ════════════════════════════════════════════════════════════════
+# Slide 8 — Business Model
+# ════════════════════════════════════════════════════════════════
 s = add_slide()
-txb(s, "音楽は、どう聴くかだ。", 1, 1.6, 11, 1.2, size=48, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-txb(s, "歌詞が、あなたの How を語り始める。", 1, 2.9, 11, 0.8, size=26, color=DIM, align=PP_ALIGN.CENTER)
-txb(s, "HowTune", 1, 4.5, 11, 0.9, size=38, bold=True, color=RED, align=PP_ALIGN.CENTER)
-txb(s, "Team 10 — Engineer Guild Hackathon 2026/05", 1, 5.6, 11, 0.6, size=18, color=DIM, align=PP_ALIGN.CENTER)
+chapter_label(s, "CHAPTER 07 — BUSINESS MODEL")
 
-# ─────────────────────────────────────────────
-out = "docs/slides/howtune_editable.pptx"
+big_title(s, "アーティスト・リスナー・\nプラットフォームのプラスサム", size=42)
+
+divider(s, Inches(3.0))
+
+biz = [
+    ("B2B\nSaaS",        "#0071E3", "アーティスト向けインサイト",
+     "身体反応ヒートマップ\n「1:18にGroove集中」\nSpotify にないデータで差別化"),
+    ("プレミアム\nマッチング", "#34C759", "セレンディピティマッチング",
+     "同曲・同瞬間に反応した\n見知らぬ人との出会い\n（Premium 解禁）"),
+    ("チップ\n循環",      "#FF9F0A", "P2Pチップ + アーティスト支援",
+     "チップ送付者を「発見者」\nとして可視化\nマージン 10%"),
+]
+biz_w = Inches(3.5)
+for i, (tag, color_hex, title, body) in enumerate(biz):
+    r, g, b = int(color_hex[1:3],16), int(color_hex[3:5],16), int(color_hex[5:7],16)
+    col = RGBColor(r, g, b)
+    x = MARGIN_L + i * (biz_w + Inches(0.4))
+    card_box(s, x, Inches(3.2), biz_w, Inches(3.7))
+    txb(s, tag, x + Inches(0.25), Inches(3.35), biz_w - Inches(0.4), Inches(0.7),
+        size=13, bold=True, color=col, font="Inter SemiBold")
+    txb(s, title, x + Inches(0.25), Inches(4.1), biz_w - Inches(0.4), Inches(0.55),
+        size=16, bold=True, color=WHITE)
+    txb(s, body, x + Inches(0.25), Inches(4.7), biz_w - Inches(0.4), Inches(1.9),
+        size=14, bold=False, color=DIM)
+
+
+# ════════════════════════════════════════════════════════════════
+# Slide 9 — MVP Status + Team
+# ════════════════════════════════════════════════════════════════
+s = add_slide()
+chapter_label(s, "CHAPTER 08 — TEAM & MVP")
+
+big_title(s, "実装済み、動いている。", size=52)
+
+txb(s, "Team Othello — PM / iOS / Backend / ML・Design の4名",
+    MARGIN_L, Inches(2.45), CONTENT_W, Inches(0.5),
+    size=16, bold=False, color=DIM)
+
+divider(s, Inches(3.1))
+
+# Built / Not built
+card_box(s, MARGIN_L, Inches(3.3), Inches(5.4), Inches(3.5))
+txb(s, "✅  実装済み（P0）",
+    MARGIN_L + Inches(0.3), Inches(3.45), Inches(5.0), Inches(0.45),
+    size=15, bold=True, color=RGBColor(0x34, 0xC7, 0x59))
+multiline(s, [
+    ("曲再生 × MusicKit", 14, False, WHITE),
+    ("時刻同期歌詞（Musixmatch）", 14, False, WHITE),
+    ("歌詞タップ → AI 対話（Claude API）", 14, False, WHITE),
+    ("Howカード生成・Firestore 保存", 14, False, WHITE),
+    ("Groove レベル表示（音量ベース）", 14, False, WHITE),
+    ("コミュニティ画面", 14, False, WHITE),
+], MARGIN_L + Inches(0.3), Inches(3.95), Inches(5.0), Inches(2.7))
+
+card_box(s, MARGIN_L + Inches(5.8), Inches(3.3), Inches(5.4), Inches(3.5))
+txb(s, "🚫  スコープ外",
+    MARGIN_L + Inches(6.1), Inches(3.45), Inches(5.0), Inches(0.45),
+    size=15, bold=True, color=DIM)
+multiline(s, [
+    ("DM・フォロー・タイムライン", 14, False, DIM),
+    ("Spotify 連携", 14, False, DIM),
+    ("完全な認証フロー", 14, False, DIM),
+    ("AirPods 必須センサー精度", 14, False, DIM),
+    ("教師データ収集アプリ（別仕様）", 14, False, DIM),
+], MARGIN_L + Inches(6.1), Inches(3.95), Inches(5.0), Inches(2.7))
+
+
+# ════════════════════════════════════════════════════════════════
+# Slide 10 — Competitive Differentiation
+# ════════════════════════════════════════════════════════════════
+s = add_slide()
+chapter_label(s, "CHAPTER 09 — DIFFERENTIATION")
+
+big_title(s, "誰もやっていない、\n3つの掛け合わせ。", size=48)
+
+divider(s, Inches(3.05))
+
+table_rows = [
+    ("",                 "Spotify", "Last.fm", "Apple Music", "HowTune"),
+    ("How の言語化",      "✗",       "✗",       "✗",           "✓"),
+    ("歌詞 × 反応",       "✗",       "✗",       "✗",           "✓"),
+    ("AI 対話 + HowCard", "✗",       "✗",       "✗",           "✓"),
+    ("身体反応マッチング", "✗",       "✗",       "✗",           "✓"),
+]
+row_h = Inches(0.58)
+col_xs = [MARGIN_L, MARGIN_L+Inches(3.8), MARGIN_L+Inches(5.8), MARGIN_L+Inches(7.8), MARGIN_L+Inches(9.65)]
+col_ws = [Inches(3.5), Inches(1.8), Inches(1.8), Inches(1.8), Inches(1.5)]
+
+for ri, row in enumerate(table_rows):
+    y = Inches(3.15) + ri * row_h
+    bg = RGBColor(0x00, 0x18, 0x32) if ri == 0 else (LGRAY if ri % 2 == 1 else BLACK)
+    card_box(s, MARGIN_L, y, CONTENT_W, row_h, bg=bg)
+    for ci, cell in enumerate(row):
+        color = BLUE if (ri == 0) else (RGBColor(0x34, 0xC7, 0x59) if cell == "✓" else DIM)
+        bold = ri == 0 or ci == 0
+        txb(s, cell, col_xs[ci] + Inches(0.15), y + Inches(0.1),
+            col_ws[ci], row_h, size=14, bold=bold, color=color, align=PP_ALIGN.CENTER if ci > 0 else PP_ALIGN.LEFT)
+
+
+# ════════════════════════════════════════════════════════════════
+# Slide 11 — Closing Vision
+# ════════════════════════════════════════════════════════════════
+s = add_slide()
+
+txb(s, "音楽は、どう聴くかだ。",
+    MARGIN_L, Inches(1.6), CONTENT_W, Inches(1.5),
+    size=62, bold=True, color=WHITE)
+
+txb(s, "歌詞が、あなたの How を語り始める。",
+    MARGIN_L, Inches(3.1), CONTENT_W, Inches(0.8),
+    size=22, bold=False, color=DIM)
+
+divider(s, Inches(4.0))
+
+multiline(s, [
+    ("Phase 1（〜6ヶ月）：アーティスト向け反応ヒートマップ（B2B）", 15, False, DIM),
+    ("Phase 2（〜1年）：チップ循環 + Fan-to-Earn エコシステム",     15, False, DIM),
+    ("Phase 3（〜2年）：ライブ会場リアルタイム共感 × 個人最適化 How マッチング", 15, False, DIM),
+], MARGIN_L, Inches(4.2), CONTENT_W, Inches(1.5))
+
+txb(s, "HowTune  ·  Team Othello  ·  Engineer Guild Hackathon 2026/05",
+    MARGIN_L, Inches(6.45), CONTENT_W, Inches(0.5),
+    size=13, bold=False, color=BLUE, font="Inter SemiBold")
+
+
+# ════════════════════════════════════════════════════════════════
+# Save
+# ════════════════════════════════════════════════════════════════
+out = "docs/slides/howtune_final.pptx"
 prs.save(out)
-print(f"Saved: {out}  ({prs.slides.__len__()} slides)")
+print(f"Saved: {out}  ({len(prs.slides)} slides)")
