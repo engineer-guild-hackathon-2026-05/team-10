@@ -45,7 +45,7 @@ extension LyricsTrackQuery {
 
 #if canImport(MusicKit)
 extension LyricsTrackQuery {
-    init(musicKitSong song: Song) {
+    init(musicKitSong song: MusicKit.Song) {
         self.init(
             musicKitID: song.id.rawValue,
             title: song.title,

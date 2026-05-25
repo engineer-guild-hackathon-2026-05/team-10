@@ -45,9 +45,10 @@ final class AuthViewModel: ObservableObject {
                 try await FirebaseAPI.shared.createUserDocument(from: result.user)
             } catch let createUserError {
                 do {
+                    try await result.user.delete()
                     try Auth.auth().signOut()
-                } catch {
-                    throw FirebaseAPIError.signOutRollbackFailed(original: createUserError, signOut: error)
+                } catch let rollbackError {
+                    throw FirebaseAPIError.signOutRollbackFailed(original: createUserError, signOut: rollbackError)
                 }
                 throw createUserError
             }

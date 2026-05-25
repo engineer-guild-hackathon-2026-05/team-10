@@ -18,7 +18,7 @@ struct PlaybackTrack: Identifiable, Equatable {
 }
 
 extension PlaybackTrack {
-    init(song: Song) {
+    init(song: MusicKit.Song) {
         self.id = song.id
         self.musicKitID = song.id.rawValue
         self.title = song.title
