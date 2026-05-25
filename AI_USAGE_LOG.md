@@ -687,6 +687,7 @@
   - Firestore の `created_at desc` と `likes desc` の候補を merge し、recency と likes を合わせたスコアで並び替える実装にした
   - 既存 `serializeHowCard` を使い、`song_id` contract 修正を維持したままおすすめ一覧に反映
   - Functions docs と steering docs を更新
+  - Firebase Functions deploy を実行し、`api(asia-northeast1)` / `onUserSignup(asia-northeast1)` の更新完了と `/health` の 200、未認証 `/recommended-comments` の 401 を確認
 - **評価**：採用
 - **採用 / 不採用の理由**：追加 index に依存せず、最新コメントと人気コメントを混ぜた dashboard 用 API を小さな Functions 差分で追加できたため。
 

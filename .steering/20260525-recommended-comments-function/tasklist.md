@@ -7,4 +7,4 @@
 - [x] API docs を更新する
 - [x] AI_USAGE_LOG.md を更新する
 - [x] Functions の静的検証を実行する
-- [ ] Firebase Functions deploy を実行する
+- [x] Firebase Functions deploy を実行する
