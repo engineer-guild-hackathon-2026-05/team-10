@@ -70,3 +70,6 @@ docs/slides/howtune.pptx
 
 **/ENV.plist
 Othello/Othello/ENV.plist
+
+# Office 一時ファイル
+~$*.pptx
