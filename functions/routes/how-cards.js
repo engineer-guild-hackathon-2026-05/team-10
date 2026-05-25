@@ -16,7 +16,7 @@ router.get('/', auth, async (_req, res) => {
 
 // POST /how-cards
 router.post('/', auth, async (req, res) => {
-  const { comment, songStart, songEnd, songTitle } = req.body;
+  const { comment, songStart, songEnd, songId, artistId } = req.body;
 
   if (typeof comment !== 'string' || !comment.trim()) {
     return res.status(400).json({ error: 'comment が必要です' });
@@ -27,19 +27,24 @@ router.post('/', auth, async (req, res) => {
   if (songStart < 0 || songEnd <= songStart) {
     return res.status(400).json({ error: 'songStart, songEnd の範囲が不正です' });
   }
-  if (typeof songTitle !== 'string' || !songTitle.trim()) {
-    return res.status(400).json({ error: 'songTitle が必要です' });
+  if (typeof songId !== 'string' || !songId.trim()) {
+    return res.status(400).json({ error: 'songId が必要です' });
+  }
+  if (typeof artistId !== 'string' || !artistId.trim()) {
+    return res.status(400).json({ error: 'artistId が必要です' });
   }
 
   try {
     const trimmedComment = comment.trim();
-    const trimmedSongTitle = songTitle.trim();
+    const trimmedSongId = songId.trim();
+    const trimmedArtistId = artistId.trim();
     const cardId = await createHowCard({
       uid: req.uid,
       comment: trimmedComment,
       songStart,
       songEnd,
-      songTitle: trimmedSongTitle,
+      songId: trimmedSongId,
+      artistId: trimmedArtistId,
     });
     res.json({
       howCard: {
@@ -48,7 +53,8 @@ router.post('/', auth, async (req, res) => {
         comment: trimmedComment,
         songStart,
         songEnd,
-        songTitle: trimmedSongTitle,
+        songId: trimmedSongId,
+        artistId: trimmedArtistId,
         likes: 0,
       },
     });

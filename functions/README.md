@@ -128,7 +128,8 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
   "comment": "ベースの入りで身体が動いた",
   "songStart": 78,
   "songEnd": 92,
-  "songTitle": "Blinding Lights"
+  "songId": "0VjIjW4GlUZAMYd2vXMi3b",
+  "artistId": "1Xyo4u8uXC1ZmMpatF05PJ"
 }
 ```
 
@@ -137,7 +138,8 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | `comment` | string | ユーザー記入のコメント（空文字不可） |
 | `songStart` | number | 区間開始（秒、0 以上） |
 | `songEnd` | number | 区間終了（秒、songStart より大きい） |
-| `songTitle` | string | 曲名 |
+| `songId` | string | 楽曲 ID（Itunes 等） |
+| `artistId` | string | アーティスト ID（Itunes 等） |
 
 **レスポンス**
 ```json
@@ -148,7 +150,8 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
     "comment": "ベースの入りで身体が動いた",
     "songStart": 78,
     "songEnd": 92,
-    "songTitle": "Blinding Lights",
+    "songId": "0VjIjW4GlUZAMYd2vXMi3b",
+    "artistId": "1Xyo4u8uXC1ZmMpatF05PJ",
     "likes": 0
   }
 }
@@ -168,7 +171,8 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "comment": "...",
       "songStart": 78,
       "songEnd": 92,
-      "songTitle": "...",
+      "songId": "...",
+      "artistId": "...",
       "likes": 3,
       "createdAt": { "_seconds": ..., "_nanoseconds": ... }
     }
@@ -205,7 +209,8 @@ how-cards/{cardId}
   comment: string
   songStart: number
   songEnd: number
-  songTitle: string
+  songId: string                      # 楽曲 ID（iTunes 等）
+  artistId: string                    # アーティスト ID（iTunes 等）
   likes: number                       # 初期値 0、いいねごとに +1
   createdAt: timestamp
 

@@ -3,14 +3,15 @@ const admin = require('firebase-admin');
 const db = () => admin.firestore();
 const { FieldValue } = admin.firestore;
 
-async function createHowCard({ uid, comment, songStart, songEnd, songTitle }) {
+async function createHowCard({ uid, comment, songStart, songEnd, songId, artistId }) {
   const ref = db().collection('how-cards').doc();
   await ref.set({
     userId: uid,
     comment,
     songStart,
     songEnd,
-    songTitle,
+    songId,
+    artistId,
     likes: 0,
     createdAt: FieldValue.serverTimestamp(),
   });
