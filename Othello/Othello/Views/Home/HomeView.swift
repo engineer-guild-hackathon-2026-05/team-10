@@ -114,7 +114,10 @@ struct HomeView: View {
             airPodsMotion.stop()
             reactionDetector.stopSession(finalPlaybackTime: displayPlaybackTime)
         }
-        .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
+        .alert(
+            "再生位置が取得できません",
+            isPresented: previewData == nil ? $playback.positionUnavailableAlertShown : .constant(false)
+        ) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(playback.positionUnavailableMessage)
