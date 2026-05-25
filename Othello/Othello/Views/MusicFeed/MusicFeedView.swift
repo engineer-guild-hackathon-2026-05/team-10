@@ -216,5 +216,5 @@ private struct MiniSongCard: View {
 }
 
 #Preview {
-    MusicFeedView(artist: Artist.mockArtists()[0], onSongTap: { _ in })
+    MusicFeedView(artist: Artist.mock[0], onSongTap: { _ in })
 }
