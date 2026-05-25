@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HighlightedHowCardCommentCard: View {
     let item: HomeDashboardComment
+    let isSelected: Bool
     let onSongTap: () -> Void
     @State private var isLiked = false
 
@@ -31,12 +32,14 @@ struct HighlightedHowCardCommentCard: View {
                         .foregroundStyle(.gray)
                 }
                 Spacer()
-                Text("選択中")
-                    .font(.caption2.weight(.heavy))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .background(.white, in: Capsule())
+                if isSelected {
+                    Text("選択中")
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(.white, in: Capsule())
+                }
             }
 
             Text(item.howCard.comment)

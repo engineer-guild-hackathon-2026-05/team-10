@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FeedPostCard: View {
     let post: FeedPost
+    let isSelected: Bool
     let onSongTap: () -> Void
     let onLike: () -> Void
     @State private var isLiked: Bool = false
@@ -33,9 +34,18 @@ struct FeedPostCard: View {
                         .foregroundStyle(.gray)
                 }
                 Spacer()
-                Image(systemName: "ellipsis")
-                    .foregroundStyle(.gray)
-                    .font(.subheadline)
+                if isSelected {
+                    Text("選択中")
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(.white, in: Capsule())
+                } else {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(.gray)
+                        .font(.subheadline)
+                }
             }
 
             Text(post.comment)
@@ -74,6 +84,24 @@ struct FeedPostCard: View {
             }
         }
         .padding(16)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+        .background(cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    Color(red: 1.0, green: 0.3, blue: 0.3).opacity(isSelected ? 0.24 : 0),
+                    lineWidth: 1
+                )
+        )
+    }
+
+    private var cardBackground: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 1.0, green: 0.3, blue: 0.3).opacity(isSelected ? 0.12 : 0.05),
+                Color.white.opacity(0.05)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 }
