@@ -14,6 +14,12 @@ class OnboardingViewModel: ObservableObject {
     private let healthStore = HKHealthStore()
 
     init() {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["HOWTUNE_SKIP_ONBOARDING"] == "1" {
+            isOnboardingComplete = true
+            useManualMode = true
+        }
+        #endif
         checkAirPodsAvailability()
     }
 

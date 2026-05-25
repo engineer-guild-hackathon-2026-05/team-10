@@ -79,7 +79,7 @@
 
 - **iOS アプリ（`Othello/`）**：Swift / SwiftUI（Xcode）
 - **センサー**：Core Motion（本体）/ CMHeadphoneMotionManager（AirPods 頭部）/ HealthKit（心拍）
-- **音楽再生**：MusicKit / AVFoundation
+- **音楽再生**：MusicKit
 - **ML（`ai-recognition/`）**：TensorFlow で学習 → Core ML に変換し端末推論
 - **バックエンド（`backend/`）**：LLM プロキシ・データ API
 - **LLM**：Claude API（`claude-sonnet-4-6`、バックエンド経由でキーを秘匿）
@@ -91,10 +91,17 @@
 | サービス名 | 用途 | プラン | 備考 |
 |---|---|---|---|
 | Anthropic Claude API | 問いかけ生成・Howカード生成 | Pay-as-you-go | バックエンド経由 |
-| Apple MusicKit | 楽曲再生・再生位置取得 | — | DECISION-01（要検討） |
-| 歌詞 API | 反応地点の歌詞表示 | — | DECISION-08（未確定） |
+| Apple MusicKit | 楽曲情報・再生位置取得 | — | MVP は MusicKit 前提。Spotify は使用しない |
+| Musixmatch | 静的歌詞取得・反応地点の歌詞表示 | 要 API key | `ENV.plist` の `MUSIXMATCH_API_KEY` に設定 |
 
 → API キー・秘匿情報は `.env`（`.gitignore` 対象）で管理。クライアントには置かない。
+
+### MusicKit / Musixmatch 連携メモ
+
+- MusicKit の `Song` から曲名・アーティスト名・アルバム名・ISRC・曲長を取り出し、Musixmatch の照合に使う。
+- Musixmatch の `matcher.track.get` で `track_id` を解決し、`track.lyrics.get` で静的歌詞を取得する。
+- Basic プランは Static lyrics 対象のため、MVP では subtitle / richsync は使用しない。実機検証では Xcode コンソールの `[MusixmatchLyricsProvider]` ログで `status` / `hint` / 試行した ID を確認する。
+- Spotify Web API は MVP では使用しない。
 
 ## リポジトリ構成
 
@@ -107,7 +114,28 @@ team-10/
 └── docs/             # ドキュメント（仕様は docs/frontend-spec.md が正）
 ```
 
-## セットアップ手順
+## セットアップ
+
+詳細な手順は **[`docs/setup.md`](./docs/setup.md)** を参照してください。
+
+> ⚠️ **iOS アプリを動かす前に、必ずバックエンドを起動してください。**
+> バックエンドが起動していないと、AI 対話・Howカード生成・Firestore 保存がすべて動作しません。
+
+```bash
+cd backend
+cp .env.example .env          # .env を作成し API キーを記入
+npm install
+npm start                      # localhost:3000 で起動
+```
+
+`.env` に必要なキー：
+
+| 変数名 | 説明 |
+|---|---|
+| `ANTHROPIC_API_KEY` | Claude API キー |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Firebase Admin SDK サービスアカウント JSON のパス |
+
+### 2. iOS アプリを起動する
 
 ```bash
 # リポジトリのクローン
@@ -121,6 +149,9 @@ open Othello/Othello.xcodeproj
 
 - **実機必須**：AirPods の頭部モーション・心拍はシミュレータで取得できません（iPhone + 対応 AirPods が必要）
 - **権限**：`Info.plist` に `NSMotionUsageDescription` / `NSHealthShareUsageDescription` が必要
+- **MusicKit**：Apple Developer の App ID で MusicKit App Service を有効化し、プロビジョニングプロファイルを更新してから実機ビルドする
+- **Musixmatch**：`Othello/Othello/ENV.example.plist` を `ENV.plist` にコピーし、`MUSIXMATCH_API_KEY` を設定する。`matcher.track.get` と `track.lyrics.get` が 401/402/403 を返す場合は API key・利用上限・契約プランを確認する
+
 
 ## ドキュメント
 
@@ -130,6 +161,8 @@ open Othello/Othello.xcodeproj
 | [`docs/product-requirements.md`](./docs/product-requirements.md) | プロダクト要求定義（PRD） |
 | [`docs/architecture.md`](./docs/architecture.md) | アーキテクチャ設計 |
 | [`docs/functional-design.md`](./docs/functional-design.md) | 機能設計 |
+| [`docs/setup.md`](./docs/setup.md) | ローカル開発環境のセットアップ手順 |
+| [`docs/data-model.md`](./docs/data-model.md) | データモデル設計（Firestore スキーマ・反応区間構造） |
 | [`docs/repository-structure.md`](./docs/repository-structure.md) | リポジトリ構造 |
 | [`docs/development-guidelines.md`](./docs/development-guidelines.md) | 開発ガイドライン |
 | [`docs/glossary.md`](./docs/glossary.md) | 用語集 |

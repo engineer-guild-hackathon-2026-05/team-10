@@ -4,12 +4,7 @@ struct ReactionTimelineView: View {
     @StateObject private var viewModel: ReactionTimelineViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(
-        trackTitle: String,
-        trackArtist: String,
-        duration: TimeInterval,
-        events: [ReactionEvent]? = nil
-    ) {
+    init(trackTitle: String, trackArtist: String, duration: TimeInterval, events: [ReactionEvent] = []) {
         _viewModel = StateObject(wrappedValue: ReactionTimelineViewModel(
             trackTitle: trackTitle,
             trackArtist: trackArtist,
@@ -43,7 +38,9 @@ struct ReactionTimelineView: View {
             }
         }
         .sheet(isPresented: $viewModel.showDialogueSheet) {
-            dialogueSheet
+            if let event = viewModel.selectedEvent {
+                HowChatView(event: event)
+            }
         }
     }
 
@@ -168,76 +165,6 @@ struct ReactionTimelineView: View {
         }
     }
 
-    // MARK: - AI対話導線シート（プレースホルダー）
-    private var dialogueSheet: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-
-                VStack(spacing: 24) {
-                    if let event = viewModel.selectedEvent {
-                        // 反応地点の概要
-                        VStack(spacing: 8) {
-                            Text(formatTime(event.startTime))
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.gray)
-                            if let lyric = event.lyricLine {
-                                Text(lyric)
-                                    .font(.title3.bold())
-                                    .foregroundStyle(.white)
-                                    .multilineTextAlignment(.center)
-                            }
-                            HStack(spacing: 6) {
-                                ForEach(event.tags, id: \.self) { tag in
-                                    Text(tag.label)
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 4)
-                                        .background(tag.color, in: Capsule())
-                                }
-                            }
-                        }
-                        .padding(.top, 32)
-                    }
-
-                    Spacer()
-
-                    // AI対話プレースホルダー
-                    VStack(spacing: 12) {
-                        Image(systemName: "sparkles")
-                            .font(.largeTitle)
-                            .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
-                        Text("AI対話機能は近日実装予定")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        Text("この地点での反応について\nAIと対話しながら言語化できます")
-                            .font(.subheadline)
-                            .foregroundStyle(.gray)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(24)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
-                    .padding(.horizontal, 20)
-
-                    Spacer()
-                }
-            }
-            .navigationTitle("この地点について")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("閉じる") { viewModel.showDialogueSheet = false }
-                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-        .preferredColorScheme(.dark)
-    }
-
     private func formatTime(_ t: TimeInterval) -> String {
         String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
     }
@@ -247,6 +174,7 @@ struct ReactionTimelineView: View {
     ReactionTimelineView(
         trackTitle: "夜行性のアパート",
         trackArtist: "草野ノエル",
-        duration: 196
+        duration: 196,
+        events: ReactionEvent.mockSamples(trackDuration: 196)
     )
 }

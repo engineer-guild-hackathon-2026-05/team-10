@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ReactionDisplayView: View {
     @StateObject private var viewModel = ReactionDisplayViewModel()
+    @State private var posted = false
+    @State private var commentText = ""
     let isSensorAvailable: Bool
     let selectedLyric: String?
     let selectedLyricTranslation: String?
@@ -23,6 +25,7 @@ struct ReactionDisplayView: View {
                     } else {
                         noLyricPlaceholder
                     }
+                    commentSection
                     howTagGrid
                     if viewModel.selectedHowTag != nil {
                         postButton
@@ -31,6 +34,10 @@ struct ReactionDisplayView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 40)
+            }
+
+            if posted {
+                postedOverlay
             }
         }
         .preferredColorScheme(.dark)
@@ -78,6 +85,51 @@ struct ReactionDisplayView: View {
         .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
     }
 
+    private var commentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "text.bubble.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Text("コメント")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(commentText.count)/140")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.gray)
+            }
+
+            ZStack(alignment: .topLeading) {
+                if commentText.isEmpty {
+                    Text("この曲のここが好き")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.32))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                }
+
+                TextEditor(text: $commentText)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 92)
+                    .onChange(of: commentText) { _, newValue in
+                        if newValue.count > 140 {
+                            commentText = String(newValue.prefix(140))
+                        }
+                    }
+            }
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1))
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 16))
+    }
+
     private var howTagGrid: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("このフレーズでの気持ちは？").font(.subheadline.bold()).foregroundStyle(.white)
@@ -112,7 +164,7 @@ struct ReactionDisplayView: View {
 
     private var postButton: some View {
         Button {
-            // TODO: Howカード投稿処理
+            withAnimation(.spring(duration: 0.4)) { posted = true }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "paperplane.fill")
@@ -132,6 +184,41 @@ struct ReactionDisplayView: View {
         }
         .buttonStyle(.plain)
         .transition(.opacity.combined(with: .move(edge: .bottom)))
+    }
+
+    private var postedOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.75).ignoresSafeArea()
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 64))
+                    .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                Text("Howカードを投稿しました")
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                if let tag = viewModel.selectedHowTag {
+                    Text(tag.label)
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(tag.color.opacity(0.8), in: Capsule())
+                }
+                if !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(commentText)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.76))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(32)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 24))
+        }
+        .onTapGesture {
+            withAnimation(.spring(duration: 0.3)) { posted = false }
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }
 
     private func howTagEmoji(_ tag: HowTag) -> String {

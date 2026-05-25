@@ -13,7 +13,7 @@ graph TB
     BE[backend<br/>LLMプロキシ]
     LLM[Claude API]
     DB[(Firestore / CloudKit)]
-    Music[MusicKit / AVFoundation]
+    Music[MusicKit]
 
     AirPods -->|CMHeadphoneMotion / HealthKit| App
     iPhone -->|Core Motion| App
@@ -35,7 +35,7 @@ graph TB
 | 本体モーション | Core Motion | 加速度・ジャイロの標準 API |
 | 頭部モーション | CMHeadphoneMotionManager | AirPods の姿勢・加速度を取得 |
 | 心拍 | HealthKit | 対応 AirPods の心拍を取得 |
-| 再生 | MusicKit / AVFoundation | 再生位置の正確な取得 |
+| 再生 | MusicKit | 再生位置の正確な取得 |
 | 推論 | Core ML | 端末上で6軸スコア推論 |
 | LLM | Claude API（backend 経由） | 問いかけ型の対話生成 |
 | DB | Firestore / CloudKit | iOS SDK あり |
@@ -178,7 +178,7 @@ protocol HeartRateService {
 ```
 
 ### PlayerService
-**責務**: MusicKit / AVFoundation で再生し、再生位置を供給
+**責務**: MusicKit で再生し、再生位置を供給
 
 ### ReactionClassifier
 **責務**: 特徴量を Core ML モデルに入力し6軸スコアを推論
