@@ -11,28 +11,34 @@ struct MiniSongCard: View {
         Button {
             startPlayback()
         } label: {
-            HStack(spacing: 12) {
-                CircularArtworkView(song: song, size: 52, isPlaying: isPlaying)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(song.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                    Text(song.artistName)
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                    if context.hasHighlight {
-                        Text("How \(formatTime(context.highlightStart ?? context.initialPlaybackTime)) - \(formatTime(context.highlightEnd ?? context.initialPlaybackTime))")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
-                    }
-                }
-                Spacer()
-                playbackGlyph
-            }
+            cardContent
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(song.title)を再生")
+    }
+
+    private var cardContent: some View {
+        HStack(spacing: 12) {
+            CircularArtworkView(song: song, size: 52, isPlaying: isPlaying)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(song.title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                Text(song.artistName)
+                    .font(.caption)
+                    .foregroundStyle(.gray)
+                if context.hasHighlight {
+                    Text("How \(formatTime(context.highlightStart ?? context.initialPlaybackTime)) - \(formatTime(context.highlightEnd ?? context.initialPlaybackTime))")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                }
+            }
+            Spacer()
+            playbackGlyph
+        }
         .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
         .contentShape(RoundedRectangle(cornerRadius: 12))
     }
