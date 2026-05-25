@@ -1,6 +1,6 @@
 # How Cards Fetch Failure Design
 
-- 原因: `Song.firestoreSongID` は `musicKitID` がない場合に title/artist 由来 slug を返すが、Functions の `GET /how-cards?song_id=...` は numeric ID だけを受け付ける。
-- 方針: iOS の API boundary で `songID` を正規化し、numeric ID 以外の曲別取得はネットワークへ送らず空配列にする。
-- 影響範囲: `FirebaseAPI.fetchHowCards(songID:limit:)` のみ。Community / Home の全件取得は従来どおり実行する。
-- 検証: 実 Functions に slug query を送ると 400 になることを確認し、修正後は iOS build を通す。
+- 原因: Firestore の既存 `how-cards` は `song_id` が `米津玄師-感電` などの legacy slug で保存されているが、Functions serializer が numeric MusicKit ID 以外を全て捨てていた。
+- 方針: `POST` / `PATCH` は numeric ID 契約を維持し、`GET` / serializer だけ legacy slug 互換を持たせる。
+- iOS は曲別取得で slug も送る。Home dashboard の `Song.musicKitID` には numeric ID だけを入れ、legacy slug を MusicKit 再生 ID と誤認しないようにする。
+- 検証: Firestore REST API で legacy slug データを確認し、Functions deploy 後に `/how-cards` と `/how-cards?song_id=...` が実データを返すことを確認する。

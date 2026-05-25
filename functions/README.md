@@ -180,6 +180,8 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 最新の Howカードコメント一覧を返す（デフォルト 50 件、`limit` 指定時は最大 250 件、`created_at` 降順）。
 `song_id` を指定した場合は曲ごとのコメント一覧を返す。
 
+新規作成・更新では `song_id` に数値の MusicKit / Apple Music / iTunes ID だけを受け付けるが、GET は既存データ互換のため `ここのっか-ここのっか` のような legacy slug も検索できる。legacy ドキュメントは canonical ID がない場合に限り、レスポンスの `song_id` へ保存済み slug を返す。
+
 **レスポンス**
 
 ```json
@@ -282,8 +284,8 @@ how-cards/{cardId}
   comment: string
   song_start: number
   song_end: number
-  song_id: string          # MusicKit / Apple Music / iTunes の数値曲 ID
-  itunes_id: string        # canonical 曲 ID（song_id と同じ値）
+  song_id: string          # 新規は MusicKit / Apple Music / iTunes の数値曲 ID。既存 legacy slug も読み取り互換対象
+  itunes_id: string | null # canonical 曲 ID（新規は song_id と同じ値）
   song_slug: string | null # 表示・移行用 slug
   song_title: string | null
   artist_name: string | null
@@ -300,8 +302,10 @@ how-cards/{cardId}/liked-by/{uid}
 
 ### `song_id` 契約と migration
 
-`song_id` は MusicKit の catalog song ID として iOS がそのまま解決できる数値文字列だけを受け付ける。
-`radwimps-愛にできることはまだあるかい` のような slug / 表示名由来の値は `400` として拒否し、既存の不正なドキュメントも API レスポンスから除外する。
+`POST /how-cards` と `PATCH /how-cards/:id` の `song_id` は MusicKit の catalog song ID として iOS がそのまま解決できる数値文字列だけを受け付ける。
+`radwimps-愛にできることはまだあるかい` のような slug / 表示名由来の値は write API では `400` として拒否する。
+
+ただし、既存 Firestore には legacy slug が残っているため、`GET /how-cards` と `GET /how-cards?song_id=...` は読み取り互換として legacy slug のドキュメントも返す。MusicKit metadata を解決できる `itunes_id` がある場合は `itunes_id` を canonical ID として返し、ない場合は保存済み `song_id` を表示・検索用 ID として返す。
 
 既存データに slug が残っている場合は migration script を使う。デフォルトは dry-run:
 

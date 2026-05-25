@@ -1512,6 +1512,29 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：Functions の `song_id` 契約を維持しつつ、iOS 側の fallback slug が 400 エラーとして UI に出る問題を解消できるため。
 
+### #003 Howカード legacy slug 互換調査と修正
+
+- **時刻**：01:00
+- **ツール**：Codex / Firebase CLI / Firestore REST / curl / xcodebuild
+- **目的**：Firestore に Howカードが存在するのにおすすめコメント・アーティスト別 Howカードが表示されない原因を、実データと Functions 実装の両面から調査して修正する
+- **プロンプト**：
+  ```text
+  [HowCards] seeded 0 users for existing How cards
+  [HowCards] skipped fetch for non-MusicKit song_id: ここのっか-ここのっか
+
+  1けんもおすすめコメント表示がないし、アーティストのhow cardも取得できない。firestoreを見るとhow cardはたくさんあるのに。
+  アーティスト一覧って今ってどういうふうにとってきているんですか？ここもモックですか？もしかしてartists collectionがないのってアンチパターンじゃないですか？firebase cliはいくらでも使っていいので、いろいろみてみてください
+  ```
+- **出力サマリ**：
+  - Firestore の root collections が `how-cards` / `users` のみで、`artists` collection が存在しないことを確認
+  - `how-cards` の実データが legacy slug 形式の `song_id` を持っており、Functions serializer の数値 MusicKit ID 前提で全件落ちていたことを特定
+  - GET 系だけ legacy slug を読み取り互換として許可し、POST/PATCH の数値 MusicKit ID 契約は維持するよう Functions を修正
+  - iOS の曲別取得は legacy slug を API へ送れるよう戻し、Home dashboard では legacy slug を MusicKit playback ID として扱わないようにした
+  - backend / data model docs に GET 互換と現状の artist catalog 制約を追記
+  - `functions:api` をデプロイし、`/how-cards?limit=3` と `/how-cards?song_id=ここのっか-ここのっか&limit=3` がどちらも HTTP 200 で 3 件返すことを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：実 Firestore データと API contract の不一致が主因だったため、読み取り互換を入れて既存データを表示できる状態に戻しつつ、新規書き込みの MusicKit ID 契約は崩さない方針が最小リスクだったため。
+
 ---
 
 ## 全体振り返り

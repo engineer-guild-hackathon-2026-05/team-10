@@ -50,13 +50,8 @@ final class FirebaseAPI {
 
     func fetchHowCards(songID: String? = nil, limit: Int = 50) async throws -> [HowCardComment] {
         var queryItems = [URLQueryItem(name: "limit", value: String(limit))]
-        if let songID = normalizedMusicKitSongID(songID) {
+        if let songID = normalizedLookupSongID(songID) {
             queryItems.insert(URLQueryItem(name: "song_id", value: songID), at: 0)
-        } else if hasNonEmptySongID(songID) {
-            #if DEBUG
-            print("[HowCards] skipped fetch for non-MusicKit song_id: \(songID ?? "")")
-            #endif
-            return []
         }
 
         let response: HowCardsResponseEnvelope = try await send(
@@ -184,21 +179,13 @@ final class FirebaseAPI {
         return urlWithQuery
     }
 
-    private func normalizedMusicKitSongID(_ rawValue: String?) -> String? {
+    private func normalizedLookupSongID(_ rawValue: String?) -> String? {
         guard let trimmed = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines),
               !trimmed.isEmpty,
-              trimmed.count <= 64,
-              trimmed.allSatisfy(\.isNumber) else {
+              trimmed.count <= 120 else {
             return nil
         }
         return trimmed
-    }
-
-    private func hasNonEmptySongID(_ rawValue: String?) -> Bool {
-        guard let trimmed = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines) else {
-            return false
-        }
-        return !trimmed.isEmpty
     }
 
     private func firebaseIDToken() async throws -> String {

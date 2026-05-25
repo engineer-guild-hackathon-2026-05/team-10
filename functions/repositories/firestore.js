@@ -28,12 +28,13 @@ async function getHowCards({ songId, limit = 50 } = {}) {
   const collection = db().collection('how-cards');
 
   if (songId) {
-    const [itunesSnapshot, songSnapshot] = await Promise.all([
-      collection.where('itunes_id', '==', songId).orderBy('created_at', 'desc').limit(limit).get(),
-      collection.where('song_id', '==', songId).orderBy('created_at', 'desc').limit(limit).get(),
-    ]);
+    const queries = [collection.where('song_id', '==', songId).limit(limit).get()];
+    if (isMusicKitSongId(songId)) {
+      queries.push(collection.where('itunes_id', '==', songId).limit(limit).get());
+    }
 
-    return serializeHowCardDocs([...itunesSnapshot.docs, ...songSnapshot.docs], limit);
+    const snapshots = await Promise.all(queries);
+    return serializeHowCardDocs(snapshots.flatMap(snapshot => snapshot.docs), limit);
   }
 
   const query = collection.orderBy('created_at', 'desc');
@@ -188,11 +189,13 @@ async function getUserProfile(uid) {
 
 function serializeHowCard(id, data) {
   if (!isHowCardComment(data)) return null;
-  const songId = canonicalMusicSongID(data);
+  const canonicalSongId = canonicalMusicSongID(data);
+  const storedSongId = normalizeString(data.song_id);
+  const songId = canonicalSongId ?? storedSongId;
   if (!songId) return null;
 
   const songSlug = normalizeString(data.song_slug)
-    ?? (isMusicKitSongId(data.song_id) ? null : normalizeString(data.song_id));
+    ?? (canonicalSongId && storedSongId && storedSongId !== canonicalSongId ? storedSongId : null);
 
   const howCard = {
     id,
@@ -200,7 +203,6 @@ function serializeHowCard(id, data) {
     song_start: Number.isFinite(data.song_start) ? data.song_start : 0,
     song_end: Number.isFinite(data.song_end) ? data.song_end : 0,
     song_id: songId,
-    itunes_id: songId,
     ...(songSlug ? { song_slug: songSlug } : {}),
     artist_id: data.artist_id,
     user_id: data.user_id,
@@ -210,6 +212,9 @@ function serializeHowCard(id, data) {
     updated_at: timestampToISOString(data.updated_at),
   };
 
+  if (canonicalSongId) {
+    howCard.itunes_id = canonicalSongId;
+  }
   if (typeof data.song_slug === 'string') {
     howCard.song_slug = data.song_slug;
   }
@@ -280,8 +285,7 @@ function isHowCardComment(data) {
   return Boolean(
     data &&
       typeof data.comment === 'string' &&
-      typeof data.song_id === 'string' &&
-      isMusicKitSongId(data.song_id) &&
+      normalizeString(data.song_id) &&
       typeof data.artist_id === 'string' &&
       typeof data.user_id === 'string'
   );

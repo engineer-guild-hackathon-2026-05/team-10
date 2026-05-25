@@ -22,7 +22,7 @@ struct HomeDashboardComment: Identifiable, Equatable {
             artistName: artistName,
             gradientColors: gradientColors,
             durationSeconds: durationSeconds,
-            musicKitID: Self.nonEmpty(howCard.songID),
+            musicKitID: Self.musicKitID(from: howCard.songID),
             artistID: Self.nonEmpty(howCard.artistID),
             artworkURL: artworkURL
         )
@@ -60,6 +60,15 @@ struct HomeDashboardComment: Identifiable, Equatable {
     private static func nonEmpty(_ value: String) -> String? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func musicKitID(from value: String) -> String? {
+        guard let trimmed = nonEmpty(value),
+              trimmed.count <= 64,
+              trimmed.allSatisfy(\.isNumber) else {
+            return nil
+        }
+        return trimmed
     }
 
     private static func stableUUID(namespace: String, key: String) -> UUID {
