@@ -1,7 +1,7 @@
 import SwiftUI
 
 // FR-DETECT-02: 6軸聴取状態タグ
-enum HowTag: String, CaseIterable {
+enum HowTag: String, CaseIterable, Hashable {
     case groove, hype, chill, immersion, hit, afterglow
 
     var label: String {

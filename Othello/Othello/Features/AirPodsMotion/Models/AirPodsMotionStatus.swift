@@ -40,7 +40,7 @@ enum AirPodsMotionStatus: Equatable {
         case .stopped:
             return "頭部モーション取得は停止しています。"
         case .disconnected:
-            return "対応AirPodsが見つかりません。本体モーションまたは手動ラベルへ切り替えてください。"
+            return "対応AirPodsが見つかりません。曲中の反応は手動で記録できます。"
         case .unsupported:
             return "このプラットフォームではAirPods頭部モーションを取得できません。"
         case .unavailable(let reason):
