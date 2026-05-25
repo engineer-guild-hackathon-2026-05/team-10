@@ -111,4 +111,4 @@
 - [x] rules / Node / iOS ビルドを検証する
 - [x] `AI_USAGE_LOG.md` を更新する
 - [x] 変更をコミットして push する
-- [x] ~~Firestore rules を deploy する~~（Firebase CLI は `/private/tmp/firebase-tools` に導入済みだが、この端末に `firebase login` 認証情報がなく `Failed to authenticate` で未実行）
+- [x] Firestore rules を `egh-howtune` へ deploy する

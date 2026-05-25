@@ -811,6 +811,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：Firestore rules を過度に広げず、iOS 直接 seed の必要範囲とコミュニティ表示名取得を分離できたため。
 
+### #042 Firestore rules deploy
+
+- **時刻**：20:59
+- **ツール**：Codex / Firebase CLI
+- **目的**：ログイン済み Firebase CLI で `egh-howtune` の Firestore rules を本番反映する
+- **プロンプト**：
+  ```text
+  firebase cliを入れました。firebase loginまで終わっているから、deployしてみてください
+  ```
+- **出力サマリ**：
+  - shell の PATH では `firebase` が見えなかったため、前回導入済みの `/private/tmp/firebase-tools/node_modules/.bin/firebase` を使用
+  - `firebase deploy --only firestore:rules --project egh-howtune --non-interactive` を実行
+  - `firestore.rules` の compile が成功し、`cloud.firestore` に rules を release した
+  - Project Console: `https://console.firebase.google.com/project/egh-howtune/overview`
+- **評価**：採用
+- **採用 / 不採用の理由**：iOS の `users/{uid}` direct access に必要な Firestore rules を Firebase project に反映できたため。
+
 ---
 
 ## Day 3（2026-05-26）
