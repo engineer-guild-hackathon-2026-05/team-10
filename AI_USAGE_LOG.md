@@ -762,13 +762,32 @@
   - `NowPlayingView` の固定歌詞配列を削除し、曲ごとに `LyricsViewModel` から Musixmatch 取得結果を表示するよう変更
   - Musixmatch Provider で `track.subtitle.get` の LRC を優先し、取得できない場合は `track.lyrics.get` へ fallback するよう変更
   - LRC parser を追加し、`[Intro]` / `[Verse]` などの bracket 行と Musixmatch footer を表示しないよう整理
-  - Functions に `GET /users` と `POST /users/seed` を追加し、既存ユーザーの `display_name` / `email` を上書きしない seed にした
+  - Functions に `GET /users` と `POST /users/seed` を追加し、既存ユーザーの `display_name` / `email` を上書きしない seed にした（後続 #040 で削除し、iOS 直接 Firestore 書き込みへ修正）
   - iOS 起動時と Howカード表示時に、既存 Howカードの `user_id` に対応する users seed / fetch を呼び、Community / MusicFeed は `display_name` を表示するよう変更
   - 旧 Howカード seed service と Preview 用 `Artist.mock` alias を削除
   - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
   - 手元の `MUSIXMATCH_API_KEY` は長さ 0 で、API 疎通時の JSON status は 401 だったため、実機表示には有効なキー設定が必要
 - **評価**：採用
 - **採用 / 不採用の理由**：固定歌詞・user_id 表示・一時 Howカード seed を取り除き、Functions / Musixmatch / users collection から表示を組み立てる実データ経路に寄せられたため。
+
+### #040 users seed を iOS 直接 Firestore 書き込みへ修正
+
+- **時刻**：20:32
+- **ツール**：Codex / xcodebuild
+- **目的**：Functions に追加した users seed endpoint を削除し、iOS アプリ側から `users` コレクションへ逐次ドキュメント追加する
+- **プロンプト**：
+  ```text
+  え、users/seedを呼び出せってんじゃなくて、ios側からuserドキュメントを逐次追加するように、って話ですよ。話わかっていますか？functionを追加しないで。削除して。
+  ```
+- **出力サマリ**：
+  - Functions の `GET /users` と `POST /users/seed` endpoint を削除
+  - Firestore repository から users 一括取得 / seed 用の追加関数を削除
+  - iOS の `UserSeedService` を FirebaseFirestore SDK に切り替え、既存 Howカードの `user_id` ごとに `users/{uid}` を逐次 `setData(..., merge: true)` するよう変更
+  - 既存 `display_name` / `email` は保持し、未設定または新規ドキュメントにだけ seed 値を入れるようにした
+  - Community / MusicFeed の fallback も Functions ではなく Firestore SDK から `users/{uid}` を取得する形へ変更
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：ユーザー意図どおり、Functions を追加せず iOS 起点で `users` コレクションを直接 seed する実装に戻したため。
 
 ---
 

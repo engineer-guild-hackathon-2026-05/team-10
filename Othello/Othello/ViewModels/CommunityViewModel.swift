@@ -164,7 +164,7 @@ final class CommunityViewModel: ObservableObject {
             userProfilesByID = profilesByID(seededUsers)
         } catch {
             do {
-                let users = try await FirebaseAPI.shared.fetchUsers(ids: userIDs)
+                let users = try await UserSeedService.fetchUsers(ids: userIDs)
                 userProfilesByID = profilesByID(users)
             } catch {
                 userProfilesByID = [:]

@@ -130,54 +130,6 @@ async function getUserProfile(uid) {
   return serializeUser(doc.id, doc.data());
 }
 
-async function getUserProfiles(userIds) {
-  const uniqueUserIds = uniqueNonEmptyStrings(userIds);
-  if (uniqueUserIds.length === 0) return [];
-
-  const refs = uniqueUserIds.map(uid => db().collection('users').doc(uid));
-  const snapshots = await db().getAll(...refs);
-  return snapshots
-    .filter(snapshot => snapshot.exists)
-    .map(snapshot => serializeUser(snapshot.id, snapshot.data()))
-    .filter(Boolean);
-}
-
-async function seedUserProfiles({ users }) {
-  const normalizedUsers = uniqueUsers(users);
-  if (normalizedUsers.length === 0) return [];
-
-  const refs = normalizedUsers.map(user => db().collection('users').doc(user.userId));
-  const snapshots = await db().getAll(...refs);
-  const batch = db().batch();
-  const now = FieldValue.serverTimestamp();
-
-  snapshots.forEach((snapshot, index) => {
-    const seedUser = normalizedUsers[index];
-    const existingData = snapshot.exists ? snapshot.data() : {};
-    const data = {
-      user_id: seedUser.userId,
-      updated_at: now,
-    };
-
-    if (!snapshot.exists || !isNonEmptyString(existingData.display_name)) {
-      data.display_name = seedUser.displayName;
-    }
-
-    if (isNonEmptyString(seedUser.email) && (!snapshot.exists || !isNonEmptyString(existingData.email))) {
-      data.email = seedUser.email;
-    }
-
-    if (!snapshot.exists || !isFirestoreTimestamp(existingData.created_at)) {
-      data.created_at = now;
-    }
-
-    batch.set(refs[index], data, { merge: true });
-  });
-
-  await batch.commit();
-  return getUserProfiles(normalizedUsers.map(user => user.userId));
-}
-
 function serializeHowCard(id, data) {
   if (!isHowCardComment(data)) return null;
 
@@ -235,36 +187,6 @@ function isFirestoreTimestamp(value) {
   return Boolean(value && typeof value.toDate === 'function');
 }
 
-function isNonEmptyString(value) {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-function uniqueNonEmptyStrings(values) {
-  const seen = new Set();
-  for (const value of values ?? []) {
-    if (!isNonEmptyString(value)) continue;
-    seen.add(value.trim());
-  }
-  return [...seen];
-}
-
-function uniqueUsers(users) {
-  const seen = new Map();
-  for (const user of users ?? []) {
-    if (!user || !isNonEmptyString(user.userId) || !isNonEmptyString(user.displayName)) continue;
-
-    const userId = user.userId.trim();
-    if (seen.has(userId)) continue;
-
-    seen.set(userId, {
-      userId,
-      email: isNonEmptyString(user.email) ? user.email.trim() : null,
-      displayName: user.displayName.trim().slice(0, 80),
-    });
-  }
-  return [...seen.values()];
-}
-
 function throwFirestoreError(message, code) {
   const error = new Error(message);
   error.code = code;
@@ -279,6 +201,4 @@ module.exports = {
   likeHowCard,
   upsertUserProfile,
   getUserProfile,
-  getUserProfiles,
-  seedUserProfiles,
 };

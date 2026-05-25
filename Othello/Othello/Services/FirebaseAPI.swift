@@ -96,34 +96,6 @@ final class FirebaseAPI {
         return response.user
     }
 
-    func fetchUsers(ids: [String]) async throws -> [UserProfile] {
-        let userIDs = uniqueNonEmptyValues(ids)
-        guard !userIDs.isEmpty else {
-            return []
-        }
-
-        let response: UsersResponseEnvelope = try await send(
-            path: "users",
-            method: "GET",
-            queryItems: [URLQueryItem(name: "user_ids", value: userIDs.joined(separator: ","))]
-        )
-        return response.users
-    }
-
-    @discardableResult
-    func seedUsers(_ users: [UserSeedProfile]) async throws -> [UserProfile] {
-        guard !users.isEmpty else {
-            return []
-        }
-
-        let response: UsersResponseEnvelope = try await send(
-            path: "users/seed",
-            method: "POST",
-            body: UserSeedRequestPayload(users: users)
-        )
-        return response.users
-    }
-
     func createUserDocument(from user: User) async throws {
         guard let email = user.email, !email.isEmpty else {
             throw FirebaseAPIError.missingEmail
@@ -136,20 +108,6 @@ final class FirebaseAPI {
             displayName: user.displayName
         )
         try await upsertUser(profile)
-    }
-
-    private func uniqueNonEmptyValues(_ values: [String]) -> [String] {
-        var seen = Set<String>()
-        var result: [String] = []
-
-        for value in values {
-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, !seen.contains(trimmed) else { continue }
-            seen.insert(trimmed)
-            result.append(trimmed)
-        }
-
-        return result
     }
 
     private var baseURL: URL? {

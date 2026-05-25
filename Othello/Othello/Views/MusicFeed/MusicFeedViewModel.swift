@@ -53,7 +53,7 @@ final class MusicFeedViewModel: ObservableObject {
             let seededUsers = try await UserSeedService.seedUsers(for: cards)
             return profilesByID(seededUsers)
         } catch {
-            let users = try await FirebaseAPI.shared.fetchUsers(ids: cards.map(\.userID))
+            let users = try await UserSeedService.fetchUsers(ids: cards.map(\.userID))
             return profilesByID(users)
         }
     }

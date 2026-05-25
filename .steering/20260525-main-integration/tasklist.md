@@ -84,9 +84,18 @@
 
 - [x] `NowPlayingView` の固定歌詞配列を削除し、Musixmatch 取得結果を表示する
 - [x] Musixmatch Provider で LRC subtitle を優先取得し、静的歌詞へ fallback する
-- [x] `users` の一括取得 / seed endpoint を Functions に追加する
+- [x] ~~`users` の一括取得 / seed endpoint を Functions に追加する~~（フェーズ11で削除し、iOS から Firestore SDK で直接 seed する方式へ変更）
 - [x] iOS 起動時に既存 Howカードに対応する users seed を呼び出す
 - [x] Community / MusicFeed で `users.display_name` を表示する
+- [x] Node 構文チェックと iOS ビルドを実行する
+- [x] `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する
+
+## フェーズ11: users seed の iOS 直接 Firestore 書き込み化
+
+- [x] Functions の `GET /users` と `POST /users/seed` 追加を削除する
+- [x] iOS の `UserSeedService` を Firestore SDK での逐次 `users/{uid}` 書き込みに変更する
+- [x] Community / MusicFeed の users 取得 fallback を Functions ではなく Firestore SDK に変更する
 - [x] Node 構文チェックと iOS ビルドを実行する
 - [x] `AI_USAGE_LOG.md` を更新する
 - [x] 変更をコミットして push する
