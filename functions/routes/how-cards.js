@@ -140,7 +140,7 @@ function normalizeRequiredString(value, maxLength) {
 
 function normalizeOptionalMusicSongID(value) {
   const trimmed = normalizeOptionalString(value, 64);
-  if (!trimmed || !/^\d{5,}$/.test(trimmed)) return null;
+  if (!trimmed || !/^\d+$/.test(trimmed)) return null;
   return trimmed;
 }
 
@@ -152,7 +152,7 @@ function normalizeRangePoint(value) {
 function parseLimit(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 50;
-  return Math.min(100, Math.max(1, Math.floor(number)));
+  return Math.min(250, Math.max(1, Math.floor(number)));
 }
 
 module.exports = router;

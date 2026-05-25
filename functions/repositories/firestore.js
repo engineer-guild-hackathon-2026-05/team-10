@@ -24,24 +24,43 @@ async function createHowCard({ uid, comment, songStart, songEnd, songId, artistI
 }
 
 async function getHowCards({ songId, limit = 50 } = {}) {
-  let query = db().collection('how-cards');
+  const collection = db().collection('how-cards');
 
   if (songId) {
-    query = query.where('song_id', '==', songId).orderBy('created_at', 'desc');
-  } else {
-    query = query.orderBy('created_at', 'desc');
+    const [itunesSnapshot, songSnapshot] = await Promise.all([
+      collection.where('itunes_id', '==', songId).orderBy('created_at', 'desc').limit(limit).get(),
+      collection.where('song_id', '==', songId).orderBy('created_at', 'desc').limit(limit).get(),
+    ]);
+
+    return serializeHowCardDocs([...itunesSnapshot.docs, ...songSnapshot.docs], limit);
   }
 
+  const query = collection.orderBy('created_at', 'desc');
   const snapshot = await query.limit(limit).get();
-  return snapshot.docs
+  return serializeHowCardDocs(snapshot.docs, limit);
+}
+
+async function serializeHowCardDocs(docs, limit) {
+  const docsById = new Map();
+  for (const doc of docs) {
+    if (!docsById.has(doc.id)) {
+      docsById.set(doc.id, doc);
+    }
+  }
+
+  const howCards = [...docsById.values()]
     .map(doc => serializeHowCard(doc.id, doc.data()))
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((a, b) => timestampMillis(b.created_at) - timestampMillis(a.created_at))
+    .slice(0, limit);
+
+  return attachUserNames(howCards);
 }
 
 async function getHowCard(cardId) {
   const doc = await db().collection('how-cards').doc(cardId).get();
   if (!doc.exists) return null;
-  return serializeHowCard(doc.id, doc.data());
+  return attachUserName(serializeHowCard(doc.id, doc.data()));
 }
 
 async function getRecommendedHowCards({ limit = 12 } = {}) {
@@ -60,10 +79,12 @@ async function getRecommendedHowCards({ limit = 12 } = {}) {
     }
   }
 
-  return [...candidates.values()]
+  const howCards = [...candidates.values()]
     .filter(Boolean)
     .sort(compareRecommendedHowCards)
     .slice(0, safeLimit);
+
+  return attachUserNames(howCards);
 }
 
 async function updateHowCard({ uid, cardId, comment, songStart, songEnd, songId, artistId, itunesId, songSlug }) {
@@ -117,7 +138,7 @@ async function likeHowCard({ cardId, uid }) {
     if (!isHowCardComment(data)) return null;
 
     const likeDoc = await transaction.get(likeRef);
-    const currentLikes = Number.isInteger(data.likes) ? data.likes : 0;
+    const currentLikes = currentLikeCount(data);
     if (likeDoc.exists) return currentLikes;
 
     transaction.set(likeRef, {
@@ -125,7 +146,8 @@ async function likeHowCard({ cardId, uid }) {
       liked_at: FieldValue.serverTimestamp(),
     });
     transaction.update(cardRef, {
-      likes: FieldValue.increment(1),
+      likes: currentLikes + 1,
+      goods: FieldValue.delete(),
       updated_at: FieldValue.serverTimestamp(),
     });
     return currentLikes + 1;
@@ -181,21 +203,64 @@ function serializeHowCard(id, data) {
     ...(songSlug ? { song_slug: songSlug } : {}),
     artist_id: data.artist_id,
     user_id: data.user_id,
-    likes: Number.isInteger(data.likes) ? data.likes : 0,
+    likes: currentLikeCount(data),
+    user_name: data.user_name ?? data.display_name ?? data.displayName ?? null,
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
   };
+}
+
+async function attachUserNames(howCards) {
+  const userIds = [...new Set(howCards.map(card => card.user_id).filter(Boolean))];
+  if (userIds.length === 0) return howCards;
+
+  const snapshots = await Promise.all(
+    userIds.map(userId => db().collection('users').doc(userId).get())
+  );
+  const userNames = new Map();
+  snapshots.forEach((snapshot, index) => {
+    if (!snapshot.exists) return;
+    const displayName = displayNameFromUserData(snapshot.data());
+    if (displayName) userNames.set(userIds[index], displayName);
+  });
+
+  return howCards.map(card => ({
+    ...card,
+    user_name: userNames.get(card.user_id) ?? card.user_name ?? null,
+  }));
+}
+
+async function attachUserName(howCard) {
+  if (!howCard) return null;
+  const [withUserName] = await attachUserNames([howCard]);
+  return withUserName;
+}
+
+function currentLikeCount(data) {
+  const likes = Number.isInteger(data.likes) ? data.likes : null;
+  const goods = Number.isInteger(data.goods) ? data.goods : null;
+  if (likes !== null && goods !== null) return Math.max(likes, goods);
+  if (likes !== null) return likes;
+  if (goods !== null) return goods;
+  return 0;
 }
 
 function serializeUser(id, data = {}) {
   return {
     id,
     user_id: data.user_id ?? id,
-    email: data.email,
+    email: data.email ?? null,
     display_name: data.display_name ?? data.displayName ?? null,
     created_at: timestampToISOString(data.created_at ?? data.createdAt),
     updated_at: timestampToISOString(data.updated_at ?? data.updatedAt),
   };
+}
+
+function displayNameFromUserData(data = {}) {
+  const displayName = data.display_name ?? data.displayName;
+  if (typeof displayName !== 'string') return null;
+  const trimmed = displayName.trim();
+  return trimmed ? trimmed : null;
 }
 
 function isHowCardComment(data) {
@@ -221,7 +286,7 @@ function normalizeMusicSongID(value) {
 }
 
 function isMusicSongID(value) {
-  return typeof value === 'string' && /^\d{5,}$/.test(value);
+  return typeof value === 'string' && /^\d+$/.test(value);
 }
 
 function normalizeString(value) {
@@ -236,6 +301,12 @@ function timestampToISOString(value) {
   if (typeof value.toDate === 'function') return value.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
   return null;
+}
+
+function timestampMillis(value) {
+  if (!value) return 0;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
 }
 
 function isFirestoreTimestamp(value) {
@@ -261,12 +332,6 @@ function ageHoursFromNow(value) {
   const millis = timestampMillis(value);
   if (!millis) return null;
   return Math.max(0, (Date.now() - millis) / 36e5);
-}
-
-function timestampMillis(value) {
-  if (!value) return 0;
-  const millis = Date.parse(value);
-  return Number.isFinite(millis) ? millis : 0;
 }
 
 function clampLimit(value, min, max) {

@@ -385,9 +385,9 @@ final class MetalWaveformRenderer: NSObject, MTKViewDelegate {
 
     private func targetColorLevel(for state: HowTag) -> Double {
         switch state {
-        case .groove:
+        case .groove, .hype, .hit:
             return 1.0
-        case .chill:
+        case .chill, .immersion, .afterglow:
             return 0.42
         case .neutral:
             return 0.0
@@ -406,9 +406,9 @@ final class MetalWaveformRenderer: NSObject, MTKViewDelegate {
 
     private func particleHue(for state: HowTag) -> CGFloat {
         switch state {
-        case .groove:
+        case .groove, .hype, .hit:
             return CGFloat.random(in: 0.00...0.13)
-        case .chill:
+        case .chill, .immersion, .afterglow:
             return CGFloat.random(in: 0.48...0.68)
         case .neutral:
             return CGFloat.random(in: 0.52...0.60)
@@ -417,9 +417,9 @@ final class MetalWaveformRenderer: NSObject, MTKViewDelegate {
 
     private func particleSaturation(for state: HowTag) -> CGFloat {
         switch state {
-        case .groove:
+        case .groove, .hype, .hit:
             return CGFloat.random(in: 0.46...0.70)
-        case .chill:
+        case .chill, .immersion, .afterglow:
             return CGFloat.random(in: 0.30...0.54)
         case .neutral:
             return CGFloat.random(in: 0.10...0.24)
