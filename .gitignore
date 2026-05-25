@@ -16,7 +16,7 @@ Thumbs.db
 *.pem
 
 # Firebase
-backend/serviceAccountKey.json
+**/serviceAccountKey.json
 
 # Node
 node_modules/

@@ -114,9 +114,9 @@ team-10/
 └── docs/             # ドキュメント（仕様は docs/frontend-spec.md が正）
 ```
 
-## セットアップ手順
+## セットアップ
 
-### 1. バックエンドを起動する（必須）
+詳細な手順は **[`docs/setup.md`](./docs/setup.md)** を参照してください。
 
 > ⚠️ **iOS アプリを動かす前に、必ずバックエンドを起動してください。**
 > バックエンドが起動していないと、AI 対話・Howカード生成・Firestore 保存がすべて動作しません。
@@ -152,6 +152,7 @@ open Othello/Othello.xcodeproj
 - **MusicKit**：Apple Developer の App ID で MusicKit App Service を有効化し、プロビジョニングプロファイルを更新してから実機ビルドする
 - **Musixmatch**：`Othello/Othello/ENV.example.plist` を `ENV.plist` にコピーし、`MUSIXMATCH_API_KEY` を設定する。`matcher.track.get` と `track.lyrics.get` が 401/402/403 を返す場合は API key・利用上限・契約プランを確認する
 
+
 ## ドキュメント
 
 | ファイル | 内容 |
@@ -160,6 +161,8 @@ open Othello/Othello.xcodeproj
 | [`docs/product-requirements.md`](./docs/product-requirements.md) | プロダクト要求定義（PRD） |
 | [`docs/architecture.md`](./docs/architecture.md) | アーキテクチャ設計 |
 | [`docs/functional-design.md`](./docs/functional-design.md) | 機能設計 |
+| [`docs/setup.md`](./docs/setup.md) | ローカル開発環境のセットアップ手順 |
+| [`docs/data-model.md`](./docs/data-model.md) | データモデル設計（Firestore スキーマ・反応区間構造） |
 | [`docs/repository-structure.md`](./docs/repository-structure.md) | リポジトリ構造 |
 | [`docs/development-guidelines.md`](./docs/development-guidelines.md) | 開発ガイドライン |
 | [`docs/glossary.md`](./docs/glossary.md) | 用語集 |
