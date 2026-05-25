@@ -1351,7 +1351,26 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：最新 main のドキュメント更新を残しつつ、PR #86 の canonical song ID 契約とレビュー指摘を最小差分で反映できたため。
 
-### #060 PR #90 main merge とレビュー対応
+### #060 Issue #83 切り抜きUI重複解消
+
+- **時刻**：22:35
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：Issue #83 の切り抜き作成UIで、上部バーと中央波形の範囲選択が重複して見える問題を解消する
+- **プロンプト**：
+  ```text
+  issue 83を修正するprを実装して立ててください
+  ```
+- **出力サマリ**：
+  - `fix/issue-83-clip-selection-ui` を `origin/main` 起点で作成
+  - 上部再生バーから `clipStart` / `clipEnd` のピンク丸マーカーを削除し、現在再生位置のみを示す `ClipProgressControls` に共通化
+  - sheet版と NowPlaying inline版の範囲選択を `ClipRangeSelectionView` / `ClipRangeWaveformView` に一本化
+  - 波形上に選択範囲の塗り・枠・左右ハンドルを追加し、説明文に頼らず操作点が見えるUIへ変更
+  - `WaveformView` / `InlineWaveformView` の重複実装を削除
+  - `git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：切り抜き範囲を操作できる場所を中央波形だけに整理し、sheet版とinline版で同じ見た目・操作を使う構成にできたため。
+
+### #061 PR #90 main merge とレビュー対応
 
 - **時刻**：22:45
 - **ツール**：Codex / GitHub CLI / node
@@ -1367,6 +1386,42 @@
   - CodeRabbit 指摘の migration batch 分割は `MAX_BATCH_WRITES = 450` と逐次 commit 実装で解消済みであることを確認
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #90 の `song_id` 契約と最新 main の Functions API 変更を両立し、migration の大規模 write リスクにも対応済みと確認できたため。
+
+### #062 PR #93 再レビュー対応と main merge
+
+- **時刻**：22:47
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #93 の CodeRabbit review comments を修正し、最新 `main` を取り込んで conflict を解消する
+- **プロンプト**：
+  ```text
+  またレビューがついているから修正して main mergeも忘れずに
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` を `fix/issue-83-clip-selection-ui` へ merge し、`AI_USAGE_LOG.md` の conflict を両方のログを残して解消
+  - `ClipProgressControls` の progress 計算を `totalDuration > 0` の場合だけ割り算する形に修正
+  - `ClipRangeWaveformView` のドラッグ更新直前で start / end ratio を再 clamp
+  - 波形範囲に VoiceOver 用の accessibility label / value / adjustable action を追加
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘の境界値・アクセシビリティ不備を最小差分で解消し、最新 main との conflict も解消できたため。
+
+### #063 PR #93 追加レビュー対応
+
+- **時刻**：23:07
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #93 の追加 CodeRabbit review comments を修正して push する
+- **プロンプト**：
+  ```text
+  pr 93のレビューを修正して
+  ```
+- **出力サマリ**：
+  - PR #93 の最新レビューを確認し、`fix/issue-83-clip-selection-ui` に最新 `origin/main` を merge
+  - `AI_USAGE_LOG.md` の conflict を既存作業ログを残す形で解消
+  - `ClipProgressControls` の 30 秒表示を定数化し、再生位置バーに accessibility value を追加
+  - `ClipRangeWaveformView` の VoiceOver adjustable action を選択範囲全体の前後移動に変更
+  - `formatTime` のローカル変数名を変更し、引数 shadowing を解消
+- **評価**：採用
+- **採用 / 不採用の理由**：追加レビューで指摘された保守性・アクセシビリティ・可読性の問題を小さな差分で解消できたため。
 
 ---
 
