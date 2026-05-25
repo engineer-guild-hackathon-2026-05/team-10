@@ -328,9 +328,13 @@ struct HowChatView: View {
 
     private func tagEmoji(_ tag: HowTag) -> String {
         switch tag {
-        case .groove:  return "🎵"
-        case .chill:   return "❄️"
-        case .neutral: return "○"
+        case .groove:    return "🎵"
+        case .hype:      return "🔥"
+        case .chill:     return "❄️"
+        case .immersion: return "🎧"
+        case .hit:       return "💫"
+        case .afterglow: return "✨"
+        case .neutral:   return "○"
         }
     }
 }

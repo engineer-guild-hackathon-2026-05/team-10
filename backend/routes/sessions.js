@@ -20,8 +20,8 @@ router.post('/', auth, async (req, res) => {
 });
 
 // POST /sessions/:id/chat
-router.post('/:id/chat', auth, async (req, res) => {
-  const { startTime, tags, intensity, lyric, history = [] } = req.body;
+router.post('/:id/chat', async (req, res) => {
+  const { startTime, tags, intensity, lyric, history = [], scores, dominantAxis } = req.body;
   const sessionId = req.params.id;
 
   if (!isValidSessionId(sessionId)) {
@@ -32,17 +32,28 @@ router.post('/:id/chat', auth, async (req, res) => {
     return res.status(400).json({ error: 'startTime, tags, intensity, history が必要です' });
   }
 
+  if (scores !== undefined && (scores === null || typeof scores !== 'object' || Array.isArray(scores))) {
+    return res.status(400).json({ error: 'scores はオブジェクトで指定してください' });
+  }
+
+  if (dominantAxis !== undefined && dominantAxis !== null && typeof dominantAxis !== 'string') {
+    return res.status(400).json({ error: 'dominantAxis は文字列で指定してください' });
+  }
+
   try {
-    await upsertChatSession({
+    const sessionPayload = {
       sessionId,
-      uid: req.uid,
       startTime,
       tags,
       intensity,
       lyric,
       history,
-    });
-    const result = await chat({ startTime, tags, intensity, lyric, history });
+      scores,
+      dominantAxis,
+    };
+    if (req.uid) sessionPayload.uid = req.uid;
+    await upsertChatSession(sessionPayload);
+    const result = await chat({ startTime, tags, intensity, lyric, history, scores, dominantAxis });
     res.json(result);
   } catch (err) {
     if (err.code === 'session-forbidden') {
@@ -70,7 +81,7 @@ router.post('/:id/how-card', auth, async (req, res) => {
   if (!session) {
     return res.status(404).json({ error: 'セッションが見つかりません' });
   }
-  if (session.userId !== req.uid) {
+  if (session.userId && session.userId !== req.uid) {
     return res.status(403).json({ error: 'このセッションへのアクセス権がありません' });
   }
 

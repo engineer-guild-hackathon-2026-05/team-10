@@ -25,10 +25,7 @@ router.put('/me', auth, async (req, res) => {
     return res.status(400).json({ error: 'email が認証情報と一致しません' });
   }
 
-  const email = tokenEmail;
-  if (!email) {
-    return res.status(400).json({ error: 'email が必要です' });
-  }
+  const email = tokenEmail ?? null;
 
   try {
     const user = await upsertUserProfile({
