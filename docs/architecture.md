@@ -13,7 +13,6 @@
 | CMHeadphoneMotionManager | AirPods 頭部モーション取得 | AirPods の加速度・姿勢を取得する唯一の手段 |
 | HealthKit | 心拍取得 | 対応 AirPods の心拍をヘルスデータ経由で取得 |
 | MusicKit | 楽曲再生・再生位置取得 | Apple Music の曲を再生位置付きで再生（DECISION-01） |
-| AVFoundation | ローカル音源再生（代替） | MusicKit 不可時のフォールバック |
 | Core ML | 端末上の6軸スコア推論 | TF 学習モデルを変換して端末推論（DECISION-02） |
 | Keychain Services | 認証トークン保持 | 機微情報の安全な保存 |
 
@@ -63,7 +62,7 @@
 │  │  - HeadphoneMotionService (CMHeadphoneMotion)    │     │
 │  │  - DeviceMotionService (Core Motion)             │     │
 │  │  - HeartRateService (HealthKit)                  │     │
-│  │  - PlayerService (MusicKit/AVFoundation)         │     │
+│  │  - PlayerService (MusicKit)                      │     │
 │  │  - ReactionClassifier (Core ML)                  │     │
 │  └──────────────────┬──────────────────────────────┘     │
 └─────────────────────┼────────────────────────────────────┘
@@ -212,5 +211,5 @@ team-10/
 | Combine / async-await | 非同期・状態管理 |
 | CoreMotion | 本体・AirPods モーション |
 | HealthKit | 心拍 |
-| MusicKit / AVFoundation | 再生・再生位置 |
+| MusicKit | 再生・再生位置 |
 | CoreML | 推論 |
