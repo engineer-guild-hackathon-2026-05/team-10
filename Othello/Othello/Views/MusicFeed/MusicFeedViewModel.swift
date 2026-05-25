@@ -14,8 +14,12 @@ final class MusicFeedViewModel: ObservableObject {
         return artist.songs[selectedSongIndex]
     }
 
-    init(artist: Artist) {
+    init(artist: Artist, initialSong: Song? = nil) {
         self.artist = artist
+        if let initialSong,
+           let selectedIndex = Self.index(of: initialSong, in: artist.songs) {
+            self.selectedSongIndex = selectedIndex
+        }
     }
 
     func loadPosts() async {
@@ -50,5 +54,34 @@ final class MusicFeedViewModel: ObservableObject {
 
     private func profilesByID(_ profiles: [UserProfile]) -> [String: UserProfile] {
         Dictionary(uniqueKeysWithValues: profiles.map { ($0.userID, $0) })
+    }
+
+    private static func index(of targetSong: Song, in songs: [Song]) -> Int? {
+        let targetKeys = lookupKeys(for: targetSong)
+        return songs.firstIndex { !lookupKeys(for: $0).isDisjoint(with: targetKeys) }
+            ?? songs.firstIndex {
+                normalize($0.title) == normalize(targetSong.title)
+                    && normalize($0.artistName) == normalize(targetSong.artistName)
+            }
+    }
+
+    private static func lookupKeys(for song: Song) -> Set<String> {
+        [
+            song.musicKitID,
+            song.firestoreLookupID,
+            song.firestoreSongID,
+            song.howCardLookupSongID
+        ]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+        .reduce(into: Set<String>()) { keys, value in
+            keys.insert(value)
+        }
+    }
+
+    private static func normalize(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
 }

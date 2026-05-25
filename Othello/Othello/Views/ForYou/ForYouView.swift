@@ -43,7 +43,10 @@ struct ForYouView: View {
             .preferredColorScheme(.dark)
         }
         .task {
-            await dashboard.load()
+            await dashboard.load(force: true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .howCardDidChange)) { _ in
+            Task { await dashboard.load(force: true) }
         }
     }
 

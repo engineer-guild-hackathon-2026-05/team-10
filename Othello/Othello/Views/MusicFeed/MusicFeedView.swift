@@ -18,7 +18,12 @@ struct MusicFeedView: View {
         self.highlightedComment = highlightedComment
         self.onPlaybackContext = onPlaybackContext
         self.playback = playback
-        self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
+        self._viewModel = StateObject(
+            wrappedValue: MusicFeedViewModel(
+                artist: artist,
+                initialSong: highlightedComment?.song
+            )
+        )
     }
 
     var body: some View {
@@ -33,6 +38,9 @@ struct MusicFeedView: View {
         .navigationBarHidden(true)
         .task(id: viewModel.selectedSong?.howCardLookupSongID) {
             await viewModel.loadPosts()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .howCardDidChange)) { _ in
+            Task { await viewModel.loadPosts() }
         }
         .preferredColorScheme(.dark)
     }

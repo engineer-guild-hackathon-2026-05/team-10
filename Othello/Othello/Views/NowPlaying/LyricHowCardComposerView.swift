@@ -222,6 +222,7 @@ struct LyricHowCardComposerView: View {
             )
             _ = try await FirebaseAPI.shared.createHowCard(howCard)
             didPost = true
+            NotificationCenter.default.post(name: .howCardDidChange, object: nil)
         } catch {
             postErrorMessage = "投稿できませんでした"
         }

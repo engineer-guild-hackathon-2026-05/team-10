@@ -161,21 +161,49 @@ final class HomeDashboardViewModel: ObservableObject {
     }
 
     private func makeFeaturedArtists(from comments: [HomeDashboardComment]) -> [Artist] {
-        var seen: Set<String> = []
+        var groups: [String: ArtistAccumulator] = [:]
+        var artistOrder: [String] = []
         var artists: [Artist] = []
 
         for comment in comments {
-            let key = comment.artist.name.lowercased()
-            guard !seen.contains(key) else { continue }
-            seen.insert(key)
-            artists.append(comment.artist)
+            let key = artistGroupingKey(for: comment.artist)
+            if groups[key] == nil {
+                artistOrder.append(key)
+                groups[key] = ArtistAccumulator(artist: comment.artist)
+            }
+
+            groups[key]?.append(song: comment.song)
+            groups[key]?.commentCount += 1
         }
 
+        for key in artistOrder {
+            guard let group = groups[key] else { continue }
+            let artist = group.artist
+            artists.append(
+                Artist(
+                    id: artist.id,
+                    name: artist.name,
+                    listeningCount: "\(group.commentCount)件のコメント",
+                    tag: artist.tag,
+                    gradientColors: artist.gradientColors,
+                    artworkURL: artist.artworkURL,
+                    songs: group.songs
+                )
+            )
+        }
+
+        let seen = Set(groups.keys)
         let fallback = Artist.catalog.filter { artist in
-            !seen.contains(artist.name.lowercased())
+            !seen.contains(artistGroupingKey(for: artist))
         }
 
         return Array((artists + fallback).prefix(8))
+    }
+
+    private func artistGroupingKey(for artist: Artist) -> String {
+        artist.name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
 
     private func gradientColors(for key: String) -> [Color] {
@@ -284,5 +312,26 @@ private struct MusicMetadata {
         self.artistName = song.artistName
         self.artworkURL = song.artwork?.url(width: 800, height: 800)
         self.durationSeconds = Int((song.duration ?? 180).rounded())
+    }
+}
+
+private struct ArtistAccumulator {
+    let artist: Artist
+    private(set) var songs: [Song]
+    private var songKeys: Set<String>
+    var commentCount: Int
+
+    init(artist: Artist) {
+        self.artist = artist
+        self.songs = []
+        self.songKeys = []
+        self.commentCount = 0
+    }
+
+    mutating func append(song: Song) {
+        let key = song.howCardLookupSongID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty, !songKeys.contains(key) else { return }
+        songKeys.insert(key)
+        songs.append(song)
     }
 }
