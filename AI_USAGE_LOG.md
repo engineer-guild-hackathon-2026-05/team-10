@@ -1628,6 +1628,22 @@
   - スライド生成 helper を `pptx_utils.py` に共通化し、gradient_angle 例外を限定して debug log 化
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘をデータ境界・リアルタイム購読・描画負荷・ドキュメント/ログ整合性の各面で解消し、PR を main と統合可能な状態へ戻せるため。
+### #007 Howカード内ミニ楽曲カードの全面タップ化
+
+- **時刻**：06:29
+- **ツール**：Codex / xcodebuild
+- **目的**：Howカード内のミニ楽曲カードを、再生ボタンだけでなくカード全体のタップで再生開始できるようにする
+- **プロンプト**：
+  ```text
+  新しいブランチで、[Image #1]赤枠の部分タップしたら曲が流れ始める（再生ボタンに限らない、ということ）ようにして欲しい
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `fix/how-card-preview-tap-playback` ブランチを作成
+  - `MiniSongCard` の背景、padding、`contentShape` を Button ラベル内部に移し、カード全面をタップ領域化
+  - 既存の `startPlayback()` / `onTap` 経由の MusicKit 再生と NowPlaying 遷移は維持
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：UIの見た目と再生経路を変えずに、ユーザーが期待する赤枠全体のタップ操作へ拡張できたため。
 
 ---
 
