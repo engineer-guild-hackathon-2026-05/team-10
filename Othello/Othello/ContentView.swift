@@ -53,9 +53,9 @@ struct ContentView: View {
         .onChange(of: nowPlayingContext?.id) { _, newValue in
             if newValue != nil {
                 airPods.start(playbackPositionProvider: playback.playbackPositionProvider())
-                showNowPlaying = true
             } else {
                 airPods.stop()
+                showNowPlaying = false
             }
         }
         .alert("再生位置が取得できません", isPresented: $playback.positionUnavailableAlertShown) {
