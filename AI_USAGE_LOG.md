@@ -924,6 +924,25 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：CodeRabbit の未解決指摘を現在のコードに照合し、実装・ドキュメント・lint の差分を最小範囲で解消できたため。
 
+### #044 Issue #83 切り抜きUI重複解消
+
+- **時刻**：22:35
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：Issue #83 の切り抜き作成UIで、上部バーと中央波形の範囲選択が重複して見える問題を解消する
+- **プロンプト**：
+  ```text
+  issue 83を修正するprを実装して立ててください
+  ```
+- **出力サマリ**：
+  - `fix/issue-83-clip-selection-ui` を `origin/main` 起点で作成
+  - 上部再生バーから `clipStart` / `clipEnd` のピンク丸マーカーを削除し、現在再生位置のみを示す `ClipProgressControls` に共通化
+  - sheet版と NowPlaying inline版の範囲選択を `ClipRangeSelectionView` / `ClipRangeWaveformView` に一本化
+  - 波形上に選択範囲の塗り・枠・左右ハンドルを追加し、説明文に頼らず操作点が見えるUIへ変更
+  - `WaveformView` / `InlineWaveformView` の重複実装を削除
+  - `git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：切り抜き範囲を操作できる場所を中央波形だけに整理し、sheet版とinline版で同じ見た目・操作を使う構成にできたため。
+
 ---
 
 ## Day 3（2026-05-26）
