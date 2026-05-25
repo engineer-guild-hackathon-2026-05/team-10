@@ -19,7 +19,7 @@
 
 Howカードコメント1件を1ドキュメントで管理する。iOS SDK から直接読み書きする最小スキーマ。
 
-```
+```text
 how-cards/{cardId}
   comment:      string       // ユーザーコメント
   song_id:      string       // 曲 ID

@@ -15,3 +15,10 @@
 - Auth 作成後に `users/{uid}` を保存し、保存に失敗した場合は中途半端なログイン状態を避けるため signOut するようにした。
 - Firestore Rules は認証済みユーザーの最小 read/write に更新した。`firebase` CLI がローカルにないため、rules のエミュレーター検証は未実施。
 - `xcodebuild` と `git diff --check` は通過した。
+
+## PRレビュー対応
+
+- [x] Markdown fence に言語指定を追加
+- [x] `users` の create / update ルールで timestamp の整合性を検証
+- [x] `users` 書き込みを `serverTimestamp()` に変更
+- [x] Auth 作成後の Firestore 保存失敗時に signOut 失敗も通知

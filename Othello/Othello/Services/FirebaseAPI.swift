@@ -6,6 +6,7 @@ enum FirebaseAPIError: Error {
     case missingDocumentID
     case documentNotFound
     case missingEmail
+    case signOutRollbackFailed(original: Error, signOut: Error)
 }
 
 final class FirebaseAPI {
@@ -59,7 +60,13 @@ final class FirebaseAPI {
 
     func upsertUser(_ user: FirestoreUser) async throws {
         let documentID = user.documentID ?? user.userID
-        try await setData(from: user, at: usersCollection.document(documentID), merge: true)
+        let document = usersCollection.document(documentID)
+        let snapshot = try await document.getDocument()
+        if snapshot.exists {
+            try await updateUser(user, at: document)
+        } else {
+            try await createUser(user, at: document)
+        }
     }
 
     func fetchUser(uid: String) async throws -> FirestoreUser {
@@ -76,14 +83,11 @@ final class FirebaseAPI {
             throw FirebaseAPIError.missingEmail
         }
 
-        let now = Date()
         let firestoreUser = FirestoreUser(
             documentID: user.uid,
             userID: user.uid,
             email: email,
-            displayName: user.displayName,
-            createdAt: now,
-            updatedAt: now
+            displayName: user.displayName
         )
         try await upsertUser(firestoreUser)
     }
@@ -94,6 +98,29 @@ final class FirebaseAPI {
 
     private var usersCollection: CollectionReference {
         firestore.collection(CollectionName.users)
+    }
+
+    private func createUser(_ user: FirestoreUser, at document: DocumentReference) async throws {
+        try await setData(userData(for: user, isCreate: true), at: document, merge: false)
+    }
+
+    private func updateUser(_ user: FirestoreUser, at document: DocumentReference) async throws {
+        try await updateData(userData(for: user, isCreate: false), at: document)
+    }
+
+    private func userData(for user: FirestoreUser, isCreate: Bool) -> [String: Any] {
+        var data: [String: Any] = [
+            FieldKey.userID: user.userID,
+            FieldKey.email: user.email,
+            FieldKey.displayName: user.displayName ?? NSNull(),
+            FieldKey.updatedAt: FieldValue.serverTimestamp()
+        ]
+
+        if isCreate {
+            data[FieldKey.createdAt] = FieldValue.serverTimestamp()
+        }
+
+        return data
     }
 
     private func setData<T: Encodable>(
@@ -116,9 +143,22 @@ final class FirebaseAPI {
         }
     }
 
-    private func updateData(_ data: [AnyHashable: Any], at document: DocumentReference) async throws {
+    private func setData(_ data: [String: Any], at document: DocumentReference, merge: Bool) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            document.updateData(data) { error in
+            document.setData(data, merge: merge) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    private func updateData(_ data: [String: Any], at document: DocumentReference) async throws {
+        let firestoreData = Dictionary(uniqueKeysWithValues: data.map { (AnyHashable($0.key), $0.value) })
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            document.updateData(firestoreData) { error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else {
@@ -149,6 +189,11 @@ private enum CollectionName {
 }
 
 private enum FieldKey {
+    static let createdAt = "created_at"
+    static let displayName = "display_name"
+    static let email = "email"
     static let goods = "goods"
     static let songID = "song_id"
+    static let updatedAt = "updated_at"
+    static let userID = "user_id"
 }

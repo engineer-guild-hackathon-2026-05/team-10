@@ -38,7 +38,14 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid) && isValidUser(request.resource.data, uid);
+      allow create: if isOwner(uid)
+        && isValidUser(request.resource.data, uid)
+        && request.resource.data.created_at == request.time
+        && request.resource.data.updated_at == request.time;
+      allow update: if isOwner(uid)
+        && isValidUser(request.resource.data, uid)
+        && request.resource.data.created_at == resource.data.created_at
+        && request.resource.data.updated_at == request.time;
       allow delete: if false;
     }
 
