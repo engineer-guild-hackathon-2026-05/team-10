@@ -10,6 +10,7 @@ struct MusicFeedView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var replyTarget: FeedPost?
     @State private var replyCountsByCardID: [String: Int] = [:]
+    @State private var reloadNonce = 0
 
     init(
         artist: Artist,
@@ -21,7 +22,12 @@ struct MusicFeedView: View {
         self.highlightedComment = highlightedComment
         self.onPlaybackContext = onPlaybackContext
         self.playback = playback
-        self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
+        self._viewModel = StateObject(
+            wrappedValue: MusicFeedViewModel(
+                artist: artist,
+                initialSong: highlightedComment?.song
+            )
+        )
         self._selectedPlaybackCardID = State(
             initialValue: highlightedComment.map { Self.highlightedSelectionID(for: $0) }
         )
@@ -37,10 +43,17 @@ struct MusicFeedView: View {
             }
         }
         .navigationBarHidden(true)
-        .task(id: viewModel.selectedSong?.howCardLookupSongID) {
+        .task(id: loadPostsTaskID) {
             await viewModel.loadPosts()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .howCardDidChange)) { _ in
+            reloadNonce &+= 1
+        }
         .preferredColorScheme(.dark)
+    }
+
+    private var loadPostsTaskID: String {
+        "\(viewModel.selectedSong?.howCardLookupSongID ?? ""):\(reloadNonce)"
     }
 
     private var navigationBar: some View {

@@ -1,5 +1,9 @@
 import Foundation
 
+extension Notification.Name {
+    static let howCardDidChange = Notification.Name("howCardDidChange")
+}
+
 struct HowCardComment: Codable, Equatable, Identifiable {
     var documentID: String?
     var comment: String
