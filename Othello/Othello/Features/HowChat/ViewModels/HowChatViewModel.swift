@@ -37,7 +37,7 @@ final class HowChatViewModel: ObservableObject {
         choices = []
         messages.append(HowChatMessage(sender: .user, text: text))
         turnCount += 1
-        guard turnCount < 3 else {
+        guard turnCount < 2 else {
             state = .done
             return
         }

@@ -18,6 +18,8 @@ private struct ChatPayload: Encodable {
     let intensity: Double
     let lyric: String?
     let history: [HistoryItem]
+    let scores: [String: Double]
+    let dominantAxis: String?
     struct HistoryItem: Encodable { let role: String; let content: String }
 }
 
@@ -118,33 +120,68 @@ final class ChatAPIClient {
     private func buildPayload(event: ReactionEvent, messages: [HowChatMessage]) -> ChatPayload {
         ChatPayload(
             startTime: event.startTime,
-            tags: event.tags.map(\.label),
+            tags: event.tags.map(\.rawValue),
             intensity: event.intensity,
             lyric: event.lyricLine,
             history: messages.map {
                 .init(role: $0.sender == .ai ? "assistant" : "user", content: $0.text)
-            }
+            },
+            scores: event.score.asDictionary,
+            dominantAxis: event.score.dominant?.id
         )
     }
 
     private func mockResponse(event: ReactionEvent, turn: Int) -> ChatResponse {
-        let dominant = event.tags.first?.label ?? "何か"
+        let dominant = event.score.dominant?.id ?? event.tags.first?.rawValue ?? "groove"
+        let time = formatTime(event.startTime)
+
         switch turn {
         case 0:
-            return ChatResponse(
-                question: "\(formatTime(event.startTime))あたり、身体が反応していました。\(dominant)な感じでしたか？",
-                choices: ["そう、ノってた", "メロディが刺さった", "なんか上がった"]
-            )
-        case 1:
-            return ChatResponse(
-                question: "その瞬間、音楽のどの要素に反応していたと思いますか？",
-                choices: ["リズム・ビート", "メロディライン", "歌詞の言葉", "音の重なり"]
-            )
+            switch dominant {
+            case "groove", "hype":
+                return ChatResponse(
+                    question: "\(time)あたり、体が動いていましたね。リズムに乗っていた感じでしたか？",
+                    choices: ["自然と体が動いた", "テンションが上がった", "ビートが気持ちよかった"]
+                )
+            case "hit", "immersion":
+                return ChatResponse(
+                    question: "\(time)あたり、何かが刺さった瞬間でしたか？",
+                    choices: ["歌詞が刺さった", "メロディが響いた", "音が重なった瞬間", "なんかわからないけど刺さった"]
+                )
+            case "chill", "afterglow":
+                return ChatResponse(
+                    question: "\(time)あたり、静かに聴き入っていましたね。どんな感じでしたか？",
+                    choices: ["余韻に浸っていた", "心が落ち着いた", "世界が広がった感じ"]
+                )
+            default:
+                return ChatResponse(
+                    question: "\(time)あたり、身体が反応していました。どんな感じでしたか？",
+                    choices: ["体が動いた", "何かが刺さった", "静かに入り込んだ"]
+                )
+            }
         default:
-            return ChatResponse(
-                question: "この感覚、一言で表すとしたら？",
-                choices: ["突き刺さる感じ", "体が動く感じ", "浮かぶような感じ", "沁みる感じ"]
-            )
+            switch dominant {
+            case "groove", "hype":
+                return ChatResponse(
+                    question: "その動き、音楽のどの部分に引っ張られていましたか？",
+                    choices: ["ベースやドラムのリズム", "サビの盛り上がり", "音の波に乗っていた"]
+                )
+            case "hit", "immersion":
+                return ChatResponse(
+                    question: "その感覚、もう少し言葉にするとしたら？",
+                    choices: ["突き刺さる感じ", "じんわり染み込む感じ", "胸が締め付けられた", "ハッとした"]
+                )
+            case "chill", "afterglow":
+                return ChatResponse(
+                    question: "その余韻、いつまでも残る感じがしましたか？",
+                    choices: ["曲が終わっても残った", "静寂が心地よかった", "もう一度聴きたくなった"]
+                )
+            default:
+                return ChatResponse(
+                    question: "この感覚、一言で表すとしたら？",
+                    choices: ["体が動く感じ", "刺さる感じ", "浮かぶような感じ", "沁みる感じ"]
+                )
+            }
         }
     }
 
