@@ -22,6 +22,8 @@ struct HomeDashboardComment: Identifiable, Equatable {
             artistName: artistName,
             gradientColors: gradientColors,
             durationSeconds: durationSeconds,
+            musicKitID: Self.nonEmpty(howCard.songID),
+            artistID: Self.nonEmpty(howCard.artistID),
             artworkURL: artworkURL
         )
 
@@ -29,7 +31,10 @@ struct HomeDashboardComment: Identifiable, Equatable {
         self.howCard = howCard
         self.song = song
         self.artist = Artist(
-            id: Self.stableUUID(namespace: "home-artist", key: Self.identityKey(howCard.artistID, fallback: artistName)),
+            id: Self.stableUUID(
+                namespace: "home-artist",
+                key: Self.identityKey(howCard.artistID, fallback: "\(artistName)-\(howCard.id)")
+            ),
             name: artistName,
             listeningCount: "\(max(howCard.goods, 0)) reactions",
             tag: "コメント",
@@ -50,6 +55,11 @@ struct HomeDashboardComment: Identifiable, Equatable {
             return normalizedKey
         }
         return fallback.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func nonEmpty(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private static func stableUUID(namespace: String, key: String) -> UUID {

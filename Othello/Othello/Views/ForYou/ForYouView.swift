@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ForYouView: View {
     @Binding var nowPlayingSong: Song?
+    @ObservedObject var playback: PlaybackViewModel
     @StateObject private var dashboard = HomeDashboardViewModel()
     @State private var searchQuery = ""
     @State private var selectedArtist: Artist?
@@ -35,7 +36,8 @@ struct ForYouView: View {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             nowPlayingSong = song
                         }
-                    }
+                    },
+                    playback: playback
                 )
             }
             .preferredColorScheme(.dark)
@@ -433,5 +435,5 @@ private struct ArtworkThumb: View {
 }
 
 #Preview {
-    ForYouView(nowPlayingSong: .constant(nil))
+    ForYouView(nowPlayingSong: .constant(nil), playback: PlaybackViewModel())
 }

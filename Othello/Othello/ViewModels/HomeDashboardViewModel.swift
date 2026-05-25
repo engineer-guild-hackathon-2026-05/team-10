@@ -6,7 +6,7 @@ import SwiftUI
 @MainActor
 final class HomeDashboardViewModel: ObservableObject {
     @Published private(set) var comments: [HomeDashboardComment] = []
-    @Published private(set) var featuredArtists: [Artist] = Artist.mock
+    @Published private(set) var featuredArtists: [Artist] = Artist.catalog
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
 
@@ -32,7 +32,7 @@ final class HomeDashboardViewModel: ObservableObject {
         } catch {
             errorMessage = message(for: error)
             if featuredArtists.isEmpty {
-                featuredArtists = Artist.mock
+                featuredArtists = Artist.catalog
             }
         }
 
@@ -166,7 +166,7 @@ final class HomeDashboardViewModel: ObservableObject {
             artists.append(comment.artist)
         }
 
-        let fallback = Artist.mock.filter { artist in
+        let fallback = Artist.catalog.filter { artist in
             !seen.contains(artist.name.lowercased())
         }
 

@@ -110,7 +110,11 @@ final class FirebaseAPI {
             let rawValue = EnvironmentValueProvider.value(forKey: "API_BASE_URL")?.trimmingCharacters(in: .whitespacesAndNewlines),
             !rawValue.isEmpty
         else {
+            #if DEBUG
+            preconditionFailure("API_BASE_URL is not configured in ENV.plist or process environment.")
+            #else
             return nil
+            #endif
         }
 
         return URL(string: rawValue)

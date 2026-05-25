@@ -92,6 +92,9 @@ struct HomeView: View {
         .onReceive(volumeTimer) { _ in
             outputVolume = AVAudioSession.sharedInstance().outputVolume
         }
+        .onAppear {
+            syncAirPodsMotionCapture()
+        }
         .onChange(of: displayIsPlaying) { _, _ in
             syncAirPodsMotionCapture()
         }
@@ -757,8 +760,18 @@ struct HomeView: View {
         let text = line.text.isEmpty ? "♪" : line.text
         let startTime = line.startTime
         let endTime = line.endTime ?? min(startTime + 6, displayTrack?.duration ?? startTime + 6)
-        let intensity = min(max(reactionLevel, 0.28), 1.0)
-        let tags = [waveformReactionState]
+
+        let canUseSensorScore = !viewModel.useManualMode && displayIsPlaying && airPodsMotion.isRecording
+        let detectorScore = canUseSensorScore ? reactionDetector.currentScore : .empty
+        let sampleScore = canUseSensorScore
+            ? airPodsMotion.latestSample.map { MotionReactionScoreEstimator.score(from: $0) }
+            : nil
+        let score = detectorScore.intensity > 0 ? detectorScore : (sampleScore ?? .empty)
+        let intensity = min(max(max(score.intensity, reactionLevel), 0.28), 1.0)
+        let activeTags = score.activeTags(threshold: 0.35)
+        let tags = activeTags.isEmpty
+            ? fallbackTags(for: intensity, state: waveformReactionState)
+            : activeTags
 
         return ReactionEvent(
             id: UUID(),
@@ -766,6 +779,7 @@ struct HomeView: View {
             endTime: max(endTime, startTime + 2),
             intensity: intensity,
             tags: tags,
+            score: score,
             lyricLine: text,
             lyricTranslation: nil,
             heartRateTrend: intensity > 0.72 ? .rising : .stable
@@ -774,6 +788,21 @@ struct HomeView: View {
 
     private var reactionLevel: Double {
         min(max(musicPulseLevel * 0.72 + airPodsMotionIntensity * 0.44, 0.08), 1.0)
+    }
+
+    private func fallbackTags(for level: Double, state: HowTag) -> [HowTag] {
+        if HowTag.scoreCases.contains(state) {
+            return [state]
+        }
+
+        switch level {
+        case 0.72...:
+            return [.groove, .hype]
+        case 0.46..<0.72:
+            return [.groove, .immersion]
+        default:
+            return [.afterglow]
+        }
     }
 
     private var musicPulseLevel: Double {
@@ -871,30 +900,13 @@ struct HomeView: View {
         }
 
         let score = reactionDetector.currentScore
-        guard score.groove > 0 || score.chill > 0 || score.neutral > 0 else {
-            return .neutral
-        }
-
-        if score.neutral >= 0.34,
-           score.neutral >= score.groove * 0.92,
-           score.neutral >= score.chill * 0.92 {
+        guard score.intensity > 0 else {
             return .neutral
         }
 
         if airPodsMotion.recentInteractionIntensity < 0.12,
-           score.neutral >= 0.18 {
+           score.intensity < 0.32 {
             return .neutral
-        }
-
-        if score.groove >= 0.24,
-           score.groove >= score.chill * 0.88,
-           score.groove >= score.neutral * 0.84 {
-            return .groove
-        }
-
-        if score.chill >= 0.24,
-           score.chill >= score.neutral * 0.82 {
-            return .chill
         }
 
         return score.dominantTag

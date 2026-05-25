@@ -109,12 +109,64 @@ how-cards/{cardId}         ← 既存Howカード生成API用
 
 ### Firestore セキュリティルール
 
-バックエンドはすべて Admin SDK 経由（ルールをバイパス）。iOS クライアントからの直接アクセスは禁止。
+バックエンドは Admin SDK 経由（ルールをバイパス）で `how-cards` を扱う。
+iOS クライアントからの直接アクセスは、ログイン中ユーザー自身の `users/{uid}` の `get/create/update` のみに限定する。
+`users` の list や他ユーザーの書き込み、`how-cards` への直接アクセスは禁止する。
 
 ```text
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function hasValidUserCreateShape(uid) {
+      return request.resource.data.keys().hasOnly([
+        'user_id',
+        'email',
+        'display_name',
+        'created_at',
+        'updated_at'
+      ])
+        && request.resource.data.user_id == uid
+        && (request.resource.data.email == null || request.resource.data.email is string)
+        && (request.resource.data.display_name == null || (
+          request.resource.data.display_name is string
+          && request.resource.data.display_name.size() <= 80
+        ))
+        && request.resource.data.created_at is timestamp
+        && request.resource.data.updated_at == request.time;
+    }
+
+    function hasValidUserUpdateShape(uid) {
+      return request.resource.data.user_id == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'user_id',
+          'email',
+          'display_name',
+          'updated_at'
+        ])
+        && (request.resource.data.email == null || request.resource.data.email is string)
+        && (request.resource.data.display_name == null || (
+          request.resource.data.display_name is string
+          && request.resource.data.display_name.size() <= 80
+        ))
+        && request.resource.data.updated_at == request.time;
+    }
+
+    match /users/{uid} {
+      allow get: if isOwnUser(uid);
+      allow list: if false;
+      allow create: if isOwnUser(uid) && hasValidUserCreateShape(uid);
+      allow update: if isOwnUser(uid) && hasValidUserUpdateShape(uid);
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
@@ -278,7 +330,7 @@ Core ML がオンデバイスで計算した反応区間を受け取り、セッ
 
 ### Howカードコメント API
 
-iOS は Firestore に直接アクセスせず、Firebase ID トークン付きでこのAPIを呼び出す。
+iOS は `how-cards` へ直接アクセスせず、Firebase ID トークン付きでこのAPIを呼び出す。
 
 `POST /how-cards`:
 
@@ -293,6 +345,7 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 ```
 
 バックエンドは `user_id` をトークンから補完し、`goods: 0` で保存する。
+`GET /how-cards` / `GET /how-cards/:id` は `users/{user_id}.display_name` を Admin SDK で参照し、表示用の `user_name` だけをレスポンスへ付与する。
 
 `GET /how-cards?song_id=1704093812` は `{ "howCards": [...] }`、`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` は `{ "howCard": ... }` を返す。
 
@@ -306,6 +359,7 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
     "song_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
+    "user_name": "Atsushi",
     "goods": 0
   }
 }
@@ -321,11 +375,12 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 
 ```json
 {
-  "email": "user@example.com",
+  "email": null,
   "display_name": null
 }
 ```
 
+`email` は nullable。ID トークンにメールアドレスがある場合はそれを正とし、body の `email` が異なる場合は 400 を返す。ID トークンにメールアドレスがない場合は `null` として扱う。
 `GET /users/me` / `PUT /users/me` は `{ "user": ... }` を返す。
 
 ---
