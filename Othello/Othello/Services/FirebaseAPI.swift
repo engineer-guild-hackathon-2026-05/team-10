@@ -50,7 +50,7 @@ final class FirebaseAPI {
 
     func fetchHowCards(songID: String? = nil, limit: Int = 50) async throws -> [HowCardComment] {
         var queryItems = [URLQueryItem(name: "limit", value: String(limit))]
-        if let songID {
+        if let songID, !songID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             queryItems.insert(URLQueryItem(name: "song_id", value: songID), at: 0)
         }
 

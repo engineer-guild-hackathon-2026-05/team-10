@@ -2,14 +2,21 @@ import SwiftUI
 
 struct MusicFeedView: View {
     let artist: Artist
-    let onSongTap: (Song) -> Void
+    let highlightedComment: HomeDashboardComment?
+    let onPlaybackContext: (NowPlayingContext) -> Void
     @ObservedObject private var playback: PlaybackViewModel
     @StateObject private var viewModel: MusicFeedViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(artist: Artist, onSongTap: @escaping (Song) -> Void, playback: PlaybackViewModel) {
+    init(
+        artist: Artist,
+        highlightedComment: HomeDashboardComment? = nil,
+        onPlaybackContext: @escaping (NowPlayingContext) -> Void,
+        playback: PlaybackViewModel
+    ) {
         self.artist = artist
-        self.onSongTap = onSongTap
+        self.highlightedComment = highlightedComment
+        self.onPlaybackContext = onPlaybackContext
         self.playback = playback
         self._viewModel = StateObject(wrappedValue: MusicFeedViewModel(artist: artist))
     }
@@ -90,6 +97,12 @@ struct MusicFeedView: View {
     private var feedList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
+                if let highlightedComment {
+                    HighlightedHowCardCommentCard(item: highlightedComment) {
+                        play(comment: highlightedComment)
+                    }
+                }
+
                 if viewModel.isLoading {
                     ProgressView()
                         .tint(.white)
@@ -128,9 +141,19 @@ struct MusicFeedView: View {
 
     private func play(post: FeedPost) {
         Task {
-            guard let track = await playback.select(song: post.song) else { return }
+            let context = post.playbackContext
+            guard let track = await playback.select(song: post.song, initialPlaybackTime: context.initialPlaybackTime) else { return }
             let resolvedSong = Song(playbackTrack: track, fallback: post.song)
-            onSongTap(resolvedSong)
+            onPlaybackContext(context.replacingSong(resolvedSong))
+        }
+    }
+
+    private func play(comment: HomeDashboardComment) {
+        Task {
+            let context = NowPlayingContext(song: comment.song, howCardComment: comment.howCard)
+            guard let track = await playback.select(song: comment.song, initialPlaybackTime: context.initialPlaybackTime) else { return }
+            let resolvedSong = Song(playbackTrack: track, fallback: comment.song)
+            onPlaybackContext(context.replacingSong(resolvedSong))
         }
     }
 
@@ -142,122 +165,6 @@ struct MusicFeedView: View {
     }
 }
 
-// MARK: - Feed Post Card
-
-private struct FeedPostCard: View {
-    let post: FeedPost
-    let onSongTap: () -> Void
-    let onLike: () -> Void
-    @State private var isLiked: Bool = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(post.avatarColor)
-                    .frame(width: 40, height: 40)
-                    .overlay {
-                        Text(post.avatarLetter)
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                    }
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Text(post.userName)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.caption2)
-                            .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
-                    }
-                    Text("\(post.userHandle) · \(post.timeAgo)")
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                }
-                Spacer()
-                Image(systemName: "ellipsis")
-                    .foregroundStyle(.gray)
-                    .font(.subheadline)
-            }
-
-            Text(post.comment)
-                .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.85))
-                .lineLimit(3)
-
-            MiniSongCard(song: post.song, onTap: onSongTap)
-
-            HStack(spacing: 20) {
-                Button {
-                    guard !isLiked else { return }
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        isLiked = true
-                    }
-                    onLike()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: isLiked ? "heart.fill" : "heart")
-                            .foregroundStyle(isLiked ? Color(red: 1.0, green: 0.3, blue: 0.3) : .white)
-                        Text("\(post.likeCount + (isLiked ? 1 : 0))")
-                            .font(.subheadline)
-                            .foregroundStyle(.white)
-                    }
-                }
-                HStack(spacing: 6) {
-                    Image(systemName: "bubble.left")
-                        .foregroundStyle(.white)
-                    Text("\(post.commentCount)")
-                        .font(.subheadline)
-                        .foregroundStyle(.white)
-                }
-                Spacer()
-                Image(systemName: "paperplane")
-                    .foregroundStyle(.gray)
-            }
-        }
-        .padding(16)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
-    }
-}
-
-// MARK: - Mini Song Card
-
-private struct MiniSongCard: View {
-    let song: Song
-    let onTap: () -> Void
-    @State private var isPlaying: Bool = false
-
-    var body: some View {
-        HStack(spacing: 12) {
-            CircularArtworkView(song: song, size: 52, isPlaying: isPlaying)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(song.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                Text(song.artistName)
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-            }
-            Spacer()
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isPlaying.toggle()
-                }
-                onTap()
-            } label: {
-                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-            }
-        }
-        .padding(12)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
-    }
-}
-
 #Preview {
-    MusicFeedView(artist: Artist.catalog[0], onSongTap: { _ in }, playback: PlaybackViewModel())
+    MusicFeedView(artist: Artist.catalog[0], onPlaybackContext: { _ in }, playback: PlaybackViewModel())
 }

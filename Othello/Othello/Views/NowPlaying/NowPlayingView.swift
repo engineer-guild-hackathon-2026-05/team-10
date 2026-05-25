@@ -5,12 +5,24 @@ enum NowPlayingTab {
 }
 
 struct NowPlayingView: View {
-    let song: Song
+    let context: NowPlayingContext
     @ObservedObject var playback: PlaybackViewModel
     @ObservedObject var airPods: AirPodsMotionViewModel
     @Environment(\.dismiss) private var dismiss
     @StateObject private var lyricsViewModel = LyricsViewModel()
     @State private var activeTab: NowPlayingTab = .playback
+
+    private var song: Song { context.song }
+
+    init(context: NowPlayingContext, playback: PlaybackViewModel, airPods: AirPodsMotionViewModel) {
+        self.context = context
+        self.playback = playback
+        self.airPods = airPods
+    }
+
+    init(song: Song, playback: PlaybackViewModel, airPods: AirPodsMotionViewModel) {
+        self.init(context: NowPlayingContext(song: song), playback: playback, airPods: airPods)
+    }
 
     var body: some View {
         ZStack {
@@ -119,9 +131,19 @@ struct NowPlayingView: View {
             let progress = duration > 0 ? min(max(playback.playbackTime / duration, 0), 1) : 0
 
             GeometryReader { proxy in
+                let width = proxy.size.width
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color.white.opacity(0.14))
+                    if context.hasHighlight {
+                        let highlightStartX = width * highlightStartProgress
+                        let desiredHighlightWidth = width * max(0.02, highlightEndProgress - highlightStartProgress)
+                        let highlightWidth = max(0, min(desiredHighlightWidth, width - highlightStartX))
+                        Capsule()
+                            .fill(Color.white.opacity(0.18))
+                            .frame(width: highlightWidth)
+                            .offset(x: highlightStartX)
+                    }
                     Capsule()
                         .fill(
                             LinearGradient(
@@ -130,10 +152,19 @@ struct NowPlayingView: View {
                                 endPoint: .trailing
                             )
                         )
-                        .frame(width: proxy.size.width * progress)
+                        .frame(width: width * progress)
                 }
             }
             .frame(height: 6)
+
+            if context.hasHighlight {
+                HStack {
+                    Text("選択中 \(highlightRangeText)")
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                    Spacer()
+                }
+            }
 
             HStack {
                 Text(formatTime(playback.playbackTime))
@@ -249,6 +280,30 @@ struct NowPlayingView: View {
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
+    private var highlightStart: TimeInterval {
+        min(max(context.highlightStart ?? context.initialPlaybackTime, 0), max(song.duration, 1))
+    }
+
+    private var highlightEnd: TimeInterval {
+        let duration = max(song.duration, 1)
+        let rawEnd = context.highlightEnd ?? max(highlightStart + 12, context.initialPlaybackTime)
+        return min(max(rawEnd, highlightStart), duration)
+    }
+
+    private var highlightStartProgress: Double {
+        let duration = max(song.duration, 1)
+        return min(max(highlightStart / duration, 0), 1)
+    }
+
+    private var highlightEndProgress: Double {
+        let duration = max(song.duration, 1)
+        return min(max(highlightEnd / duration, highlightStartProgress), 1)
+    }
+
+    private var highlightRangeText: String {
+        "\(formatTime(highlightStart)) - \(formatTime(highlightEnd))"
+    }
+
     private var waveformAudioLevel: Double {
         guard playback.isPlaying else {
             return 0.18
@@ -328,7 +383,6 @@ struct NowPlayingView: View {
         .padding(.bottom, 32)
     }
 }
-
 
 #Preview {
     NowPlayingView(song: Song(

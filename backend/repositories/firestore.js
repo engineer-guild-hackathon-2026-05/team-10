@@ -24,6 +24,61 @@ async function getSession(sessionId) {
   return { id: doc.id, ...doc.data() };
 }
 
+async function upsertChatSession({
+  sessionId,
+  uid,
+  startTime,
+  tags,
+  intensity,
+  lyric,
+  history,
+  scores,
+  dominantAxis,
+}) {
+  const sessionRef = db().collection('sessions').doc(sessionId);
+  const now = FieldValue.serverTimestamp();
+  const hasOwner = typeof uid === 'string' && uid.length > 0;
+
+  await db().runTransaction(async transaction => {
+    const snapshot = await transaction.get(sessionRef);
+    const existingData = snapshot.exists ? snapshot.data() : {};
+
+    if (snapshot.exists && hasOwner && existingData.userId && existingData.userId !== uid) {
+      const error = new Error('このセッションへのアクセス権がありません');
+      error.code = 'session-forbidden';
+      throw error;
+    }
+
+    const data = {
+      reactionStartTime: startTime,
+      reactionTags: tags,
+      reactionIntensity: intensity,
+      chatHistory: history,
+      status: existingData.status === 'done' ? 'done' : 'chatting',
+      updatedAt: now,
+    };
+
+    if (hasOwner) {
+      data.userId = uid;
+    }
+    if (lyric !== undefined) {
+      data.lyric = lyric;
+    }
+    if (scores !== undefined) {
+      data.reactionScores = scores;
+    }
+    if (dominantAxis !== undefined) {
+      data.dominantAxis = dominantAxis;
+    }
+
+    if (!snapshot.exists || !isFirestoreTimestamp(existingData.createdAt)) {
+      data.createdAt = now;
+    }
+
+    transaction.set(sessionRef, data, { merge: true });
+  });
+}
+
 async function saveHowCard({
   uid,
   email,
@@ -53,7 +108,11 @@ async function saveHowCard({
     createdAt: FieldValue.serverTimestamp(),
   });
 
-  batch.set(sessionRef, { status: 'done' }, { merge: true });
+  batch.set(
+    sessionRef,
+    { status: 'done', userId: uid, updatedAt: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
 
   const userUpdate = {};
   if (email) userUpdate.email = email;
@@ -275,6 +334,7 @@ function isFirestoreTimestamp(value) {
 module.exports = {
   createSession,
   getSession,
+  upsertChatSession,
   saveHowCard,
   upsertUserProfile,
   getUserProfile,

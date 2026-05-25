@@ -88,12 +88,12 @@ router.patch('/:id', auth, async (req, res) => {
 
 router.post('/:id/like', auth, async (req, res) => {
   try {
-    const goods = await likeHowCard({ cardId: req.params.id, uid: req.uid });
-    if (goods === null) {
+    const likes = await likeHowCard({ cardId: req.params.id, uid: req.uid });
+    if (likes === null) {
       return res.status(404).json({ error: 'Howカードが見つかりません' });
     }
 
-    res.json({ goods, likes: goods });
+    res.json({ likes });
   } catch (err) {
     console.error(err?.message ?? err);
     res.status(500).json({ error: 'Howカードのいいね更新に失敗しました' });
@@ -112,7 +112,17 @@ function normalizeCommentPayload(body) {
     return null;
   }
 
-  return { comment, songStart, songEnd, songId, artistId };
+  const explicitSongSlug = normalizeOptionalString(body.song_slug, 120);
+
+  return {
+    comment,
+    songStart,
+    songEnd,
+    songId,
+    artistId,
+    itunesId: songId,
+    songSlug: explicitSongSlug,
+  };
 }
 
 function normalizeOptionalString(value, maxLength) {

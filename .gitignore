@@ -65,8 +65,12 @@ docs/slides/*.html
 docs/slides/*.pdf
 docs/slides/howtune.pptx
 
+# Firebase local config
 **/GoogleInfo.plist
+GoogleService-Info.plist
 **/GoogleService-Info.plist
+**/GoogleServiceInfo.plist
+**/googleserviceinfo.plist
 
 **/ENV.plist
 Othello/Othello/ENV.plist

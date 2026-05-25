@@ -5,7 +5,7 @@ struct ContentView: View {
     @StateObject private var onboardingVM = OnboardingViewModel()
     @StateObject private var playback = PlaybackViewModel()
     @StateObject private var airPods = AirPodsMotionViewModel()
-    @State private var nowPlayingSong: Song?
+    @State private var nowPlayingContext: NowPlayingContext?
     @State private var showNowPlaying: Bool = false
     @State private var didSeedHowCardUsers = false
 
@@ -34,11 +34,11 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
 
-            ForYouView(nowPlayingSong: $nowPlayingSong, playback: playback)
+            ForYouView(nowPlayingContext: $nowPlayingContext, playback: playback)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if nowPlayingSong != nil {
-                GlobalMiniPlayerView(song: nowPlayingSong, onTap: {
+            if nowPlayingContext != nil {
+                GlobalMiniPlayerView(song: nowPlayingContext?.song, onTap: {
                     showNowPlaying = true
                 }, playback: playback)
                 .padding(.horizontal, 12)
@@ -50,9 +50,10 @@ struct ContentView: View {
             await playback.onAppear()
             await seedHowCardUsersIfNeeded()
         }
-        .onChange(of: nowPlayingSong?.id) { _, newValue in
+        .onChange(of: nowPlayingContext?.id) { _, newValue in
             if newValue != nil {
                 airPods.start(playbackPositionProvider: playback.playbackPositionProvider())
+                showNowPlaying = true
             } else {
                 airPods.stop()
             }
@@ -62,12 +63,9 @@ struct ContentView: View {
         } message: {
             Text(playback.positionUnavailableMessage)
         }
-        .onChange(of: nowPlayingSong) { _, newSong in
-            if newSong != nil { showNowPlaying = true }
-        }
         .fullScreenCover(isPresented: $showNowPlaying) {
-            if let song = nowPlayingSong {
-                NowPlayingView(song: song, playback: playback, airPods: airPods)
+            if let context = nowPlayingContext {
+                NowPlayingView(context: context, playback: playback, airPods: airPods)
             }
         }
     }
