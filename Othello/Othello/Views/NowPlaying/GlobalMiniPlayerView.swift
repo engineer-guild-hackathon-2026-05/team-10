@@ -31,6 +31,7 @@ struct GlobalMiniPlayerView: View {
             Spacer()
 
             Button {
+                onTap()
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isPlaying.toggle()
                 }
