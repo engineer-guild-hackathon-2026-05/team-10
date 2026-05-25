@@ -20,6 +20,7 @@ struct ClipCreationView: View {
                         songInfo
                         playerControls
                         waveformSection
+                        commentSection
                         shareButton
                     }
                     .padding(.horizontal, 24)
@@ -32,20 +33,25 @@ struct ClipCreationView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Image(systemName: "music.note")
-                        .foregroundStyle(.white)
-                        .padding(8)
-                        .background(Color.white.opacity(0.12), in: Circle())
-                        .accessibilityHidden(true)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("完了") { dismiss() }
-                        .foregroundStyle(Color(red: 0.55, green: 0.45, blue: 0.95))
-                        .fontWeight(.semibold)
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Color.white.opacity(0.12), in: Circle())
+                    }
+                    .accessibilityLabel("戻る")
                 }
             }
             .toolbarBackground(Color.black, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .alert("投稿エラー", isPresented: postErrorBinding) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(viewModel.postErrorMessage ?? "")
+            }
             .preferredColorScheme(.dark)
         }
     }
@@ -53,14 +59,7 @@ struct ClipCreationView: View {
     // MARK: - Album Art
 
     private var albumArt: some View {
-        RoundedRectangle(cornerRadius: 24)
-            .fill(LinearGradient(
-                colors: song.gradientColors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ))
-            .frame(width: 220, height: 220)
-            .shadow(color: (song.gradientColors.first ?? .clear).opacity(0.4), radius: 24, y: 10)
+        CircularArtworkView(song: song, size: 220, isPlaying: viewModel.isPlaying, showsCenterHole: true)
     }
 
     // MARK: - Song Info
@@ -175,21 +174,92 @@ struct ClipCreationView: View {
         }
     }
 
+    // MARK: - Comment
+
+    private var commentSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("コメント")
+                    .font(.caption)
+                    .foregroundStyle(.gray)
+                Spacer()
+                Text("\(viewModel.commentText.count)/140")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.gray)
+            }
+
+            ZStack(alignment: .topLeading) {
+                if viewModel.commentText.isEmpty {
+                    Text("この曲のここが好き")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.32))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                }
+
+                TextEditor(text: $viewModel.commentText)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 88)
+                    .onChange(of: viewModel.commentText) { _, newValue in
+                        if newValue.count > 140 {
+                            viewModel.commentText = String(newValue.prefix(140))
+                        }
+                    }
+            }
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+
+            if viewModel.postedCardID != nil {
+                Label("Howカードを投稿しました", systemImage: "checkmark.circle.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.green)
+            }
+        }
+    }
+
     // MARK: - Share Button
 
     private var shareButton: some View {
-        Button {} label: {
+        Button {
+            Task {
+                if await viewModel.postHowCard() {
+                    dismiss()
+                }
+            }
+        } label: {
             HStack(spacing: 8) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.body.weight(.semibold))
-                Text("この切り抜きをシェア")
-                    .font(.body.weight(.semibold))
+                if viewModel.isPosting {
+                    ProgressView()
+                        .tint(.black)
+                    Text("投稿中")
+                        .font(.body.weight(.semibold))
+                } else {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body.weight(.semibold))
+                    Text("この切り抜きをシェア")
+                        .font(.body.weight(.semibold))
+                }
             }
             .foregroundStyle(.black)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
             .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
         }
+        .disabled(viewModel.isPosting)
+    }
+
+    private var postErrorBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.postErrorMessage != nil },
+            set: { if !$0 { viewModel.postErrorMessage = nil } }
+        )
     }
 
     // MARK: - Tab Selector

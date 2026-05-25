@@ -652,6 +652,241 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘を実装・docs・metadata に反映し、main 取り込み後の PR ブランチを再レビュー可能な状態へ戻せたため。
 
+### #032 最新 main への統合
+
+- **時刻**：16:21
+- **ツール**：Codex
+- **目的**：大幅に更新された main の UI を優先しつつ、既存の Firebase Functions / MusicKit / Auth / AirPods / 円形アートワーク・波形 UI を統合する
+- **プロンプト**：
+  ```text
+  mainが大幅に変更されました。ここに今までやってきた変更を上手くマージして欲しい。
+  uiは基本的にmainの物を優先し、丸いアートワークや波形表示については我々のUIを使ってください。また、エンドポイント（firebase functions）繋ぎこみや
+  MusicKitとの繋ぎ込み、Auth、Airpodsの処理についてはいい感じに繋ぎ込んでマージすること。ちゃんと動く状態になることが求められます。
+  まずはpull origin mainしてからすすめていってください
+  ```
+- **出力サマリ**：
+  - `pull origin main` で最新 main を取り込み、`feat/main-integration` ブランチで統合作業を実施
+  - main の ForYou / MusicFeed / NowPlaying UI を残しつつ、円形アートワークと波形表示を NowPlaying / mini player / clip 作成へ統合
+  - MusicFeed の曲タップを MusicKit 検索・再生に接続し、再生成功時は MusicKit の曲ID・アートワークを `Song` に反映
+  - `GET /how-cards` / like / create を iOS から Firebase Functions 経由で使うよう MusicFeed と clip 作成画面を接続
+  - Auth 済みユーザーの ID トークンを使う既存 `FirebaseAPI` 経路を維持し、曲選択時に AirPods 頭部モーションを MusicKit 再生位置 provider と同期開始するよう接続
+  - `ChatAPIClient` の optional baseURL 文字列化バグを修正
+- **評価**：採用
+- **採用 / 不採用の理由**：main の画面構成を優先したまま、既存のバックエンド経由 Firebase・MusicKit・AirPods・円形波形 UI を実利用経路に接続できたため。
+
+### #033 最新 main 再取り込みと playback UI 修正
+
+- **時刻**：18:15
+- **ツール**：Codex / xcodebuild
+- **目的**：更新された main を PR ブランチへ取り込み、main の playback UI を優先しつつ NowPlaying の戻る導線と歌詞スクロールを修正する
+- **プロンプト**：
+  ```text
+  再度mainが更新されていて、pullしてきてほしい。mainのUI（とくにplaybackまわり）を優先して。
+  また、曲を再生している画面で右上が「完了」なのはおかしいから、左上に戻るchevronを追加する感じでお願いしたいです。
+
+  あと歌詞がスクロールできないのもなおして。
+  ```
+- **出力サマリ**：
+  - `origin/main` を `feat/main-integration` に merge し、`AI_USAGE_LOG.md` / `ContentView.swift` / `MusicFeedView.swift` / `GlobalMiniPlayerView.swift` の conflict を解消
+  - main 側の AirPods reactive waveform / 3状態分類 / Metal 描画更新を優先して取り込み
+  - NowPlaying の右上 dismiss を廃止し、左上 chevron の戻るボタンへ変更
+  - NowPlaying の playback content を縦 `ScrollView` 化し、歌詞カードまでスクロールできるよう修正
+  - MusicFeed の曲タップで切り抜き作成シートを即表示せず、MusicKit 再生後に NowPlaying を開く main 側挙動へ寄せた
+  - clip 作成画面の toolbar も右上「完了」ではなく左上 chevron へ変更
+- **評価**：採用
+- **採用 / 不採用の理由**：main の playback 更新を維持しながら、ユーザーが指摘した戻る導線と歌詞スクロールの実操作上の問題を解消できたため。
+
+### #034 NowPlaying 歌詞 UI の簡素化
+
+- **時刻**：18:25
+- **ツール**：Codex / xcodebuild
+- **目的**：NowPlaying の歌詞表示から section 表示・全文表示ボタン・接続状態 pill を削除し、歌詞を常時同じスタイルで表示する
+- **プロンプト**：
+  ```text
+  setion1 イントロ みたいな感じで表示されてるところがあると思うんだけど、そこは必要ない。全文表示ボタンもいらない。歌詞全体がいつも表示されるようにして欲しい。あと[intro]とかもいらないし[verse1]みたいなのも。文字の色は全部.whiteに固定して欲しい。全部同じように表示されるように。
+
+  右上の「接続確認中」みたいなUIも必要ない。
+  ```
+- **出力サマリ**：
+  - NowPlaying の `Section 1・イントロ` chip を削除
+  - 歌詞カードの `全文表示` ボタンと `[Intro]` / `[Verse 1]` 表示を削除
+  - 歌詞データをフラットな行リストとして表示し、全行を `.white` / `.body` に統一
+  - 右上の AirPods 接続状態 pill を削除
+  - `git diff --check` と `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：不要な補助 UI を外し、歌詞本文だけが常時同じ見た目で読める表示にできたため。
+
+### #035 Howカード UI の Functions 実データ接続
+
+- **時刻**：18:38
+- **ツール**：Codex / npm / xcodebuild
+- **目的**：Howカード表示を iOS 内のモック fallback から Firebase Functions 経由の `how-cards` 取得へ切り替える
+- **プロンプト**：
+  ```text
+  あと今ってUIが全部モックデータだよね？じっさいにfunctions叩いて取得するように変更できないですか。今書かれているモックデータを全部how-cardsコレクションに追加してからやって欲しい。
+  ```
+- **出力サマリ**：
+  - Functions の Howカード schema を `goods` に統一し、旧 `likes` も互換 decode / response できるようにした
+  - 既存フィード / コミュニティのコメントを 202 件の seed データとして `functions/seed/howCardSeedData.js` に移した
+  - `GET /how-cards` 初回実行時に `app-metadata` を見て、未投入なら `how-cards` コレクションへ idempotent に seed 投入するようにした
+  - iOS の `FirebaseAPI` に Functions 本番 URL fallback を追加し、MusicFeed / Community を Functions 取得結果から表示するよう変更
+  - MusicFeed の `FeedPost.mockPosts` fallback を削除
+  - ローカル seed スクリプトは ADC / service account 不在で投入不可だったため、デプロイ後の Functions 初回取得で投入される形にした
+  - Node 構文チェック、seed 件数確認、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：iOS が直接 Firestore やローカル mock に依存せず、Functions 経由で `how-cards` を取得する実データ経路に寄せられたため。
+
+### #036 Howカード seed warmup の修正
+
+- **時刻**：18:47
+- **ツール**：Codex / xcodebuild
+- **目的**：Community 導線に依存せず、ログイン後の main 起動時に Functions の Howカード seed 判定を走らせる
+- **プロンプト**：
+  ```text
+  コミュニティタブ開いてもFirestoreにデータあがらんかも
+  ```
+- **出力サマリ**：
+  - 現在の main UI では `CommunityView` が main 導線に載っていないことを確認
+  - `ContentView` の main 起動時に `FirebaseAPI.fetchHowCards(limit: 1)` を一度だけ呼ぶ warmup を追加
+  - warmup 失敗時は DEBUG ログだけに留め、メイン画面表示は止めないようにした
+  - `git diff --check` と `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：ユーザーが特定画面を開く操作に依存せず、ログイン後に Functions の seed 処理が実行される経路を作れたため。
+
+### #037 iOS からの Howカード逐次 seed 方式へ変更
+
+- **時刻**：18:53
+- **ツール**：Codex / xcodebuild
+- **目的**：Functions 側に seed 処理を持たせず、iOS 側から既存の Howカード作成 API を逐次呼び出して初期データを追加する
+- **プロンプト**：
+  ```text
+  functionsに追加するんじゃなくて、ios側から開いたら追加するfunctionを逐次呼び出すようにして欲しい
+  ```
+- **出力サマリ**：
+  - Functions の GET 時自動 seed と seed スクリプトを削除
+  - iOS に `HowCardSeedService` を追加し、既存のフィード / コミュニティ用コメントから 202 件分の seed 候補を生成
+  - main 起動時に `GET /how-cards` で既存カードを取得し、同じ曲・区間・コメントがないものだけ `POST /how-cards` を 1 件ずつ呼ぶように変更
+  - Functions は `goods` schema と通常の create / fetch / like API のみを維持
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：seed 専用処理を Functions 側に置かず、iOS 起点で既存の作成 endpoint を使う要件に合わせられたため。
+
+### #038 GoogleService-Info.plist の追跡解除
+
+- **時刻**：20:05
+- **ツール**：Codex / git
+- **目的**：Firebase 設定ファイルをローカルに残したまま git 追跡から外し、今後 push されない状態にする
+- **プロンプト**：
+  ```text
+  いま、githubをみると,GoogleService-Info.plistがpushされてしまっている。これはいけないので、git追跡から削除して欲しい。githubの履歴からも削除できたらしておいて欲しい。gitignoreに追加して、ということ。削除っていうのはファイルを消すってことじゃないからね。
+  ```
+- **出力サマリ**：
+  - `Othello/Othello/GoogleService-Info.plist` が git 追跡対象であることを確認
+  - ローカルファイルを残したまま `git rm --cached` で追跡から外した
+  - `.gitignore` に `**/GoogleService-Info.plist` が既に含まれていることを確認
+  - 履歴上は `origin/main` の `6ca0437` から複数ブランチへ混入しており、完全 purge には main と関連ブランチの履歴書き換えが必要であることを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：現在の PR 先端からは Firebase 設定ファイルを外し、ローカル開発用ファイルは保持したまま今後の再追加を `.gitignore` で防げるため。
+
+### #039 歌詞取得と users 表示の実データ接続
+
+- **時刻**：20:16
+- **ツール**：Codex / xcodebuild / curl
+- **目的**：NowPlaying の固定歌詞を Musixmatch API 取得に差し替え、Community の user_id 表示を users.display_name 表示へ変更する
+- **プロンプト**：
+  ```text
+  歌詞が全然表示されないのと、どの曲でも同じ歌詞が表示されるんだけど。ちゃんとmusixmatch APIを呼び出すようになっている？
+
+  また、コミュニティ画面でuser idが表示されているんだけど、user_nameが表示されて欲しい。ということは、usersコレクションから対応するuserをとってきてnameを入れたいんだけど、そうなると今度はusersコレクションにseedsをしなきゃいけない。iosアプリ側で、アプリ開いたら対応するusersのseedするスクリプト書いてくれる？
+  ```
+- **出力サマリ**：
+  - `NowPlayingView` の固定歌詞配列を削除し、曲ごとに `LyricsViewModel` から Musixmatch 取得結果を表示するよう変更
+  - Musixmatch Provider で `track.subtitle.get` の LRC を優先し、取得できない場合は `track.lyrics.get` へ fallback するよう変更
+  - LRC parser を追加し、`[Intro]` / `[Verse]` などの bracket 行と Musixmatch footer を表示しないよう整理
+  - Functions に `GET /users` と `POST /users/seed` を追加し、既存ユーザーの `display_name` / `email` を上書きしない seed にした（後続 #040 で削除し、iOS 直接 Firestore 書き込みへ修正）
+  - iOS 起動時と Howカード表示時に、既存 Howカードの `user_id` に対応する users seed / fetch を呼び、Community / MusicFeed は `display_name` を表示するよう変更
+  - 旧 Howカード seed service と Preview 用 `Artist.mock` alias を削除
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+  - 手元の `MUSIXMATCH_API_KEY` は長さ 0 で、API 疎通時の JSON status は 401 だったため、実機表示には有効なキー設定が必要
+- **評価**：採用
+- **採用 / 不採用の理由**：固定歌詞・user_id 表示・一時 Howカード seed を取り除き、Functions / Musixmatch / users collection から表示を組み立てる実データ経路に寄せられたため。
+
+### #040 users seed を iOS 直接 Firestore 書き込みへ修正
+
+- **時刻**：20:32
+- **ツール**：Codex / xcodebuild
+- **目的**：Functions に追加した users seed endpoint を削除し、iOS アプリ側から `users` コレクションへ逐次ドキュメント追加する
+- **プロンプト**：
+  ```text
+  え、users/seedを呼び出せってんじゃなくて、ios側からuserドキュメントを逐次追加するように、って話ですよ。話わかっていますか？functionを追加しないで。削除して。
+  ```
+- **出力サマリ**：
+  - Functions の `GET /users` と `POST /users/seed` endpoint を削除
+  - Firestore repository から users 一括取得 / seed 用の追加関数を削除
+  - iOS の `UserSeedService` を FirebaseFirestore SDK に切り替え、既存 Howカードの `user_id` ごとに `users/{uid}` を逐次 `setData(..., merge: true)` するよう変更
+  - 既存 `display_name` / `email` は保持し、未設定または新規ドキュメントにだけ seed 値を入れるようにした
+  - Community / MusicFeed の fallback も Functions ではなく Firestore SDK から `users/{uid}` を取得する形へ変更
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：ユーザー意図どおり、Functions を追加せず iOS 起点で `users` コレクションを直接 seed する実装に戻したため。
+
+### #041 users Firestore rules と表示名取得経路の安全化
+
+- **時刻**：20:44
+- **ツール**：Codex / Firebase CLI / xcodebuild
+- **目的**：iOS からの `users/{uid}` 直接書き込みが Firestore rules で拒否される問題を修正し、可能なら rules を deploy する
+- **プロンプト**：
+  ```text
+  12.13.0 - [FirebaseFirestore][I-FST000001] Listen for query at users/7Ez4X2acWsNnW0XOSELj3UudhBl1|f:|ob:__name__asc failed: Missing or insufficient permissions.
+  [HowCards] user seed failed: Error Domain=FIRFirestoreErrorDomain Code=7 "Missing or insufficient permissions." UserInfo={NSLocalizedDescription=Missing or insufficient permissions.}
+
+  可能なら Firestore rules を deploy する とあるけど、firebase cliが足りないのかな？入れていいですよ
+  ```
+- **出力サマリ**：
+  - `firestore.rules` が deny-all で、iOS の `users/{uid}` get/create/update が拒否される状態だったことを確認
+  - direct Firestore access はログイン中ユーザー自身の `users/{uid}` のみ許可し、`users` list / 他ユーザー書き込み / `how-cards` 直接アクセスは引き続き禁止
+  - iOS の `UserSeedService` はログイン中ユーザー自身の user doc だけを seed するよう制限
+  - Community / MusicFeed の他ユーザー表示名は、既存 `GET /how-cards` が Admin SDK で `users.display_name` を参照して `user_name` だけ返す構成に変更
+  - Firebase CLI 15.18.0 を `/private/tmp/firebase-tools` に導入し deploy を試行したが、この端末に `firebase login` 認証情報がなく `Failed to authenticate` で未実行
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：Firestore rules を過度に広げず、iOS 直接 seed の必要範囲とコミュニティ表示名取得を分離できたため。
+
+### #042 Firestore rules deploy
+
+- **時刻**：20:59
+- **ツール**：Codex / Firebase CLI
+- **目的**：ログイン済み Firebase CLI で `egh-howtune` の Firestore rules を本番反映する
+- **プロンプト**：
+  ```text
+  firebase cliを入れました。firebase loginまで終わっているから、deployしてみてください
+  ```
+- **出力サマリ**：
+  - shell の PATH では `firebase` が見えなかったため、前回導入済みの `/private/tmp/firebase-tools/node_modules/.bin/firebase` を使用
+  - `firebase deploy --only firestore:rules --project egh-howtune --non-interactive` を実行
+  - `firestore.rules` の compile が成功し、`cloud.firestore` に rules を release した
+  - Project Console: `https://console.firebase.google.com/project/egh-howtune/overview`
+- **評価**：採用
+- **採用 / 不採用の理由**：iOS の `users/{uid}` direct access に必要な Firestore rules を Firebase project に反映できたため。
+
+### #043 PR #72レビュー対応
+
+- **時刻**：21:25
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #72 の CodeRabbit review comments を確認し、現在の `feat/main-integration` で有効な指摘を修正する
+- **プロンプト**：
+  ```text
+  #72のレビューを見て、修正して
+  ```
+- **出力サマリ**：
+  - 再生トラック未一致時の `tracks.first` fallback と `onSongTap` 遷移を止め、誤再生・誤遷移を防止
+  - Clip 投稿の再入 guard、`postedCardID` reset、いいね重複送信防止、artwork fallback の空 gradient 対応を追加
+  - Community loading/error 表示、MusicFeed load cancellation、LRC parser の同時刻順序と bracketed lyric heading の扱いを修正
+  - `UserSeedService` を差分がある時だけ Firestore write する実装にし、nullable email 契約に合わせて client / Functions / docs を更新
+  - 現在のブランチに存在しない古い `HowCardSeedService.swift` と README seed metadata 指摘は対象外として確認
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘のうち現在も有効な不具合を、表示・投稿・再生・データ同期の各境界で最小差分に分けて解消できたため。
+
 ### #032 PR #73 main conflict 解消
 
 - **時刻**：21:10
