@@ -173,13 +173,8 @@ private struct HighlightedHowCardCommentCard: View {
                             .foregroundStyle(.white)
                     }
                 }
-                HStack(spacing: 6) {
-                    Image(systemName: "bubble.left")
-                        .foregroundStyle(.white)
-                    Text("1")
-                        .font(.subheadline)
-                        .foregroundStyle(.white)
-                }
+                Image(systemName: "bubble.left")
+                    .foregroundStyle(.white)
                 Spacer()
                 Image(systemName: "paperplane")
                     .foregroundStyle(.gray)
