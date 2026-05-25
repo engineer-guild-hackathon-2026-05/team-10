@@ -168,6 +168,43 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：3状態と6軸のどちらか一方を消すのではなく、現在の実装と学習データ収集の関係として自然に読める内容に統合できたため。
 
+### #009 FirestoreコメントAPIとAuthユーザー保存
+
+- **時刻**：13:30
+- **ツール**：Codex
+- **目的**：Howカードコメントの Firestore 直書きモデル/API、FirebaseAuth ユーザー作成後の users 保存を実装する
+- **プロンプト**：
+  ```text
+  firestoreとコメントをつなぐところの機能開発をして欲しい。firestoreのデータ構造は次のようになっています。how-cardsコレクションの中にドキュメントがあり、comment, song_id, artist_id, user_id, goods(integer)←いいねの数 が保存されている感じ。ドキュメントをまずはこの内容で更新し、それに合わせてコードも書いていってください。Viewと繋ぎこむところはまだで良くて、Firebase APIみたいなものが作れていて、structがあり、encode decodeできるようになっていればいいかなと思います。また、FirebaseAuthでユーザー作成して、作ったユーザーをusersコレクションに保存する機能もまだだから、そこについても開発しておいて欲しい
+  ```
+- **出力サマリ**：
+  - `docs/data-model.md` を `how-cards` の `comment/song_id/artist_id/user_id/goods` 構造と `users/{uid}` 構造に更新
+  - `HowCardComment` / `FirestoreUser` の Firestore Codable model を追加
+  - `FirebaseAPI` を追加し、Howカード作成・更新・取得・goods加算・ユーザー保存/取得を実装
+  - `AuthViewModel.signUp` で FirebaseAuth 作成後に `users/{uid}` を保存し、保存失敗時は signOut するよう変更
+  - iOSターゲットに `FirebaseFirestore` を追加し、Firestore Rules も認証済みユーザー向けの最小権限へ更新
+  - `xcodebuild` と `git diff --check` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：View接続前のデータ層として必要な Codable model と API 境界を作り、Auth 作成と Firestore ユーザー保存を同じフローに統合できたため。
+
+### #010 PR #60 レビュー対応
+
+- **時刻**：13:44
+- **ツール**：Codex
+- **目的**：CodeRabbit の PR レビュー指摘を反映し、再ビルドして push する
+- **プロンプト**：
+  ```text
+  https://github.com/engineer-guild-hackathon-2026-05/team-10/pull/60　レビューが返ってきているから直してpushしなおして
+  ```
+- **出力サマリ**：
+  - `AI_USAGE_LOG.md` と `docs/data-model.md` の fenced code block に言語指定を追加
+  - Firestore Rules の `users` create/update を分離し、`created_at` 不変性と `updated_at == request.time` を検証
+  - `users` 保存を `Date()` ではなく `FieldValue.serverTimestamp()` で書くよう修正
+  - Auth 作成後の Firestore 保存失敗時に、signOut 失敗も `FirebaseAPIError.signOutRollbackFailed` として通知
+  - `xcodebuild` と `git diff --check` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘4件をすべて反映し、Firestore Rules と iOS 書き込み実装の整合性を保ったままビルド通過できたため。
+
 ---
 
 ## Day 3（2026-05-26）

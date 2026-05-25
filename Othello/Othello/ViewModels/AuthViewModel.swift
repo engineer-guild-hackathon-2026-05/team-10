@@ -40,7 +40,17 @@ final class AuthViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            try await Auth.auth().createUser(withEmail: email, password: password)
+            let result = try await Auth.auth().createUser(withEmail: email, password: password)
+            do {
+                try await FirebaseAPI.shared.createUserDocument(from: result.user)
+            } catch let createUserError {
+                do {
+                    try Auth.auth().signOut()
+                } catch {
+                    throw FirebaseAPIError.signOutRollbackFailed(original: createUserError, signOut: error)
+                }
+                throw createUserError
+            }
         } catch {
             errorMessage = localizedError(error)
         }
@@ -56,6 +66,13 @@ final class AuthViewModel: ObservableObject {
     }
 
     private func localizedError(_ error: Error) -> String {
+        if case FirebaseAPIError.signOutRollbackFailed = error {
+            return "ユーザー情報の保存とログアウトに失敗しました"
+        }
+        if error is FirebaseAPIError {
+            return "ユーザー情報の保存に失敗しました"
+        }
+
         let code = AuthErrorCode(rawValue: (error as NSError).code)
         switch code {
         case .invalidEmail:
