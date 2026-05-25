@@ -310,7 +310,7 @@ txt(s, "体験とコミュニティが最も希少な資源になる。\nHowTune
 # ═══════════════════════════════════════════════════════════════
 s = add_slide()
 kicker(s, "THE PROBLEM")
-txt(s, "Labeling is not enough.",
+txt(s, "聴き方は、伝わらない。",
     ML, Inches(1.05), CW, Inches(1.0), sz=52, bold=True)
 bar(s, ML+Inches(0.05), Inches(2.2), Inches(2.6))
 txt(s, "既存サービスは「曲名」でしか繋げない。本当の熱狂は、聴き方の中にある。",
