@@ -671,6 +671,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #73 の主目的である6軸 HowChat 深掘りを失わず、main 側で入った AirPods / Metal / 3状態波形制御ともコンパイル可能な形で統合できたため。
 
+### #033 how-cards song_id 契約修正
+
+- **時刻**：21:35
+- **ツール**：Codex / GitHub CLI / Apple Music
+- **目的**：Issue #78 の `how-cards.song_id` に slug が返る問題を修正し、MusicKit ID 契約を API 境界で保証する
+- **プロンプト**：
+  ```text
+  issue 78 https://github.com/engineer-guild-hackathon-2026-05/team-10/issues/78 を修正するプルリクを出して欲しい。ブランチ切って実装して。
+  ```
+- **出力サマリ**：
+  - `song_id` を MusicKit / Apple Music / iTunes の数値曲 ID として validation する共通 helper を追加
+  - Functions / backend の `GET` / `POST` / `PATCH /how-cards` で slug や表示名由来の `song_id` を 400 にするよう修正
+  - Firestore serializer でも不正な既存 `song_id` を持つドキュメントを返さないようにした
+  - legacy slug を `song_slug` に退避し、既知の RADWIMPS 曲を MusicKit ID へ置換する migration script を追加
+  - Functions / backend / data model docs を更新し、`song_slug` / `song_title` を表示用フィールドとして分離
+- **評価**：採用
+- **採用 / 不採用の理由**：API 境界・永続化データ・既存データ移行・ドキュメントの4点で `song_id` 契約を揃えられたため。
+
 ---
 
 ## Day 3（2026-05-26）

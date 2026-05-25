@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { isMusicKitSongId } = require('../utils/musicKit');
 
 const db = () => admin.firestore();
 const { FieldValue } = admin.firestore;
@@ -211,7 +212,7 @@ async function getHowCardsByTag(tag) {
 function serializeHowCardComment(id, data) {
   if (!isHowCardComment(data)) return null;
 
-  return {
+  const howCard = {
     id,
     comment: data.comment,
     song_start: Number.isFinite(data.song_start) ? data.song_start : 0,
@@ -223,6 +224,18 @@ function serializeHowCardComment(id, data) {
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
   };
+
+  if (typeof data.song_slug === 'string') {
+    howCard.song_slug = data.song_slug;
+  }
+  if (typeof data.song_title === 'string') {
+    howCard.song_title = data.song_title;
+  }
+  if (typeof data.artist_name === 'string') {
+    howCard.artist_name = data.artist_name;
+  }
+
+  return howCard;
 }
 
 function isHowCardComment(data) {
@@ -230,6 +243,7 @@ function isHowCardComment(data) {
     data &&
       typeof data.comment === 'string' &&
       typeof data.song_id === 'string' &&
+      isMusicKitSongId(data.song_id) &&
       typeof data.artist_id === 'string' &&
       typeof data.user_id === 'string'
   );

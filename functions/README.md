@@ -148,7 +148,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | `comment` | string | ユーザー記入のコメント（空文字不可） |
 | `song_start` | number | 区間開始（秒、0 以上） |
 | `song_end` | number | 区間終了（秒、`song_start` より大きい） |
-| `song_id` | string | 曲 ID |
+| `song_id` | string | MusicKit / Apple Music / iTunes の数値曲 ID（例: `1704093812`）。slug や表示名は不可 |
 | `artist_id` | string | アーティスト ID |
 
 **レスポンス**
@@ -184,6 +184,9 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "song_start": 78.4,
       "song_end": 84.2,
       "song_id": "1704093812",
+      "song_slug": "ado-show",
+      "song_title": "Show",
+      "artist_name": "Ado",
       "artist_id": "ado",
       "user_id": "uid123",
       "likes": 3
@@ -238,7 +241,10 @@ how-cards/{cardId}
   comment: string
   song_start: number
   song_end: number
-  song_id: string
+  song_id: string          # MusicKit / Apple Music / iTunes の数値曲 ID
+  song_slug: string | null # 旧slugや表示用slugが必要な場合のみ
+  song_title: string | null
+  artist_name: string | null
   artist_id: string
   user_id: string
   likes: number
@@ -249,6 +255,21 @@ how-cards/{cardId}/liked-by/{uid}
   user_id: string
   liked_at: timestamp
 ```
+
+### `song_id` 契約と migration
+
+`song_id` は MusicKit の catalog song ID として iOS がそのまま解決できる数値文字列だけを受け付ける。
+`radwimps-愛にできることはまだあるかい` のような slug / 表示名由来の値は `400` として拒否し、既存の不正なドキュメントも API レスポンスから除外する。
+
+既存データに slug が残っている場合は migration script を使う。デフォルトは dry-run:
+
+```powershell
+cd functions
+npm run migrate:how-card-song-ids
+npm run migrate:how-card-song-ids -- --write
+```
+
+既知の legacy slug は `song_slug` に退避し、`song_id` を MusicKit ID に置換する。
 
 ---
 
