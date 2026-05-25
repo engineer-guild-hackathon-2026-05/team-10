@@ -374,7 +374,7 @@ s = add_slide()
 kicker(s, "LIVE DEMO")
 txt(s, "DEMO", ML, Inches(2.0), Inches(8), Inches(2.0), sz=110, bold=True)
 bar(s, ML+Inches(0.05), Inches(4.3), Inches(4.0), h=Inches(0.08))
-txt(s, "実機で、歌詞タップ → AI対話 → HowCard を体験します。",
+txt(s, "実機で、歌詞範囲選択 → Howコメント投稿 → HowCard を体験します。",
     ML, Inches(4.65), CW, Inches(0.6), sz=20, col=LGRAY)
 txt(s, "▶ ここに実機スクリーンショット / 画面録画を配置",
     ML, Inches(6.4), CW, Inches(0.5), sz=14, col=GRAY, italic=True)
@@ -419,19 +419,18 @@ txt(s, "身体反応を、数値に。",
 bar(s, ML+Inches(0.05), Inches(2.1), Inches(2.6))
 
 grad_card(s, ML, Inches(2.6), CW, Inches(1.5), RGBColor(0x06,0x1A,0x36), DBLUE, angle=0)
-txt(s, "Groove  =  volume × 0.42  +  pulse × 0.58",
+txt(s, "Groove  =  head motion features",
     ML, Inches(2.6), CW, Inches(1.0), sz=28, bold=True, col=LBLUE,
     align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
-txt(s, "AirPods 不要。iPhone だけで動く。",
+txt(s, "AirPods 頭部モーションで聴き方を推定する。",
     ML, Inches(3.55), CW, Inches(0.5), sz=14, col=GRAY, align=PP_ALIGN.CENTER)
 
-axes = [("groove",BLUE),("hype",LBLUE),("chill",GREEN),
-        ("immersion",PURPLE),("hit",AMBER),("afterglow",PINK)]
+axes = [("groove",BLUE),("chill",GREEN),("neutral",GRAY)]
 gap = Inches(0.25)
-pw = (CW - gap*5) / 6
+pw = (CW - gap*2) / 3
 for i,(name,color) in enumerate(axes):
     pill(s, ML+i*(pw+gap), Inches(4.6), pw, Inches(0.7), name, color)
-txt(s, "6軸スコアで「聴き方」を多次元に表現する",
+txt(s, "3状態で「聴き方」の入口をシンプルに表現する",
     ML, Inches(5.6), CW, Inches(0.5), sz=16, col=LGRAY, align=PP_ALIGN.CENTER)
 
 # ═══════════════════════════════════════════════════════════════
@@ -442,10 +441,10 @@ kicker(s, "THE MOAT")
 txt(s, "使うほど、賢くなる。",
     ML, Inches(1.05), CW, Inches(0.9), sz=48, bold=True)
 bar(s, ML+Inches(0.05), Inches(2.15), Inches(2.6))
-txt(s, "AI対話の回答が、そのまま学習データになる。",
+txt(s, "Howコメントが、そのまま聴き方のデータになる。",
     ML, Inches(2.45), CW, Inches(0.5), sz=18, col=LGRAY)
 
-nodes = ["タップ","AI 対話","学習","精度向上","共鳴増加"]
+nodes = ["範囲選択","How投稿","学習","精度向上","共鳴増加"]
 gap = Inches(0.55)
 nw = (CW - gap*4) / 5
 for i, t in enumerate(nodes):
@@ -465,17 +464,17 @@ txt(s, "このデータ資産が、競合の参入障壁になる。",
 # ═══════════════════════════════════════════════════════════════
 s = add_slide()
 kicker(s, "TECHNOLOGY")
-txt(s, "Apple Ecosystem × Claude",
+txt(s, "Apple Ecosystem × Firebase",
     ML, Inches(1.05), CW, Inches(0.9), sz=44, bold=True)
 bar(s, ML+Inches(0.05), Inches(2.1), Inches(3.0))
 
 tech = [
     (BLUE,   "iOS",     "SwiftUI + MusicKit"),
     (LBLUE,  "歌詞",     "Musixmatch API"),
-    (GREEN,  "Groove",  "音量 + 本体モーション"),
-    (AMBER,  "AI",      "Claude (backend経由)"),
+    (GREEN,  "Groove",  "AirPods 頭部モーション"),
+    (AMBER,  "Community","HowCard コメント"),
     (PURPLE, "ML",      "Create ML → Core ML"),
-    (PINK,   "Backend", "Firestore + Node.js"),
+    (PINK,   "Backend", "Firebase Functions + Firestore"),
 ]
 gap = Inches(0.4)
 cwd = (CW - gap*2) / 3
@@ -591,7 +590,7 @@ txt(s, "✓  実装済み (P0)", ML+Inches(0.5), Inches(3.45), cw2-Inches(1), In
     sz=18, bold=True, col=GREEN)
 mtxt(s, [
     "曲再生 × MusicKit", "時刻同期歌詞 (Musixmatch)",
-    "歌詞タップ → AI対話 (Claude)", "HowCard 生成・保存",
+    "歌詞範囲選択 → Howコメント投稿", "HowCard 保存・編集",
     "Groove レベル表示",
 ], ML+Inches(0.5), Inches(4.1), cw2-Inches(1), Inches(2.5), dsz=16, spacing=1.4)
 
@@ -601,7 +600,7 @@ txt(s, "○  意図的にスコープ外", c2x+Inches(0.5), Inches(3.45), cw2-In
     sz=18, bold=True, col=GRAY)
 mtxt(s, [
     "DM・フォロー・タイムライン", "Spotify 連携",
-    "完全な認証フロー", "AirPods 必須のセンサー精度",
+    "完全な認証フロー", "HealthKit / 心拍連携",
     "教師データ収集アプリ",
 ], c2x+Inches(0.5), Inches(4.1), cw2-Inches(1), Inches(2.5), dsz=16, dcol=GRAY, spacing=1.4)
 
@@ -658,44 +657,44 @@ def qa(q, answer):
     mtxt(s, answer, ML, Inches(2.8), CW, Inches(4.0), dsz=17, spacing=1.45)
 
 qa("Q1: AirPods がないと精度が落ちる？", [
-    ("A. AirPods はサプリメントに降格済み (ADR-0005)。", 18, True, WHITE),
+    ("A. MVP の主シグナルは AirPods 頭部モーションです。", 18, True, WHITE),
     "",
-    ("デモは iPhone 単体で完全動作。", 17, False, LBLUE),
-    "音量 × 本体モーションで Groove を算出。AirPods 接続時は精度が上がるが必須ではない。",
-    "ロードマップ: 音量 → AirPods → 個人最適化。",
+    ("未接続時は手動選択で体験を継続。", 17, False, LBLUE),
+    "自動推定は対応 AirPods 接続時に有効化する。",
+    "ロードマップ: AirPods 頭部モーション → 個人最適化。",
 ])
 qa("Q2: 音楽・歌詞のライセンスは？", [
     ("A. Apple MusicKit で再生 = ライセンス取得済み。", 18, True, WHITE),
     "",
     "音源は保持・配信せず MusicKit に委任。",
     "歌詞は Musixmatch API（商用時は有償プラン）。",
-    "Claude API はバックエンド経由でキーを秘匿。",
+    "Functions 経由で投稿・認証を扱い、音源は保持しない。",
 ])
 qa("Q3: ML の精度は現実的？", [
     ("A. MVP はルールベース。精度より体験を優先。", 18, True, WHITE),
     "",
-    ("volume × 0.42 + motion × 0.58。", 17, False, LBLUE),
+    ("AirPods head motion → groove / chill / neutral。", 17, False, LBLUE),
     "誇大な精度は主張しない。",
-    "AI対話の回答 → ラベル → Create ML で精度向上。使うほど賢くなる。",
+    "Howコメント → ラベル → Create ML で精度向上。使うほど賢くなる。",
 ])
 qa("Q4: スケールするか / 模倣されないか？", [
     ("A. データモートとネットワーク効果。", 18, True, WHITE),
     "",
-    "「歌詞 × 身体反応 × AI対話」のラベル付きデータは、後発が追うのに同量のユーザー時間が必要。",
+    "「歌詞 × 身体反応 × Howコメント」のラベル付きデータは、後発が追うのに同量のユーザー時間が必要。",
     ("同じ歌詞に反応した人が増えるほど、マッチング価値が上がる。", 17, False, LBLUE),
 ])
 qa("Q5: 心拍・身体データのプライバシーは？", [
     ("A. プライバシーを設計の中心に。", 18, True, WHITE),
     "",
-    "心拍は HealthKit 端末内に留め、Firestore には書き込まない。",
-    "LLM キーはバックエンド経由 (ADR-0002)。",
+    "HealthKit / 心拍連携は MVP から削除済み。",
+    "Firestore には HowCard コメントとユーザー情報のみを保存。",
     "最小権限・明示同意・削除手段を非機能要件に定義。",
 ])
 qa("Q6: なぜ今、なぜこのチーム？", [
     ("A. タイミング・技術・チームが揃った。", 18, True, WHITE),
     "",
     ("AIがスキルをコモディティ化した直後 — 「How」のSNSはまだ無い。", 17, False, LBLUE),
-    "Apple Ecosystem × Claude が今が最良の組み合わせ。",
+    "Apple Ecosystem × Firebase が今が最良の組み合わせ。",
     "PM / iOS / Backend / ML の4専門職で、3日で動くものを作った。",
 ])
 

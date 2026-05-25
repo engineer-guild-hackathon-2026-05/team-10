@@ -12,9 +12,12 @@ final class HowChatViewModel: ObservableObject {
     enum ChatState { case idle, loading, waitingReply, done, error }
 
     let event: ReactionEvent
+    let sessionID: String
+    private let maximumDialogueTurns = 2
 
     init(event: ReactionEvent) {
         self.event = event
+        self.sessionID = event.id.uuidString
     }
 
     func start() {
@@ -37,7 +40,7 @@ final class HowChatViewModel: ObservableObject {
         choices = []
         messages.append(HowChatMessage(sender: .user, text: text))
         turnCount += 1
-        guard turnCount < 2 else {
+        guard turnCount < maximumDialogueTurns else {
             state = .done
             return
         }
@@ -47,7 +50,7 @@ final class HowChatViewModel: ObservableObject {
     private func sendToAI(userMessage: String?) async {
         state = .loading
         do {
-            let response = try await ChatAPIClient.shared.chat(event: event, messages: messages)
+            let response = try await ChatAPIClient.shared.chat(sessionID: sessionID, event: event, messages: messages)
             messages.append(HowChatMessage(sender: .ai, text: response.question))
             choices = response.choices.map { HowChatChoice(label: $0) }
             state = .waitingReply

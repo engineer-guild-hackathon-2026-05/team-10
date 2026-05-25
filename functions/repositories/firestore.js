@@ -286,7 +286,7 @@ function normalizeMusicSongID(value) {
 }
 
 function isMusicSongID(value) {
-  return typeof value === 'string' && /^\d+$/.test(value);
+  return typeof value === 'string' && value.length <= 64 && /^\d+$/.test(value);
 }
 
 function normalizeString(value) {

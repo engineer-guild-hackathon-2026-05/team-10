@@ -1,80 +1,241 @@
 # バックエンド設計書
 
-> スタック: **Node.js + Express**、**Firestore**（Admin SDK）、**Firebase Auth（Email/Password）**、**Anthropic SDK（Claude）**
+> 2026-05-25 時点の実装に追従する。本番バックエンドは **Firebase Cloud Functions v2 + Express + Firestore Admin SDK + Firebase Auth**。旧 `backend/` はローカル参照用であり、本番デプロイ対象ではない。
 
 ---
 
-## ディレクトリ構成
+## 本番構成
 
 ```text
-backend/
-├── index.js                  # Express アプリのエントリーポイント
+functions/
+├── index.js                  # HTTPS api + Auth onCreate trigger
+├── app.js                    # Express app mount
 ├── middleware/
-│   └── auth.js               # Firebase ID トークン検証 → req.uid / email / displayName をセット
+│   └── auth.js               # Firebase ID token 検証
 ├── routes/
-│   ├── sessions.js           # POST /sessions、POST /sessions/:id/chat、POST /sessions/:id/how-card
-│   ├── how-cards.js          # /how-cards 配下
-│   └── users.js              # GET/PUT /users/me
-├── services/
-│   └── claude.js             # Anthropic SDK ラッパー（対話・Howカード生成）
+│   ├── how-cards.js          # Howカードコメント API
+│   ├── recommended-comments.js # Home dashboard 向けおすすめコメント API
+│   └── users.js              # 自分のユーザー情報 API
 ├── repositories/
-│   └── firestore.js          # Firestore の読み書きをまとめる
-├── .env                      # gitignore 対象
-├── serviceAccountKey.json    # gitignore 対象
+│   └── firestore.js          # Firestore read/write
 └── package.json
 ```
 
+- Runtime: Node.js 20
+- Region: `asia-northeast1`
+- Base URL: `https://asia-northeast1-egh-howtune.cloudfunctions.net/api`
+- Auth: Firebase ID token (`Authorization: Bearer <token>`)
+- Data store: Firestore
+- `api`: Express app を HTTPS Function に mount
+- `onUserSignup`: Firebase Auth onCreate で `users/{uid}` を自動作成
+
 ---
 
-## 環境変数（`.env`）
+## 現在のエンドポイント
 
-```bash
-ANTHROPIC_API_KEY=
-PORT=3000
+| Method | Path | Auth | 用途 |
+|---|---|---|---|
+| GET | `/health` | 不要 | 死活確認 |
+| GET | `/how-cards` | 必須 | Howカードコメント一覧 |
+| GET | `/how-cards?song_id=...` | 必須 | 曲ごとの Howカードコメント一覧 |
+| GET | `/how-cards/:id` | 必須 | Howカードコメント詳細 |
+| POST | `/how-cards` | 必須 | Howカードコメント作成 |
+| PATCH | `/how-cards/:id` | 必須 | 自分の Howカードコメント更新 |
+| POST | `/how-cards/:id/like` | 必須 | いいね。冪等、二重防止 |
+| GET | `/recommended-comments` | 必須 | Home dashboard 向けおすすめコメント一覧 |
+| GET | `/users/me` | 必須 | 自分のユーザー情報取得 |
+| PUT | `/users/me` | 必須 | 自分のユーザー情報作成・更新 |
+
+`/sessions`, `/sessions/:id/chat`, `/sessions/:id/how-card`, `GET /how-cards?tag=...` は Functions 本番には実装されていない。HowChat 側には legacy/mock client が残っているが、本番 API contract ではない。
+
+---
+
+## 認証フロー
+
+1. iOS が Firebase Auth でサインアップまたはサインインする。
+2. iOS は API request ごとに Firebase ID token を取得し、`Authorization: Bearer <token>` を付与する。
+3. `functions/middleware/auth.js` が token を検証し、`req.uid`, `req.email`, `req.displayName` を設定する。
+4. 新規サインアップ時は `onUserSignup` が `users/{uid}` を作成する。
+5. iOS は必要に応じて `PUT /users/me`、または Firestore rules で許可された自分自身の `users/{uid}` 直接 read/write で display name などを同期する。
+
+`PUT /users/me` の email は ID token の値を正とする。body の email が token と異なる場合は 400 を返す。
+
+---
+
+## API 詳細
+
+### GET /health
+
+```json
+{ "status": "ok" }
 ```
 
-サービスアカウントキーは `backend/serviceAccountKey.json` に置く（gitignore 対象）。
-本番では `GOOGLE_APPLICATION_CREDENTIALS` 環境変数でパスを指定可能。
+### POST /how-cards
 
----
+Howカードコメントを作成する。`user_id` は ID token から補完される。
 
-## Firebase セットアップ（コードを書く前に済ませる）
+```json
+{
+  "comment": "ここのベースラインが少し外れている感じが好き",
+  "song_start": 78.4,
+  "song_end": 84.2,
+  "song_id": "1704093812",
+  "song_slug": "ado-show",
+  "artist_id": "ado"
+}
+```
 
-1. Firebase コンソールでプロジェクトを作成
-2. Firestore を有効化（クライアント直接アクセス禁止前提。テストモードは使わない）
-3. Authentication → Sign-in method → **Email/Password を有効化**（メール確認は無効のまま）
-4. サービスアカウントキーを生成 → `backend/serviceAccountKey.json` として保存（gitignore 対象）
-5. `GoogleService-Info.plist` をダウンロード → `Othello/Othello/` に追加（iOS 側のみ）
-6. リポジトリルートで `firebase init` を実行 → Firestore のみ選択 → `firestore.rules` と `firestore.indexes.json` を生成し、ルールは `allow read, write: if false;` に設定
+Validation:
+
+- `comment`: string, 1〜140 chars
+- `song_start`: number, 0 以上
+- `song_end`: number, `song_start` より大きい
+- `song_id`: string, 1〜64 chars, numeric MusicKit / Apple Music / iTunes ID
+- `itunes_id`: optional string, 1〜64 chars, numeric canonical 曲 ID
+- `song_slug`: optional string, 1〜120 chars, 表示・移行用の slug
+- `artist_id`: string, 1〜120 chars
+
+Response:
+
+```json
+{
+  "howCard": {
+    "id": "card456",
+    "comment": "ここのベースラインが少し外れている感じが好き",
+    "song_start": 78.4,
+    "song_end": 84.2,
+    "song_id": "1704093812",
+    "itunes_id": "1704093812",
+    "song_slug": "ado-show",
+    "artist_id": "ado",
+    "user_id": "uid123",
+    "user_name": null,
+    "likes": 0,
+    "created_at": null,
+    "updated_at": null
+  }
+}
+```
+
+作成直後の response は Firestore server timestamp 確定前のため `created_at` が `null` になり得る。`updated_at` は作成時には書かれず、更新または like 時に付与される。
+
+### GET /how-cards
+
+最新順に Howカードコメント一覧を返す。デフォルトは 50 件、`limit` 指定時は 1〜250 件に丸める。
+
+```json
+{
+  "howCards": [
+    {
+      "id": "card456",
+      "comment": "...",
+      "song_start": 78.4,
+      "song_end": 84.2,
+      "song_id": "1704093812",
+      "itunes_id": "1704093812",
+      "artist_id": "ado",
+      "user_id": "uid123",
+      "user_name": "Atsushi",
+      "likes": 3,
+      "created_at": "2026-05-25T12:00:00.000Z",
+      "updated_at": "2026-05-25T12:05:00.000Z"
+    }
+  ]
+}
+```
+
+`song_id` を指定した場合は canonical `itunes_id` を主軸に検索し、後方互換として `song_id` も併用して曲単位のコメントを返す。`user_name` は `users/{user_id}.display_name` を Admin SDK で参照して付与する。
+
+### GET /how-cards/:id
+
+指定 ID の Howカードコメントを `{ "howCard": ... }` で返す。存在しない場合は 404。
+
+### PATCH /how-cards/:id
+
+作成時と同じ payload で、自分の Howカードコメントだけを更新できる。他ユーザーのカードは 403。
+
+更新対象:
+
+- `comment`
+- `song_start`
+- `song_end`
+- `song_id`
+- `itunes_id`
+- `song_slug`
+- `artist_id`
+- `updated_at`
+
+### POST /how-cards/:id/like
+
+`how-cards/{id}/liked-by/{uid}` を使って二重いいねを防ぐ。未いいねなら `likes` を +1 し、既いいねなら現在値をそのまま返す。
+
+```json
+{ "likes": 4 }
+```
+
+### GET /recommended-comments
+
+Home dashboard 向けにおすすめ Howカードコメント一覧を返す。`created_at` が新しいコメントと `likes` が多いコメントを候補にして Functions 側でスコアリングする。`limit` は 1〜50、未指定時は 12。
+
+```json
+{
+  "comments": [
+    {
+      "id": "card456",
+      "comment": "...",
+      "song_start": 78.4,
+      "song_end": 84.2,
+      "song_id": "1704093812",
+      "itunes_id": "1704093812",
+      "artist_id": "ado",
+      "user_id": "uid123",
+      "user_name": "Atsushi",
+      "likes": 3
+    }
+  ]
+}
+```
+
+### GET /users/me / PUT /users/me
+
+`GET /users/me` は現在ログイン中の `users/{uid}` を返す。
+現行 iOS では `UserSeedService` がログイン中ユーザー自身の `users/{uid}` を Firestore SDK で read/write する経路もある。Firestore rules は自分自身の get/create/update のみに制限する。
+
+`PUT /users/me`:
+
+```json
+{
+  "email": "user@example.com",
+  "display_name": "Atsushi"
+}
+```
+
+Response:
+
+```json
+{
+  "user": {
+    "id": "uid123",
+    "user_id": "uid123",
+    "email": "user@example.com",
+    "display_name": "Atsushi",
+    "created_at": "2026-05-25T12:00:00.000Z",
+    "updated_at": "2026-05-25T12:05:00.000Z"
+  }
+}
+```
 
 ---
 
 ## Firestore データモデル
 
-### コレクション
-
 ```text
 users/{uid}
   user_id: string
-  email: string
+  email: string | null
   display_name: string | null
   created_at: timestamp
   updated_at: timestamp
-
-users/{uid}                ← 既存Howカード生成API用
-  email: string
-  displayName: string
-  howTags: string[]        ← HowCard 生成時に追記される
-  updatedAt: timestamp
-
-sessions/{sessionId}
-  userId: string
-  songTitle: string
-  durationSec: number
-  reactions: ReactionSpan[]
-  chatHistory: ChatMessage[]
-  status: "analyzing" | "done"
-  createdAt: timestamp
 
 how-cards/{cardId}
   comment: string
@@ -86,410 +247,39 @@ how-cards/{cardId}
   artist_id: string
   user_id: string
   likes: number
+  created_at: timestamp
+  updated_at: timestamp | absent
 
-how-cards/{cardId}         ← 既存Howカード生成API用
-  userId: string
-  displayName: string      ← 非正規化（コミュニティ表示用に user 参照不要）
-  sessionId: string
-  songTitle: string
-  howTags: string[]
-  tagLabel: string
-  description: string
-  highlightSec: number
-  createdAt: timestamp
-```
-
-### 型定義
-
-```js
-// ReactionSpan
-{ startSec, endSec, scores: { groove, chill, neutral } }
-
-// ChatMessage
-{ role: "user" | "assistant", content: string }
-```
-
-### Firestore セキュリティルール
-
-バックエンドは Admin SDK 経由（ルールをバイパス）で `how-cards` を扱う。
-iOS クライアントからの直接アクセスは、ログイン中ユーザー自身の `users/{uid}` の `get/create/update` のみに限定する。
-`users` の list や他ユーザーの書き込み、`how-cards` への直接アクセスは禁止する。
-
-```text
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwnUser(uid) {
-      return isSignedIn() && request.auth.uid == uid;
-    }
-
-    function hasValidUserCreateShape(uid) {
-      return request.resource.data.keys().hasOnly([
-        'user_id',
-        'email',
-        'display_name',
-        'created_at',
-        'updated_at'
-      ])
-        && request.resource.data.user_id == uid
-        && (request.resource.data.email == null || request.resource.data.email is string)
-        && (request.resource.data.display_name == null || (
-          request.resource.data.display_name is string
-          && request.resource.data.display_name.size() <= 80
-        ))
-        && request.resource.data.created_at is timestamp
-        && request.resource.data.updated_at == request.time;
-    }
-
-    function hasValidUserUpdateShape(uid) {
-      return request.resource.data.user_id == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'user_id',
-          'email',
-          'display_name',
-          'updated_at'
-        ])
-        && (request.resource.data.email == null || request.resource.data.email is string)
-        && (request.resource.data.display_name == null || (
-          request.resource.data.display_name is string
-          && request.resource.data.display_name.size() <= 80
-        ))
-        && request.resource.data.updated_at == request.time;
-    }
-
-    match /users/{uid} {
-      allow get: if isOwnUser(uid);
-      allow list: if false;
-      allow create: if isOwnUser(uid) && hasValidUserCreateShape(uid);
-      allow update: if isOwnUser(uid) && hasValidUserUpdateShape(uid);
-      allow delete: if false;
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
+how-cards/{cardId}/liked-by/{uid}
+  user_id: string
+  liked_at: timestamp
 ```
 
 ---
 
-## 認証フロー（Email/Password）
+## iOS 連携
 
-### 全体像
-
-1. iOS が Firebase Auth で Email/Password サインアップまたはサインイン
-2. iOS は Firebase user の displayName を設定（推奨）
-3. iOS はすべてのリクエストに Firebase ID トークンを付与:
-   ```
-   Authorization: Bearer <firebase-id-token>
-   ```
-4. `middleware/auth.js` が Admin SDK でトークンを検証 → `req.uid` / `req.email` / `req.displayName` をセット
-5. サインアップ後、iOS が `PUT /users/me` を呼び、`users/{uid}` をバックエンド経由で作成・更新する
-
-### 認証が必要なエンドポイント
-
-| エンドポイント | 認証 |
-|---|---|
-| `POST /sessions` | ✅ 必須 |
-| `POST /sessions/:id/chat` | ✅ 必須 |
-| `POST /sessions/:id/how-card` | ✅ 必須 |
-| `GET /how-cards` | ✅ 必須 |
-| `POST /how-cards` | ✅ 必須 |
-| `PATCH /how-cards/:id` | ✅ 必須 |
-| `POST /how-cards/:id/like` | ✅ 必須 |
-| `GET /recommended-comments` | ✅ 必須 |
-| `GET /users/me` | ✅ 必須 |
-| `PUT /users/me` | ✅ 必須 |
-| `GET /health` | ❌ 不要 |
-
----
-
-## API エンドポイント
-
-### POST /sessions
-
-Core ML がオンデバイスで計算した反応区間を受け取り、セッションを Firestore に保存する。
-
-**リクエスト**
-```json
-{
-  "songTitle": "Blinding Lights",
-  "durationSec": 200,
-  "reactions": [
-    {
-      "startSec": 78,
-      "endSec": 84,
-      "scores": { "groove": 0.82, "chill": 0.05, "neutral": 0.13 }
-    }
-  ]
-}
-```
-
-**レスポンス**
-```json
-{ "sessionId": "abc123" }
-```
-
----
-
-### POST /sessions/:id/chat
-
-1ターン分の対話を Claude に中継する。iOS 側が `history[]` を管理し、毎回リクエストに含める（ステートレス）。
-
-**リクエスト**
-```json
-{
-  "startTime": 78,
-  "tags": ["groove"],
-  "intensity": 0.82,
-  "lyric": "歌詞行",
-  "history": [
-    { "role": "user", "content": "対話を開始してください" },
-    { "role": "assistant", "content": "..." }
-  ]
-}
-```
-
-**レスポンス**
-```json
-{
-  "question": "ベースが入った瞬間に何か感じましたか？",
-  "choices": ["体が動いた", "テンションが上がった", "鳥肌が立った", "言葉にできない"]
-}
-```
-
----
-
-### POST /sessions/:id/how-card
-
-セッションが `req.uid` 所有であることを検証してから Howカードを生成・保存する。
-
-**リクエスト**
-```json
-{
-  "songTitle": "Blinding Lights",
-  "reactions": [...],
-  "chatHistory": [
-    { "role": "user", "content": "体が動いた" },
-    { "role": "assistant", "content": "リズムに乗っていたんですね。" }
-  ]
-}
-```
-
-**レスポンス**
-```json
-{
-  "howCard": {
-    "id": "card456",
-    "howTags": ["groove", "bass-driven"],
-    "tagLabel": "ベースの入りに反応する人",
-    "description": "メロディより先に、低音の重心やリズムの入り方に反応するタイプ。",
-    "highlightSec": 78
-  }
-}
-```
-
-**Firestore 書き込み（batch）**
-- `how-cards/{cardId}` を作成（`displayName` を非正規化）
-- `sessions/{sessionId}` の status を `"done"` に更新
-- `users/{uid}` に email / displayName / howTags をマージ（auto-create）
-
-**エラー**
-- `403`: セッションが他ユーザーのもの
-- `404`: セッションが存在しない
-
----
-
-### GET /how-cards?tag=groove
-
-タグで絞り込んだ Howカード一覧。`displayName` が含まれるので、コミュニティ画面でそのまま表示できる（追加の user 参照不要）。
-
-**レスポンス**
-```json
-{
-  "howCards": [
-    {
-      "id": "card456",
-      "userId": "uid123",
-      "displayName": "ノリ太郎",
-      "songTitle": "Blinding Lights",
-      "howTags": ["groove", "bass-driven"],
-      "tagLabel": "ベースの入りに反応する人",
-      "description": "...",
-      "highlightSec": 78
-    }
-  ]
-}
-```
-
-最大50件、`createdAt` 降順。
-
----
-
-### Howカードコメント API
-
-iOS は `how-cards` へ直接アクセスせず、Firebase ID トークン付きでこのAPIを呼び出す。
-
-`POST /how-cards`:
-
-```json
-{
-  "comment": "このベースラインの入りが好き",
-  "song_start": 78.4,
-  "song_end": 84.2,
-  "song_id": "1704093812",
-  "song_slug": "ado-show",
-  "artist_id": "ado"
-}
-```
-
-`song_id` は MusicKit / Apple Music / iTunes の曲 ID として扱う。slug や表示用文字列は `song_slug` / `song_title` など別フィールドに分離する。バックエンドは `user_id` をトークンから補完し、`likes: 0` で保存する。
-`GET /how-cards` / `GET /how-cards/:id` は `users/{user_id}.display_name` を Admin SDK で参照し、表示用の `user_name` だけをレスポンスへ付与する。
-
-`GET /how-cards?song_id=1704093812` は `{ "howCards": [...] }`、`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` は `{ "howCard": ... }` を返す。
-
-```json
-{
-  "howCard": {
-    "id": "card789",
-    "comment": "このベースラインの入りが好き",
-    "song_start": 78.4,
-    "song_end": 84.2,
-    "song_id": "1704093812",
-    "itunes_id": "1704093812",
-    "artist_id": "ado",
-    "user_id": "uid123",
-    "user_name": "Atsushi",
-    "likes": 0
-  }
-}
-```
-
-`POST /how-cards/:id/like` は同じユーザーの二重いいねを防ぎ、`{ "likes": 4 }` を返す。
-
-### GET /recommended-comments
-
-Home dashboard 向けのおすすめコメント一覧。`how-cards` から新しいコメントといいね数の多いコメントを候補として取得し、Functions 側でスコアリングして返す。`limit` は 1〜50、未指定時は 12。
-
-```json
-{
-  "comments": [
-    {
-      "id": "card789",
-      "comment": "このベースラインの入りが好き",
-      "song_start": 78.4,
-      "song_end": 84.2,
-      "song_id": "1704093812",
-      "itunes_id": "1704093812",
-      "artist_id": "ado",
-      "user_id": "uid123",
-      "likes": 12,
-      "created_at": "2026-05-25T12:00:00.000Z"
-    }
-  ]
-}
-```
-
----
-
-### ユーザー API
-
-`PUT /users/me`:
-
-```json
-{
-  "email": null,
-  "display_name": null
-}
-```
-
-`email` は nullable。ID トークンにメールアドレスがある場合はそれを正とし、body の `email` が異なる場合は 400 を返す。ID トークンにメールアドレスがない場合は `null` として扱う。
-`GET /users/me` / `PUT /users/me` は `{ "user": ... }` を返す。
-
----
-
-## iOS 実装ガイド
-
-iOS チームがこのバックエンドと連携するための最小実装メモ。
-
-### Firebase SDK セットアップ
+iOS の `FirebaseAPI` は `API_BASE_URL` から base URL を読み取り、上記 Functions API へ Firebase ID token 付きでアクセスする。
 
 ```swift
-// AppDelegate or App
-import FirebaseCore
-import FirebaseAuth
-
-FirebaseApp.configure()
-```
-
-### サインアップ（初回ユーザー）
-
-```swift
-// 1. ユーザー作成
-let result = try await Auth.auth().createUser(withEmail: email, password: password)
-
-// 2. displayName を設定（重要：これをやらないと token に name claim が入らない）
-let changeRequest = result.user.createProfileChangeRequest()
-changeRequest.displayName = displayName
-try await changeRequest.commitChanges()
-
-// 3. プロファイル更新を token に反映させるために強制リフレッシュ
-let token = try await result.user.getIDToken(forcingRefresh: true)
-```
-
-### サインイン（既存ユーザー）
-
-```swift
-let result = try await Auth.auth().signIn(withEmail: email, password: password)
-let token = try await result.user.getIDToken()
-```
-
-### アプリ起動時の状態チェック
-
-Firebase Auth は Keychain にセッションを保持するので、再ログイン不要。
-
-```swift
-if let user = Auth.auth().currentUser {
-    let token = try await user.getIDToken()  // 自動リフレッシュされる
-    // ログイン済み → メイン画面
-} else {
-    // 未ログイン → ログイン画面
-}
-```
-
-### リクエストへのトークン付与
-
-```swift
-var request = URLRequest(url: url)
 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 ```
 
-### 401 ハンドリング
+`ENV.plist` には最低限以下を設定する。
 
-トークンは1時間で失効する。`getIDToken()` は自動リフレッシュするが、ネットワーク状況やサインアウトで失敗することがある。
-
-```swift
-if response.statusCode == 401 {
-    try? Auth.auth().signOut()
-    // ログイン画面へ遷移
-}
+```text
+API_BASE_URL=https://asia-northeast1-egh-howtune.cloudfunctions.net/api
+MUSIXMATCH_API_KEY=...
+HOWTUNE_CHAT_MOCK=false
 ```
 
-### よくある落とし穴
+---
 
-1. **displayName を設定した直後の token に name claim が入らない**
-   → `getIDToken(forcingRefresh: true)` で強制リフレッシュする
-2. **シミュレータでネットワーク権限ダイアログが出ない**
-   → 実機で確認
-3. **`GoogleService-Info.plist` を Xcode の "Copy items if needed" で追加していない**
-   → ビルドエラーになる
-4. **iOS 側で Firestore に直接書き込もうとする**
-   → Firestore rules で全拒否しているので必ず backend 経由
+## 旧 backend/ の扱い
+
+`backend/` には Claude / sessions 連携の古い Express 実装が残っている。現在の本番デプロイには反映されないため、新規 API 変更は `functions/` に追加する。
+
+HowChat の `/sessions` 系 API を本番化する場合は、`functions/` 側へ明示的に移植し、このドキュメントを再更新する。
 
 ---
 
@@ -500,9 +290,9 @@ if response.statusCode == 401 {
 ```
 
 | HTTP | 意味 |
-|------|------|
-| 400 | リクエスト不正（パラメータ不足など） |
-| 401 | 認証失敗（トークンなし・無効・期限切れ） |
-| 403 | アクセス権なし（他ユーザーのリソース） |
-| 404 | リソースが見つからない |
-| 500 | サーバーエラー（Claude API / Firestore 障害） |
+|---|---|
+| 400 | リクエスト不正 |
+| 401 | token なし、または token 不正 |
+| 403 | 他ユーザーのリソースなどアクセス権なし |
+| 404 | リソースが存在しない |
+| 500 | Firestore / Functions 内部エラー |

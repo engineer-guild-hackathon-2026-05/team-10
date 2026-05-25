@@ -23,3 +23,11 @@
 - [x] main 側の `user_name` 付与を維持したまま、`itunes_id` 主軸 + `song_id` fallback 検索を残す
 - [x] Functions の公開レスポンスと docs のカウンタ表記を `likes` に統一する
 - [x] 既存 `goods` データは読み取り互換として扱い、次回いいね時に `likes` へ寄せる
+
+## PR #86 main merge とレビュー再対応
+
+- [x] 最新 `origin/main` を merge して docs / AI usage log の conflict を解消する
+- [x] `isMusicSongID` に 64 文字上限を追加する
+- [x] backend / data model docs を `song_id` / `itunes_id` / `song_slug` / `likes` 契約へ統一する
+- [x] Functions と iOS build の検証を実行する
+- [x] commit / push して PR #86 を更新する

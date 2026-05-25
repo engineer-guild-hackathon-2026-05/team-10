@@ -1,376 +1,209 @@
 # 機能設計書 (Functional Design Document)
 
-> 対象: **iOS ネイティブ（SwiftUI）**。実コード: `Othello/`（iOSアプリ）/ `backend/` / `ai-recognition/`。
+> 2026-05-25 時点の実装に追従する。対象は iOS ネイティブアプリ `Othello/` と Firebase Functions `functions/`。
 
-## システム構成図
+## システム構成
 
 ```mermaid
 graph TB
-    AirPods[AirPods<br/>頭部モーション・心拍]
-    iPhone[iPhone 本体モーション]
-    App[Othello iOSアプリ<br/>SwiftUI]
-    CoreML[Core ML / ReactionScoring<br/>3状態スコア化]
-    BE[backend<br/>LLMプロキシ]
-    LLM[Claude API]
-    DB[(Firestore / CloudKit)]
+    AirPods[AirPods 頭部モーション]
+    App[Othello iOSアプリ]
     Music[MusicKit]
+    Lyrics[Musixmatch API]
+    API[Firebase Functions api]
+    DB[(Firestore)]
+    ML[Core ML / ReactionScoring]
 
-    AirPods -->|CMHeadphoneMotion / HealthKit| App
-    iPhone -->|Core Motion| App
-    Music -->|再生位置| App
-    App --> CoreML
-    App -->|HTTPS / SSE| BE
-    BE --> LLM
-    BE --> DB
-    DB -->|ユーザー・Howカード| App
+    Music -->|楽曲検索・再生位置| App
+    AirPods -->|CMHeadphoneMotionManager| App
+    App --> ML
+    App -->|歌詞取得| Lyrics
+    App -->|Firebase ID token付きHTTPS| API
+    API --> DB
+```
+
+HealthKit / 心拍連携は現行実装から削除済み。
+
+---
+
+## 主要機能
+
+### 認証
+
+- Firebase Auth でログイン状態を管理する。
+- 未ログイン時は `LoginView` を表示する。
+- ログイン後、オンボーディング完了状態に応じてメイン画面へ進む。
+
+### オンボーディング
+
+- AirPods 頭部モーションが利用可能か確認する。
+- 利用できない場合は手動モードへ進める。
+- HealthKit 権限は要求しない。
+
+### 再生
+
+- `MusicKitPlaybackService` が MusicKit 認証、曲検索、再生、一時停止、再生位置更新を担う。
+- 再生位置が取得できない場合は alert を表示する。
+- `PlaybackPositionProviding` を通じて AirPods モーションのサンプルに曲中時刻を紐づける。
+
+### 頭部モーション取得
+
+- `AirPodsMotionManager` が `CMHeadphoneMotionManager` から加速度・回転速度・姿勢を取得する。
+- サンプルは `AirPodsMotionSample` として扱う。
+- AirPods が未接続・非対応の場合は status と event で UI に通知する。
+
+### 反応検出
+
+- `ReactionFeatureExtractor` が 2秒窓で特徴量を抽出する。
+- 特徴量:
+  - `meanMagnitude`
+  - `stdMagnitude`
+  - `maxDelta`
+  - `energy`
+  - `peakCount`
+  - `rhythmRegularity`
+  - `stillness`
+- `OthelloActivityClassifierService` が Core ML モデルを読み込める場合は補助推論する。
+- `ReactionScoringService` が `groove / chill / neutral` の3状態スコアへ変換する。
+
+### 歌詞表示
+
+- `MusixmatchLyricsProvider` が MusicKit の曲名・アーティスト名・アルバム名・ISRC・曲長を使って Musixmatch と照合する。
+- `matcher.track.get` で track を解決する。
+- `track.subtitle.get` で LRC 形式の同期歌詞を試す。
+- 同期歌詞が取れない場合は `track.lyrics.get` の静的歌詞へ fallback する。
+- 歌詞取得できない場合も、歌詞なし表示で体験を継続する。
+
+### Howカードコメント
+
+- 曲中区間に対して `comment`, `song_start`, `song_end`, `song_id`, `artist_id` を保存する。
+- 保存・取得・更新・いいねは Functions の `/how-cards` API を使う。
+- `user_name` は Functions が `users/{user_id}.display_name` から補完する。
+
+### コミュニティ / フィード
+
+- Howカードコメント一覧を表示する。
+- 曲単位では `GET /how-cards?song_id=...` を使う。
+- `GET /how-cards?tag=...` は現行 Functions には未実装。
+
+### HowChat
+
+- `HowChatView` / `HowChatViewModel` / `ChatAPIClient` は残っている。
+- `HOWTUNE_CHAT_MOCK=true` または DEBUG で base URL がない場合は mock 応答を使う。
+- 非 mock 時の `/sessions/default/chat` と `/sessions/demo/how-card` は legacy endpoint であり、現行 Functions 本番には実装されていない。
+
+---
+
+## データモデル（Swift）
+
+### ReactionScore
+
+```swift
+struct ReactionScore {
+    var groove: Double
+    var chill: Double
+    var neutral: Double
+}
+```
+
+### ReactionEvent
+
+```swift
+struct ReactionEvent: Identifiable {
+    let id: UUID
+    let startTime: TimeInterval
+    let endTime: TimeInterval
+    let intensity: Double
+    let tags: [HowTag]
+    let lyricLine: String?
+    let lyricTranslation: String?
+    let heartRateTrend: HeartRateTrend
+}
+```
+
+`heartRateTrend` は legacy 表示互換のフィールドであり、現行実装では実測心拍に基づかない。
+
+### HowCardComment
+
+Functions API と対応するコメントモデル。
+
+```text
+id / documentID
+comment
+song_start
+song_end
+song_id
+artist_id
+user_id
+user_name
+goods / likes
+created_at
+updated_at
 ```
 
 ---
 
-## 技術スタック
+## API 設計
 
-| 分類 | 技術 | 選定理由 |
-|------|------|----------|
-| アプリ | Swift / SwiftUI（`Othello/`） | iOS ネイティブ標準 |
-| 本体モーション | Core Motion | 加速度・ジャイロの標準 API |
-| 頭部モーション | CMHeadphoneMotionManager | AirPods の姿勢・加速度を取得 |
-| 心拍 | HealthKit | 対応 AirPods の心拍を取得 |
-| 再生 | MusicKit / AVFoundation | 本番アプリは MusicKit で再生位置を取得し、収集アプリはローカル音源再生にも対応 |
-| 推論 | Core ML / ReactionScoringService | 3状態ML候補と特徴量を組み合わせ、iOSでも groove / chill / neutral として表示・保存 |
-| LLM | Claude API（backend 経由） | 問いかけ型の対話生成 |
-| DB | Firestore / CloudKit | iOS SDK あり |
-| 学習 | TensorFlow.js / Create ML（`ai-recognition/`） | 3状態ラベル収集・学習 → Core ML 連携 |
+Base URL:
+
+```text
+https://asia-northeast1-egh-howtune.cloudfunctions.net/api
+```
+
+| Method | Path | 用途 |
+|---|---|---|
+| GET | `/health` | 死活確認 |
+| GET | `/how-cards` | 最新 Howカードコメント一覧 |
+| GET | `/how-cards?song_id=...` | 曲ごとの Howカードコメント一覧 |
+| GET | `/how-cards/:id` | Howカードコメント詳細 |
+| POST | `/how-cards` | Howカードコメント作成 |
+| PATCH | `/how-cards/:id` | 自分の Howカードコメント更新 |
+| POST | `/how-cards/:id/like` | いいね |
+| GET | `/users/me` | 自分のユーザー情報取得 |
+| PUT | `/users/me` | 自分のユーザー情報作成・更新 |
+
+すべての API は `/health` を除いて Firebase ID token が必要。
 
 ---
 
-## データモデル定義（Swift）
-
-### User
-
-```swift
-struct User: Codable, Identifiable {
-    let id: String            // 認証 UID
-    var displayName: String
-    var howTags: [String]     // 蓄積された Howタグ
-    var createdAt: Date
-}
-```
-
-### ListeningSession
-
-```swift
-struct ListeningSession: Codable, Identifiable {
-    let id: String
-    let userId: String
-    var songTitle: String
-    var durationSec: Double
-    var motionFrames: [MotionFrame]   // 本体 + 頭部モーション
-    var heartRateSamples: [HeartRateSample]
-    var reactions: [ReactionSpan]
-    var status: SessionStatus
-    var createdAt: Date
-}
-
-enum SessionStatus: String, Codable {
-    case recording, analyzing, done
-}
-
-struct MotionFrame: Codable {
-    let t: Double          // 曲中時刻（秒）
-    let source: MotionSource  // .device or .headphone
-    let ax, ay, az: Double // 加速度
-    let magnitude: Double   // 合成
-}
-
-enum MotionSource: String, Codable { case device, headphone }
-
-struct HeartRateSample: Codable {
-    let t: Double          // 曲中時刻（秒）
-    let bpm: Double
-    let hrv: Double?       // 心拍変動（取得可能な場合）
-}
-```
-
-### ReactionSpan / ReactionScores
-
-```swift
-struct ReactionSpan: Codable {
-    let startSec: Double
-    let endSec: Double
-    let scores: ReactionScores
-}
-
-struct ReactionScores: Codable {
-    let groove, chill, neutral: Double  // 各 0〜1
-}
-```
-
-### HowCard
-
-```swift
-struct HowCard: Codable, Identifiable {
-    let id: String
-    let userId: String
-    let sessionId: String
-    var songTitle: String
-    var howTags: [String]      // 例: ["groove", "bass-driven"]
-    var tagLabel: String       // 例: "ベースの入りに反応する人"
-    var description: String     // 2〜3文
-    var highlightSec: Double    // 代表的な反応地点
-    var createdAt: Date
-}
-```
-
-### ER図
-
-```mermaid
-erDiagram
-    USER ||--o{ LISTENING_SESSION : has
-    USER ||--o{ HOW_CARD : has
-    LISTENING_SESSION ||--o{ HOW_CARD : generates
-
-    USER {
-        string id PK
-        string displayName
-        string[] howTags
-    }
-    LISTENING_SESSION {
-        string id PK
-        string userId FK
-        string songTitle
-        string status
-    }
-    HOW_CARD {
-        string id PK
-        string userId FK
-        string sessionId FK
-        string tagLabel
-    }
-```
-
----
-
-## コンポーネント設計（iOS Service）
-
-### HeadphoneMotionService
-**責務**: `CMHeadphoneMotionManager` で AirPods 頭部モーションを取得・時刻同期
-
-```swift
-protocol HeadphoneMotionService {
-    var isConnected: Bool { get }
-    func start(onFrame: @escaping (MotionFrame) -> Void)
-    func stop()
-}
-```
-
-### DeviceMotionService
-**責務**: Core Motion で iPhone 本体モーションを取得（AirPods 非接続時のフォールバック）
-
-### HeartRateService
-**責務**: HealthKit で心拍を取得し曲中時刻に対応づけ
-
-```swift
-protocol HeartRateService {
-    func requestAuthorization() async throws
-    func start(onSample: @escaping (HeartRateSample) -> Void)
-    func stop()
-}
-```
-
-### PlayerService
-**責務**: MusicKit で再生し、再生位置を供給
-
-### ReactionClassifier
-**責務**: 特徴量を Core ML モデルに入力して groove / chill / neutral の3状態スコアを得る
-
-```swift
-struct ReactionClassifier {
-    func extractFeatures(_ frames: [MotionFrame], _ hr: [HeartRateSample], windowSec: Double) -> [FeatureVector]
-    func classify(_ features: [FeatureVector]) -> [ReactionScores]
-    func score(_ features: [FeatureVector]) -> [ReactionScores]
-}
-```
-
-### APIClient
-**責務**: backend との HTTP/SSE 通信（セッション保存・対話・Howカード生成）
-
----
-
-## ユースケース図
-
-### UC-01: 曲を聴いて Howカードを作る（メインフロー）
-
-```mermaid
-sequenceDiagram
-    participant U as ユーザー
-    participant App as Othello (iOS)
-    participant ML as Core ML
-    participant BE as backend
-    participant LLM as Claude API
-    participant DB as Firestore
-
-    U->>App: 曲を選んで再生
-    App->>App: AirPods頭部モーション + 心拍 + 本体モーション記録
-    U->>App: 再生停止
-    App->>ML: 特徴量抽出 → 3状態スコア化
-    ML-->>App: ReactionSpan[]
-    App->>App: タイムライン表示 + 最初の問いかけ
-    loop 対話（3ターン程度）
-        U->>App: 回答入力
-        App->>BE: POST /sessions/:id/chat
-        BE->>LLM: 問いかけ生成
-        LLM-->>BE: 返答（SSE）
-        BE-->>App: ストリーム
-    end
-    App->>BE: POST /sessions/:id/how-card
-    BE->>LLM: Howカード生成
-    BE->>DB: HowCard 保存
-    BE-->>App: HowCard
-    App->>U: Howカード表示・編集・確定
-```
-
-### UC-02: 同じHowの人を探す
-
-```mermaid
-sequenceDiagram
-    participant U as ユーザー
-    participant App as Othello (iOS)
-    participant BE as backend
-    participant DB as Firestore
-
-    U->>App: HowタグをTap
-    App->>BE: GET /how-cards?tag=groove
-    BE->>DB: HowCard クエリ
-    DB-->>BE: HowCard[]
-    BE-->>App: 一覧
-    App->>U: 同じHowの人を表示
-```
-
----
-
-## 画面遷移図
+## 画面遷移
 
 ```mermaid
 stateDiagram-v2
-    [*] --> オンボーディング
-    オンボーディング --> ホーム: AirPods接続・権限取得
-    ホーム --> リスニング: 「聴いてみる」
-    リスニング --> 解析中: 再生停止
-    解析中 --> AI対話: Core ML 推論完了
-    AI対話 --> Howカード確認: 対話完了
-    Howカード確認 --> コミュニティ: 「同じHowの人を見る」
-    Howカード確認 --> ホーム: 確定・保存
-    コミュニティ --> ホーム: 戻る
+    [*] --> Login
+    Login --> Onboarding: login success
+    Onboarding --> Main: complete
+    Onboarding --> ManualMode: AirPods unavailable
+    Main --> ForYou
+    ForYou --> NowPlaying: song selected
+    NowPlaying --> HowCardCreation: lyric/range selected
+    ForYou --> MusicFeed
+    MusicFeed --> HowCardDetail
 ```
 
----
-
-## API 設計（backend）
-
-### POST /sessions — セッション保存・解析結果保存
-推論は端末（Core ML）で行うため、リクエストは反応区間を含む。
-
-```json
-{
-  "songTitle": "Blinding Lights",
-  "durationSec": 200,
-  "reactions": [
-    { "startSec": 78, "endSec": 84,
-      "scores": { "groove": 0.82, "chill": 0.05, "neutral": 0.13 } }
-  ]
-}
-```
-
-### POST /sessions/:id/chat — AI 対話（SSE）
-
-```json
-{ "message": "ベースが入った瞬間が好きだった" }
-```
-レスポンスは Server-Sent Events で逐次返却。
-
-### POST /sessions/:id/how-card — Howカード生成
-
-```json
-{
-  "howCard": {
-    "howTags": ["groove", "bass-driven"],
-    "tagLabel": "ベースの入りに反応する人",
-    "description": "メロディより先に、低音の重心やリズムの入り方に反応するタイプ。",
-    "highlightSec": 78
-  }
-}
-```
-
-### GET /how-cards?tag=groove — Howカード一覧
-
----
-
-## アルゴリズム設計: 3状態スコア
-
-### 目的
-5秒窓のモーション+心拍特徴量から、MVP学習ラベルである groove / chill / neutral の3状態スコアを推定し、iOSアプリでも同じ3状態として表示・保存する。
-
-### 特徴量
-
-| 特徴量 | 説明 |
-|--------|------|
-| meanMagnitude / stdMagnitude | 動き量・ばらつき |
-| maxDelta | 最大変化量（スパイク検出） |
-| energy | 運動エネルギー |
-| peakCount / rhythmRegularity | リズム周期・規則性 |
-| stillness | 静止度 |
-| heartRate / hrvTrend | 心拍数・心拍変動トレンド（生理的高揚の裏付け） |
-
-### 推論
-- MVP 初期: ルールベース（`ai-recognition/` でルール定義）
-- 学習後: TensorFlow / Create ML で3状態モデルを学習 → Core ML 変換 → `ReactionClassifier` と `ReactionScoringService` で3状態スコアへ反映
-- 心拍はトレンド（上昇/下降/安定）として扱い、秒単位の断定をしない
-
----
-
-## UI設計
-
-### Howカード
-
-```
-┌─────────────────────────────────────┐
-│  🎵 Blinding Lights                 │
-│  ベースの入りに反応する人           │
-│  メロディより先に、低音の重心やリズム │
-│  の入り方に反応するタイプ。          │
-│  [groove] [bass-driven]  📍 1:18    │
-│  [編集] [シェア] [同じHowの人を見る] │
-└─────────────────────────────────────┘
-```
-
-### タイムライン
-- 横軸: 再生時間
-- 3状態スコアをカラーで重ね描画（groove=暖色、chill=寒色、neutral=低彩度）
-- 心拍トレンドを別レーンで重ねる
+現行 `ContentView` の main は `ForYouView` を中心に表示し、曲選択後は mini player と `NowPlayingView` を開く。
 
 ---
 
 ## エラーハンドリング
 
-| エラー | 処理 | ユーザー表示 |
-|--------|------|-------------|
-| AirPods 未接続 | 本体モーションへフォールバック | 「AirPods が無いので iPhone の動きで記録します」 |
-| モーション/ヘルス権限拒否 | 手動ラベルモードへ | 「手動で反応を記録できます」 |
-| 心拍非対応機種 | 心拍機能を無効化 | （通知最小） |
-| LLM 障害 | リトライ→デフォルト質問 | 「もう少し教えてください。どこが好きでしたか？」 |
-| 通信断 | ローカルバッファ→再送 | （透過処理） |
+| エラー | 処理 |
+|---|---|
+| Firebase 未ログイン | LoginView へ |
+| MusicKit 未許可 | 再生位置不可の alert または検索空状態 |
+| AirPods 未接続 / 非対応 | 手動モードまたは取得停止表示 |
+| Musixmatch 同期歌詞なし | 静的歌詞へ fallback |
+| Musixmatch 歌詞なし | 歌詞なし表示 |
+| Functions 401/403 | 認証エラーとして扱う |
+| Functions 404 | document not found として扱う |
 
 ---
 
-## テスト戦略
+## テスト観点
 
-### ユニットテスト（XCTest）
-- 特徴量抽出: 既知のモーションパターンで値域を確認
-- `ReactionClassifier`: 静止・一定リズム・スパイクのエッジケース
-- センサー Service: プロトコル抽象化してモック注入
-
-### 統合テスト
-- backend: Claude API をモックして対話・カード生成フロー
-
-### E2E（手動）
-- 実機（iPhone + AirPods）: 接続 → 再生 → モーション/心拍 → AI 対話 → Howカード
+- MusicKit 認証後に検索・再生・再生位置更新が動く。
+- AirPods 接続時に頭部モーションサンプルが入り、3状態スコアが更新される。
+- Musixmatch の同期歌詞取得と静的歌詞 fallback が動く。
+- `POST /how-cards` / `GET /how-cards` / `POST /how-cards/:id/like` が Firebase ID token 付きで動く。
+- `HOWTUNE_CHAT_MOCK=true` で HowChat が API 未接続でも進行する。
