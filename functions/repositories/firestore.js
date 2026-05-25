@@ -3,78 +3,47 @@ const admin = require('firebase-admin');
 const db = () => admin.firestore();
 const { FieldValue } = admin.firestore;
 
-async function createSession({ uid, songTitle, durationSec, reactions }) {
-  const ref = db().collection('sessions').doc();
+async function createHowCard({ uid, comment, songStart, songEnd, songTitle }) {
+  const ref = db().collection('how-cards').doc();
   await ref.set({
     userId: uid,
+    comment,
+    songStart,
+    songEnd,
     songTitle,
-    durationSec,
-    reactions,
-    chatHistory: [],
-    status: 'analyzing',
+    likes: 0,
     createdAt: FieldValue.serverTimestamp(),
   });
   return ref.id;
 }
 
-async function getSession(sessionId) {
-  const doc = await db().collection('sessions').doc(sessionId).get();
-  if (!doc.exists) return null;
-  return { id: doc.id, ...doc.data() };
-}
-
-async function saveHowCard({
-  uid,
-  email,
-  displayName,
-  sessionId,
-  songTitle,
-  howTags,
-  tagLabel,
-  description,
-  highlightSec,
-}) {
-  const cardRef = db().collection('how-cards').doc();
-  const sessionRef = db().collection('sessions').doc(sessionId);
-  const userRef = db().collection('users').doc(uid);
-
-  const batch = db().batch();
-
-  batch.set(cardRef, {
-    userId: uid,
-    displayName: displayName ?? null,
-    sessionId,
-    songTitle,
-    howTags,
-    tagLabel,
-    description,
-    highlightSec,
-    createdAt: FieldValue.serverTimestamp(),
-  });
-
-  batch.set(sessionRef, { status: 'done' }, { merge: true });
-
-  const userUpdate = {};
-  if (email) userUpdate.email = email;
-  if (displayName) userUpdate.displayName = displayName;
-  if (howTags.length > 0) userUpdate.howTags = FieldValue.arrayUnion(...howTags);
-  if (Object.keys(userUpdate).length > 0) {
-    userUpdate.updatedAt = FieldValue.serverTimestamp();
-    batch.set(userRef, userUpdate, { merge: true });
-  }
-
-  await batch.commit();
-  return cardRef.id;
-}
-
-async function getHowCardsByTag(tag) {
+async function getHowCards({ limit = 50 } = {}) {
   const snapshot = await db()
     .collection('how-cards')
-    .where('howTags', 'array-contains', tag)
     .orderBy('createdAt', 'desc')
-    .limit(50)
+    .limit(limit)
     .get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-module.exports = { createSession, getSession, saveHowCard, getHowCardsByTag };
+async function likeHowCard({ cardId, uid }) {
+  const cardRef = db().collection('how-cards').doc(cardId);
+  const cardDoc = await cardRef.get();
+  if (!cardDoc.exists) return null;
+
+  const likeRef = cardRef.collection('liked-by').doc(uid);
+  const existing = await likeRef.get();
+  const currentLikes = cardDoc.data().likes ?? 0;
+  if (existing.exists) {
+    return currentLikes;
+  }
+
+  const batch = db().batch();
+  batch.set(likeRef, { likedAt: FieldValue.serverTimestamp() });
+  batch.update(cardRef, { likes: FieldValue.increment(1) });
+  await batch.commit();
+
+  return currentLikes + 1;
+}
+
+module.exports = { createHowCard, getHowCards, likeHowCard };
