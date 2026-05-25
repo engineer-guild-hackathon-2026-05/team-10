@@ -9,7 +9,7 @@ graph TB
     AirPods[AirPods<br/>頭部モーション・心拍]
     iPhone[iPhone 本体モーション]
     App[Othello iOSアプリ<br/>SwiftUI]
-    CoreML[Core ML / ReactionScoring<br/>3状態候補 + 6軸スコア化]
+    CoreML[Core ML / ReactionScoring<br/>3状態スコア化]
     BE[backend<br/>LLMプロキシ]
     LLM[Claude API]
     DB[(Firestore / CloudKit)]
@@ -36,7 +36,7 @@ graph TB
 | 頭部モーション | CMHeadphoneMotionManager | AirPods の姿勢・加速度を取得 |
 | 心拍 | HealthKit | 対応 AirPods の心拍を取得 |
 | 再生 | MusicKit / AVFoundation | 本番アプリは MusicKit で再生位置を取得し、収集アプリはローカル音源再生にも対応 |
-| 推論 | Core ML / ReactionScoringService | 3状態ML候補と特徴量を組み合わせ、iOSでは6軸スコアとして表示・保存 |
+| 推論 | Core ML / ReactionScoringService | 3状態ML候補と特徴量を組み合わせ、iOSでも groove / chill / neutral として表示・保存 |
 | LLM | Claude API（backend 経由） | 問いかけ型の対話生成 |
 | DB | Firestore / CloudKit | iOS SDK あり |
 | 学習 | TensorFlow.js / Create ML（`ai-recognition/`） | 3状態ラベル収集・学習 → Core ML 連携 |
@@ -101,11 +101,7 @@ struct ReactionSpan: Codable {
 }
 
 struct ReactionScores: Codable {
-    let groove, hype, chill, immersion, hit, afterglow: Double  // 各 0〜1
-}
-
-struct TrainingStateScores: Codable {
-    let groove, chill, neutral: Double  // ai-recognition MVP の学習ラベル
+    let groove, chill, neutral: Double  // 各 0〜1
 }
 ```
 
@@ -185,12 +181,12 @@ protocol HeartRateService {
 **責務**: MusicKit で再生し、再生位置を供給
 
 ### ReactionClassifier
-**責務**: 特徴量を Core ML モデルに入力して3状態候補を得て、アプリ側の特徴量スコアと合わせて6軸スコアへ展開
+**責務**: 特徴量を Core ML モデルに入力して groove / chill / neutral の3状態スコアを得る
 
 ```swift
 struct ReactionClassifier {
     func extractFeatures(_ frames: [MotionFrame], _ hr: [HeartRateSample], windowSec: Double) -> [FeatureVector]
-    func classify(_ features: [FeatureVector]) -> [TrainingStateScores]
+    func classify(_ features: [FeatureVector]) -> [ReactionScores]
     func score(_ features: [FeatureVector]) -> [ReactionScores]
 }
 ```
@@ -216,7 +212,7 @@ sequenceDiagram
     U->>App: 曲を選んで再生
     App->>App: AirPods頭部モーション + 心拍 + 本体モーション記録
     U->>App: 再生停止
-    App->>ML: 特徴量抽出 → 3状態候補 + 6軸スコア化
+    App->>ML: 特徴量抽出 → 3状態スコア化
     ML-->>App: ReactionSpan[]
     App->>App: タイムライン表示 + 最初の問いかけ
     loop 対話（3ターン程度）
@@ -309,10 +305,10 @@ stateDiagram-v2
 
 ---
 
-## アルゴリズム設計: 3状態候補 + 6軸スコア
+## アルゴリズム設計: 3状態スコア
 
 ### 目的
-5秒窓のモーション+心拍特徴量から、MVP学習ラベルである groove / chill / neutral の候補を推定し、iOSアプリでは groove / hype / chill / immersion / hit / afterglow の6軸スコアとして表示・保存する。
+5秒窓のモーション+心拍特徴量から、MVP学習ラベルである groove / chill / neutral の3状態スコアを推定し、iOSアプリでも同じ3状態として表示・保存する。
 
 ### 特徴量
 
@@ -327,7 +323,7 @@ stateDiagram-v2
 
 ### 推論
 - MVP 初期: ルールベース（`ai-recognition/` でルール定義）
-- 学習後: TensorFlow / Create ML で3状態モデルを学習 → Core ML 変換 → `ReactionClassifier` と `ReactionScoringService` で6軸へ展開
+- 学習後: TensorFlow / Create ML で3状態モデルを学習 → Core ML 変換 → `ReactionClassifier` と `ReactionScoringService` で3状態スコアへ反映
 - 心拍はトレンド（上昇/下降/安定）として扱い、秒単位の断定をしない
 
 ---
@@ -349,7 +345,7 @@ stateDiagram-v2
 
 ### タイムライン
 - 横軸: 再生時間
-- 6スコアをカラーで重ね描画（Groove=緑/Hype=赤/Chill=青/Immersion=紫/Hit=橙/Afterglow=水）
+- 3状態スコアをカラーで重ね描画（groove=暖色、chill=寒色、neutral=低彩度）
 - 心拍トレンドを別レーンで重ねる
 
 ---

@@ -22,7 +22,7 @@ final class CommunityViewModel: ObservableObject {
         MyHowCard(
             title: "深夜に染み込む孤独感",
             description: "歌詞の映像喚起力に完全に引き込まれた。コンビニの灯りの描写が刺さりすぎた。",
-            tag: .hit,
+            tag: .groove,
             trackTitle: "感電",
             trackArtist: "米津玄師",
             createdAt: "2日前"
@@ -49,14 +49,14 @@ final class CommunityViewModel: ObservableObject {
     }
 
     let allListeners: [CommunityListener] = [
-        CommunityListener(name: "haru___m", howTag: .hit, howTitle: "この歌詞で泣いた", trackTitle: "感電", mutualCount: 3),
+        CommunityListener(name: "haru___m", howTag: .groove, howTitle: "この歌詞で泣いた", trackTitle: "感電", mutualCount: 3),
         CommunityListener(name: "nocturnalvibes", howTag: .chill, howTitle: "深夜ドライブに最高", trackTitle: "夜に駆ける", mutualCount: 1),
         CommunityListener(name: "groove_seeker", howTag: .groove, howTitle: "ビートに乗れて最高", trackTitle: "感電", mutualCount: 5),
-        CommunityListener(name: "lyric_nerd", howTag: .immersion, howTitle: "歌詞の世界に入り込む", trackTitle: "Lemon", mutualCount: 2),
-        CommunityListener(name: "afterglow99", howTag: .afterglow, howTitle: "余韻が抜けない", trackTitle: "感電", mutualCount: 4),
-        CommunityListener(name: "hype_machine", howTag: .hype, howTitle: "テンションが爆上がり", trackTitle: "打上花火", mutualCount: 1),
+        CommunityListener(name: "lyric_nerd", howTag: .chill, howTitle: "歌詞の世界に入り込む", trackTitle: "Lemon", mutualCount: 2),
+        CommunityListener(name: "afterglow99", howTag: .neutral, howTitle: "余韻が抜けない", trackTitle: "感電", mutualCount: 4),
+        CommunityListener(name: "hype_machine", howTag: .groove, howTitle: "テンションが爆上がり", trackTitle: "打上花火", mutualCount: 1),
         CommunityListener(name: "still_water_v", howTag: .chill, howTitle: "心が落ち着く", trackTitle: "感電", mutualCount: 2),
-        CommunityListener(name: "kokoro_kizamu", howTag: .hit, howTitle: "この一節が全部", trackTitle: "愛にできることはまだあるかい", mutualCount: 6),
+        CommunityListener(name: "kokoro_kizamu", howTag: .groove, howTitle: "この一節が全部", trackTitle: "愛にできることはまだあるかい", mutualCount: 6),
     ]
 
     // MARK: - Popular Tracks by How
@@ -71,9 +71,9 @@ final class CommunityViewModel: ObservableObject {
 
     let popularTracks: [HowTrack] = [
         HowTrack(trackTitle: "感電", trackArtist: "米津玄師", howTag: .groove, howCount: 341),
-        HowTrack(trackTitle: "夜に駆ける", trackArtist: "YOASOBI", howTag: .hit, howCount: 289),
-        HowTrack(trackTitle: "Lemon", trackArtist: "米津玄師", howTag: .afterglow, howCount: 214),
-        HowTrack(trackTitle: "打上花火", trackArtist: "DAOKO×米津玄師", howTag: .hype, howCount: 198),
+        HowTrack(trackTitle: "夜に駆ける", trackArtist: "YOASOBI", howTag: .groove, howCount: 289),
+        HowTrack(trackTitle: "Lemon", trackArtist: "米津玄師", howTag: .neutral, howCount: 214),
+        HowTrack(trackTitle: "打上花火", trackArtist: "DAOKO×米津玄師", howTag: .groove, howCount: 198),
         HowTrack(trackTitle: "愛にできることはまだあるかい", trackArtist: "RADWIMPS", howTag: .chill, howCount: 176),
     ]
 

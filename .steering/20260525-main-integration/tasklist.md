@@ -20,3 +20,12 @@
 - [x] iOS ビルドを実行する
 - [x] `AI_USAGE_LOG.md` を更新する
 - [x] 変更をコミットして push する
+
+## フェーズ4: 再度 main 取り込みと playback 修正
+
+- [x] `git pull origin main` を実行し、main 更新を取り込む
+- [x] main の playback UI を優先して merge conflict を解消する
+- [x] NowPlaying の戻る操作を左上 chevron に変更する
+- [x] NowPlaying の歌詞表示をスクロール可能にする
+- [x] 検証後に `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する

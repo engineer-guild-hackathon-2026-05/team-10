@@ -5,7 +5,6 @@ struct MusicFeedView: View {
     let onSongTap: (Song) -> Void
     @ObservedObject private var playback: PlaybackViewModel
     @StateObject private var viewModel: MusicFeedViewModel
-    @State private var clipSong: Song?
     @Environment(\.dismiss) private var dismiss
 
     init(artist: Artist, onSongTap: @escaping (Song) -> Void, playback: PlaybackViewModel) {
@@ -25,9 +24,6 @@ struct MusicFeedView: View {
             }
         }
         .navigationBarHidden(true)
-        .sheet(item: $clipSong) { song in
-            ClipCreationView(song: song)
-        }
         .task(id: viewModel.selectedSong?.firestoreSongID) {
             await viewModel.loadPosts()
         }
@@ -42,7 +38,7 @@ struct MusicFeedView: View {
                     .font(.title3)
             }
             Spacer()
-            Text("Listening")
+            Text(artist.name)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
@@ -59,33 +55,35 @@ struct MusicFeedView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
                 ForEach(Array(artist.songs.enumerated()), id: \.element.id) { index, song in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            viewModel.selectedSongIndex = index
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 24, height: 24)
-                            Text(song.title)
-                                .font(.subheadline)
-                                .fontWeight(viewModel.selectedSongIndex == index ? .bold : .regular)
-                                .foregroundStyle(viewModel.selectedSongIndex == index ? .white : Color.gray)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(
-                            viewModel.selectedSongIndex == index
-                                ? Color.white.opacity(0.12)
-                                : Color.clear,
-                            in: Capsule()
-                        )
-                    }
+                    songTabButton(index: index, song: song)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+        }
+    }
+
+    private func songTabButton(index: Int, song: Song) -> some View {
+        let isSelected: Bool = viewModel.selectedSongIndex == index
+        let gradient = LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+        let bgColor: Color = isSelected ? Color.white.opacity(0.12) : Color.clear
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.selectedSongIndex = index
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(gradient)
+                    .frame(width: 24, height: 24)
+                Text(song.title)
+                    .font(.subheadline)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? .white : Color.gray)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(bgColor, in: Capsule())
         }
     }
 
@@ -120,7 +118,6 @@ struct MusicFeedView: View {
                 resolvedSong = post.song
             }
 
-            clipSong = resolvedSong
             onSongTap(resolvedSong)
         }
     }

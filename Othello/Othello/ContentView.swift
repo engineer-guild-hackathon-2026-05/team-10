@@ -60,6 +60,9 @@ struct ContentView: View {
         } message: {
             Text(playback.positionUnavailableMessage)
         }
+        .onChange(of: nowPlayingSong) { _, newSong in
+            if newSong != nil { showNowPlaying = true }
+        }
         .fullScreenCover(isPresented: $showNowPlaying) {
             if let song = nowPlayingSong {
                 NowPlayingView(song: song, playback: playback, airPods: airPods)

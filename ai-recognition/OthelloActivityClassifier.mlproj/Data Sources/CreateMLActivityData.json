@@ -13,7 +13,7 @@
         "createdDate" : "2026-05-24T14:25:12Z",
         "event" : "dataSourceMetrics",
         "id" : "852AE323-5781-4545-A3FC-A38D1F7055F9",
-        "subtitle" : "6 Classes, 12 Items",
+        "subtitle" : "3 Classes, 16 Items",
         "title" : "Data Summary"
       }
     ],
@@ -48,7 +48,7 @@
   "createdDate" : "2026-05-24T09:37:52Z",
   "dataPathRelativeToProjectURL" : "../../../../../../Downloads/CreateMLActivityData/",
   "dataResult" : {
-    "classesCount" : 6,
+    "classesCount" : 3,
     "columnTypes" : [
       "Double",
       "Double",
@@ -89,29 +89,26 @@
     "dataAnalysis" : {
       "classifierAnalysis" : {
         "labelStats" : {
-          "afterglow" : 1,
-          "chill" : 3,
-          "groove" : 2,
-          "hit" : 1,
-          "hype" : 3,
-          "immersion" : 2
+          "chill" : 4,
+          "groove" : 6,
+          "neutral" : 6
         }
       },
       "issues" : [
         {
-          "description" : "6 classes found, including chill, hype, groove",
+          "description" : "3 classes expected: groove, chill, neutral",
           "severity" : "debug"
         },
         {
-          "description" : "Less than 100 total activity recording files found - add more to improve model validation",
+          "description" : "Only 16 seed examples are available - collect hundreds per class before using validation metrics for production decisions",
           "severity" : "warning"
         },
         {
-          "description" : "Smallest class is \"afterglow\" with 1 activity recording files",
+          "description" : "Smallest class is \"chill\" with 4 seed examples",
           "severity" : "debug"
         },
         {
-          "description" : "Largest class is \"chill\" with 3 activity recording files",
+          "description" : "Largest classes are \"groove\" and \"neutral\" with 6 seed examples each",
           "severity" : "debug"
         },
         {
@@ -126,8 +123,8 @@
       },
       "summary" : {
         "canUseValidation" : 0,
-        "classCount" : 6,
-        "sampleCount" : 12
+        "classCount" : 3,
+        "sampleCount" : 16
       }
     },
     "dataSourceID" : "1A8DE18D-A53A-46C4-BA94-B645F57E2E0B",
@@ -138,7 +135,7 @@
       "errorType" : "notReady",
       "reason" : "No features selected"
     },
-    "itemsCount" : 12
+    "itemsCount" : 16
   },
   "dataURL" : "file:///Users/atsushi/Downloads/CreateMLActivityData/",
   "experimentIDs" : [
