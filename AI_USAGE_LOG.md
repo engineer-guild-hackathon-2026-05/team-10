@@ -223,6 +223,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：既存の backend/functions 構成に合わせ、クライアントがFirestoreに直接触らない境界へ整理できたため。
 
+### #012 Howカードコメントの範囲フィールド追加
+
+- **時刻**：14:09
+- **ツール**：Codex
+- **目的**：Howカードコメント型を `song_start` / `song_end` を含む新スキーマへ更新する
+- **プロンプト**：
+  ```text
+  how_cardについて、今後バックエンド（functions）の中で方が変わることになった：
+  comment, song_start, song_end(rangeが別れた）, song_id, artist_id, user_id, goods
+  そうなるようにiosのドキュメント・実装を変更して欲しい
+  ```
+- **出力サマリ**：
+  - `HowCardComment` と `FirebaseAPI` の Howカードコメント payload に `songStart` / `songEnd` を追加
+  - `backend/` と `functions/` の Howカードコメント API で `song_start` / `song_end` を必須入力として検証・保存・返却するよう更新
+  - `docs/data-model.md`、`docs/backend.md`、`backend/README.md`、steering docs を新スキーマへ更新
+- **評価**：採用
+- **採用 / 不採用の理由**：iOS の Codable model / API payload と backend/functions の入出力スキーマを同じ `song_start` / `song_end` 前提に揃えられたため。
+
 ---
 
 ## Day 3（2026-05-26）

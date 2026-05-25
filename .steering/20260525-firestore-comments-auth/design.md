@@ -15,6 +15,8 @@
 ```text
 how-cards/{cardId}
   comment: string
+  song_start: number
+  song_end: number
   song_id: string
   artist_id: string
   user_id: string

@@ -22,6 +22,8 @@ Howカードコメント1件を1ドキュメントで管理する。iOS は Fire
 ```text
 how-cards/{cardId}
   comment:      string       // ユーザーコメント
+  song_start:   number       // コメント対象範囲の開始秒
+  song_end:     number       // コメント対象範囲の終了秒
   song_id:      string       // 曲 ID
   artist_id:    string       // アーティスト ID
   user_id:      string       // Firebase Auth uid
@@ -58,11 +60,13 @@ users/{uid}
 
 ## Howカードコメント データ構造（iOS ↔ Backend ↔ Firestore）
 
-`POST /how-cards` では iOS が `comment`, `song_id`, `artist_id` を送り、バックエンドが Firebase ID トークンから `user_id` を決めて `goods: 0` で保存する。
+`POST /how-cards` では iOS が `comment`, `song_start`, `song_end`, `song_id`, `artist_id` を送り、バックエンドが Firebase ID トークンから `user_id` を決めて `goods: 0` で保存する。
 
 ```json
 {
   "comment": "このベースラインの入りが好き",
+  "song_start": 78.4,
+  "song_end": 84.2,
   "song_id": "1704093812",
   "artist_id": "ado",
   "user_id": "firebase-uid",
@@ -112,5 +116,6 @@ Firebase Auth で作成したユーザーを、`PUT /users/me` 経由で `users/
 - 心拍の生データは HealthKit 内に留め、Firestore には書き込まない
 - センサー生ログ（全フレーム）は Cloud Storage に保存し、Firestore には反応区間サマリのみ持つ（DECISION-04）
 - iOS クライアントは Firestore に直接アクセスしない。Firestore Rules は deny-all とし、読み書きは Admin SDK を持つバックエンドに集約する
+- `song_start` / `song_end` は秒単位の数値として扱い、`song_end >= song_start` を前提にする
 - `how-cards.user_id` は Firebase Auth の `uid` と一致させる
 - `goods` はクライアント上では `Int`、Firestore 上では integer として扱う

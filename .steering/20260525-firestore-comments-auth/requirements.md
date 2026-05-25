@@ -6,7 +6,7 @@ Howカードのコメント保存とユーザー作成を Firebase に寄せる�
 
 ## 要件
 
-- `how-cards` コレクションは、ドキュメントごとに `comment`, `song_id`, `artist_id`, `user_id`, `goods` を持つ。
+- `how-cards` コレクションは、ドキュメントごとに `comment`, `song_start`, `song_end`, `song_id`, `artist_id`, `user_id`, `goods` を持つ。
 - iOS 側に Howカードコメント用の `Codable` struct を追加する。
 - iOS 側にバックエンドAPI呼び出し用の API / Service を追加する。
 - View との本格接続は今回の範囲外とする。

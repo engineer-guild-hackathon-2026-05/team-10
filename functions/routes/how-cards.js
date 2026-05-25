@@ -53,7 +53,7 @@ router.get('/:id', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
-    return res.status(400).json({ error: 'comment, song_id, artist_id が必要です' });
+    return res.status(400).json({ error: 'comment, song_start, song_end, song_id, artist_id が必要です' });
   }
 
   try {
@@ -69,7 +69,7 @@ router.post('/', auth, async (req, res) => {
 router.patch('/:id', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
-    return res.status(400).json({ error: 'comment, song_id, artist_id が必要です' });
+    return res.status(400).json({ error: 'comment, song_start, song_end, song_id, artist_id が必要です' });
   }
 
   try {
@@ -107,11 +107,15 @@ function normalizeCommentPayload(body) {
   if (!body || typeof body !== 'object') return null;
 
   const comment = normalizeString(body.comment, 140);
+  const songStart = normalizeRangePoint(body.song_start);
+  const songEnd = normalizeRangePoint(body.song_end);
   const songId = normalizeString(body.song_id, 120);
   const artistId = normalizeString(body.artist_id, 120);
-  if (!comment || !songId || !artistId) return null;
+  if (!comment || songStart == null || songEnd == null || songEnd < songStart || !songId || !artistId) {
+    return null;
+  }
 
-  return { comment, songId, artistId };
+  return { comment, songStart, songEnd, songId, artistId };
 }
 
 function normalizeString(value, maxLength) {
@@ -125,6 +129,12 @@ function parseLimit(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 50;
   return Math.min(100, Math.max(1, Math.floor(number)));
+}
+
+function normalizeRangePoint(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return null;
+  return number;
 }
 
 module.exports = router;

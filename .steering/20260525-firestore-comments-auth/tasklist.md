@@ -30,3 +30,10 @@
 - [x] iOS の `FirebaseAPI` を直接 Firestore 呼び出しから Firebase ID トークン付き HTTP 呼び出しへ変更
 - [x] `FirebaseFirestore` 依存と Firestore property wrapper を削除
 - [x] Firestore Rules を deny-all に戻す
+
+## Howカードコメント range 対応
+
+- [x] `HowCardComment` と API payload に `song_start` / `song_end` を追加
+- [x] `backend/` と `functions/` のコメント API 入出力を新スキーマに更新
+- [x] docs と AI usage log を新スキーマに更新
+- [x] ビルドと差分確認を実行

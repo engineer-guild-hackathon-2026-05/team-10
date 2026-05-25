@@ -98,10 +98,12 @@ async function getUserProfile(uid) {
   return serializeUser(doc.id, doc.data());
 }
 
-async function createHowCardComment({ uid, comment, songId, artistId }) {
+async function createHowCardComment({ uid, comment, songStart, songEnd, songId, artistId }) {
   const ref = db().collection('how-cards').doc();
   const data = {
     comment,
+    song_start: songStart,
+    song_end: songEnd,
     song_id: songId,
     artist_id: artistId,
     user_id: uid,
@@ -112,7 +114,7 @@ async function createHowCardComment({ uid, comment, songId, artistId }) {
   return { id: ref.id, ...data };
 }
 
-async function updateHowCardComment({ uid, cardId, comment, songId, artistId }) {
+async function updateHowCardComment({ uid, cardId, comment, songStart, songEnd, songId, artistId }) {
   const ref = db().collection('how-cards').doc(cardId);
 
   await db().runTransaction(async transaction => {
@@ -132,6 +134,8 @@ async function updateHowCardComment({ uid, cardId, comment, songId, artistId }) 
 
     transaction.update(ref, {
       comment,
+      song_start: songStart,
+      song_end: songEnd,
       song_id: songId,
       artist_id: artistId,
     });
@@ -198,6 +202,8 @@ function serializeHowCardComment(id, data) {
   return {
     id,
     comment: data.comment,
+    song_start: Number.isFinite(data.song_start) ? data.song_start : 0,
+    song_end: Number.isFinite(data.song_end) ? data.song_end : 0,
     song_id: data.song_id,
     artist_id: data.artist_id,
     user_id: data.user_id,

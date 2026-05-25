@@ -287,6 +287,8 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 ```json
 {
   "comment": "このベースラインの入りが好き",
+  "song_start": 78.4,
+  "song_end": 84.2,
   "song_id": "1704093812",
   "artist_id": "ado"
 }
@@ -301,6 +303,8 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
   "howCard": {
     "id": "card789",
     "comment": "このベースラインの入りが好き",
+    "song_start": 78.4,
+    "song_end": 84.2,
     "song_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
@@ -353,6 +357,8 @@ sessions/{sessionId}
 
 how-cards/{cardId}
   comment: string
+  song_start: number
+  song_end: number
   song_id: string
   artist_id: string
   user_id: string
