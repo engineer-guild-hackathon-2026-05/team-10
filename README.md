@@ -122,6 +122,7 @@ team-10/
 | [`docs/architecture.md`](./docs/architecture.md) | アーキテクチャ設計 |
 | [`docs/functional-design.md`](./docs/functional-design.md) | 機能設計 |
 | [`docs/setup.md`](./docs/setup.md) | ローカル開発環境のセットアップ手順 |
+| [`docs/data-model.md`](./docs/data-model.md) | データモデル設計（Firestore スキーマ・反応区間構造） |
 | [`docs/repository-structure.md`](./docs/repository-structure.md) | リポジトリ構造 |
 | [`docs/development-guidelines.md`](./docs/development-guidelines.md) | 開発ガイドライン |
 | [`docs/glossary.md`](./docs/glossary.md) | 用語集 |
