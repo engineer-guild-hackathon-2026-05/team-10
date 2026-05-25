@@ -564,6 +564,7 @@ struct HomeView: View {
                         .foregroundStyle(.white)
                         .submitLabel(.search)
                         .onSubmit { Task { await playback.search() } }
+                        .disabled(!playback.canUseAppleMusicCatalog)
                     if !playback.searchQuery.isEmpty {
                         Button {
                             playback.searchQuery = ""
@@ -579,11 +580,11 @@ struct HomeView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
 
-                if playback.authorizationStatus != .authorized {
+                if !playback.canUseAppleMusicCatalog {
                     searchEmptyState(
-                        title: "Apple Music の認証が必要です",
-                        systemImage: "music.note.list",
-                        description: "設定 → プライバシー → メディアと Apple Music で許可してください"
+                        title: playback.appleMusicAccessStatus.title,
+                        systemImage: playback.appleMusicAccessStatus.systemImage,
+                        description: playback.appleMusicAccessStatus.message
                     )
                 } else if playback.searchResults.isEmpty && playback.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     searchEmptyState(

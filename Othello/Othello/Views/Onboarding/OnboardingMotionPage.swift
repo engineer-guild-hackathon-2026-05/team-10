@@ -9,7 +9,7 @@ struct OnboardingMotionPage: View {
             HowTuneDesign.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                progressIndicator(current: 1, total: 2)
+                progressIndicator(current: 2, total: 2)
                     .padding(.top, 60)
                     .padding(.horizontal, 32)
 
@@ -86,8 +86,8 @@ struct OnboardingMotionPage: View {
     }
 
     private var nextButton: some View {
-        primaryButton(label: "次へ", icon: "arrow.right") {
-            withAnimation { viewModel.currentPage = 2 }
+        primaryButton(label: "HowTune をはじめる", icon: "music.note") {
+            viewModel.completeOnboarding()
         }
     }
 }

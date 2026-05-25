@@ -11,6 +11,9 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
     @Published private(set) var playbackTime: TimeInterval = 0
     @Published private(set) var isPositionAvailable: Bool = false
     @Published private(set) var unavailableReason: String?
+    @Published private(set) var appleMusicAccessStatus: AppleMusicAccessStatus = .init(
+        authorizationStatus: MusicAuthorization.currentStatus
+    )
 
     private let player = ApplicationMusicPlayer.shared
     private var positionTimer: AnyCancellable?
@@ -31,33 +34,51 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
     // MARK: - Authorization
 
     func requestAuthorization() async {
+        appleMusicAccessStatus = .checking
         let status = await MusicAuthorization.request()
         authorizationStatus = status
 
         if status != .authorized {
-            notifyPositionUnavailable("Apple Music の認証が許可されていません。")
+            let accessStatus = AppleMusicAccessStatus(authorizationStatus: status)
+            appleMusicAccessStatus = accessStatus
+            notifyPositionUnavailable(accessStatus.message)
             return
         }
+
+        await refreshSubscriptionStatus()
+    }
+
+    func refreshSubscriptionStatus() async {
+        guard authorizationStatus == .authorized else {
+            let accessStatus = AppleMusicAccessStatus(authorizationStatus: authorizationStatus)
+            appleMusicAccessStatus = accessStatus
+            notifyPositionUnavailable(accessStatus.message)
+            return
+        }
+
+        appleMusicAccessStatus = .checking
 
         do {
             let subscription = try await MusicSubscription.current
             guard subscription.canPlayCatalogContent else {
-                notifyPositionUnavailable("Apple Music のカタログ再生が利用できません。")
+                appleMusicAccessStatus = .subscriptionRequired
+                notifyPositionUnavailable(AppleMusicAccessStatus.subscriptionRequired.message)
                 return
             }
 
+            appleMusicAccessStatus = .authorized
             unavailableReason = nil
             isPositionAvailable = currentTrack != nil
         } catch {
-            notifyPositionUnavailable("Apple Music の利用状態を確認できませんでした。")
+            appleMusicAccessStatus = .unavailable
+            notifyPositionUnavailable(AppleMusicAccessStatus.unavailable.message)
         }
     }
 
     // MARK: - Search
 
     func search(query: String) async throws -> [PlaybackTrack] {
-        guard authorizationStatus == .authorized else {
-            notifyPositionUnavailable("Apple Music の認証が許可されていません。")
+        guard await ensureCatalogPlaybackAvailable() else {
             return []
         }
 
@@ -70,8 +91,7 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
     // MARK: - Playback control
 
     func play(track: PlaybackTrack, startingAt startTime: TimeInterval = 0) async throws {
-        guard authorizationStatus == .authorized else {
-            notifyPositionUnavailable("Apple Music の認証が許可されていません。")
+        guard await ensureCatalogPlaybackAvailable() else {
             return
         }
 
@@ -98,6 +118,10 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
     }
 
     func togglePlayback() async {
+        guard await ensureCatalogPlaybackAvailable() else {
+            return
+        }
+
         guard currentTrack != nil else {
             notifyPositionUnavailable("曲が選択されていません。")
             return
@@ -153,6 +177,20 @@ final class MusicKitPlaybackService: ObservableObject, PlaybackPositionProviding
     private func notifyPositionUnavailable(_ reason: String) {
         unavailableReason = reason
         isPositionAvailable = false
+    }
+
+    private func ensureCatalogPlaybackAvailable() async -> Bool {
+        if appleMusicAccessStatus.canUseCatalogPlayback {
+            return true
+        }
+
+        if authorizationStatus == .authorized {
+            await refreshSubscriptionStatus()
+        } else {
+            await requestAuthorization()
+        }
+
+        return appleMusicAccessStatus.canUseCatalogPlayback
     }
 
     private func boundedPlaybackTime(_ value: TimeInterval, duration: TimeInterval?) -> TimeInterval {

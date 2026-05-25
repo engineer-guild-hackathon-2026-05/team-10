@@ -10,9 +10,9 @@ struct OnboardingView: View {
             TabView(selection: $viewModel.currentPage) {
                 OnboardingWelcomePage(currentPage: $viewModel.currentPage)
                     .tag(0)
-                OnboardingMotionPage(viewModel: viewModel)
+                OnboardingMusicPage(viewModel: viewModel)
                     .tag(1)
-                OnboardingHealthPage(viewModel: viewModel)
+                OnboardingMotionPage(viewModel: viewModel)
                     .tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
