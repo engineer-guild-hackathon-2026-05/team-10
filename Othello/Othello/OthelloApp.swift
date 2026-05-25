@@ -1,14 +1,12 @@
-//
-//  OthelloApp.swift
-//  Othello
-//
-//  Created by Kosuke Ozawa on 2026/05/24.
-//
-
+import FirebaseCore
 import SwiftUI
 
 @main
 struct OthelloApp: App {
+    init() {
+        FirebaseApp.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
