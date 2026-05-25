@@ -276,6 +276,47 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビューの実指摘を最小差分で解消しつつ、Firestore index とローカル backend の挙動も揃えられたため。
 
+### #015 発表スライドの仕上げ（スライド4・9・11・12）
+
+- **時刻**：01:30
+- **ツール**：Claude Code
+- **目的**：python-pptx でスライドを更新。スライド4タイトル変更、スライド9を実装に合わせてpill更新、スライド11を技術ロゴ画像ベースに、スライド12をガラスカードスタイルに統一
+- **プロンプト**：
+  ```
+  9に関して 実装に合わせてスライドを調整して
+  スライド11を画像ベースにして
+  ビジネスモデルのスライドをさっきさくせいしたけいしきの綺麗さに揃えて欲しい
+  ```
+- **出力サマリ**：
+  - スライド4タイトルを「聴き方は、伝わらない。」に変更
+  - スライド9のpillラベルをHomeView実装（volume × 0.42 + sinusoid）に合わせて🎵🔥❄️🎧💫✨の日本語に更新
+  - スライド11はdevicon CDNからSVGを取得しcairosvgでPNG変換、Swift/Firebase/Musixmatch/Create MLのロゴ画像に差し替え
+  - スライド12（ビジネスモデル）をガラスカード + カラードットスタイルに統一
+- **評価**：採用
+- **採用 / 不採用の理由**：実装事実（音量+サインカーブ）とスライドの記述を一致させ、技術スライドも実ロゴで視覚的にわかりやすくなったため。
+
+### #016 HowChat深掘りAI改善（実モーション6軸スコア接続）
+
+- **時刻**：02:30
+- **ツール**：Claude Code
+- **目的**：AirPodsモーションの実スコアをHowChatに接続し、定型文応答を解消。dominant軸ベースの動的選択肢・2ターン制・バックエンドコンテキスト改善
+- **プロンプト**：
+  ```
+  次はHOW投稿を手伝うAIを作成していきます。動きに対して深掘りするもので、3回は多いと思うのでどこかのドキュメントに書いてあると思うけどgrill-meした方針に則って実装して欲しいです。現状とずれそうだったらうまく方針を聞いたりして。最新のメインブランチからgh issue -> /steering -> 実装の順で
+  少し待って 今６つの軸は疑似コードで残っている可能性が高いです 動きを収集していると思うのでそれをローカルで処理してそこからAIがインサイトをするという方向でいけないですか？最適化がおおすぎ？
+  MLを作らないとダメ？ 激しく動いていた部分に関してはかんたんに抜き出せそう
+  ```
+- **出力サマリ**：
+  - `MotionReactionScoreEstimator`（ルールベース算術、ML不要）で `AirPodsMotionSample` → 6軸スコア生成を確認
+  - `ReactionEvent` に `score: ReactionScore` フィールド追加、`ReactionScore` に `asDictionary` 拡張追加
+  - `HomeView` に `AirPodsMotionViewModel` を接続し、歌詞タップ時に実スコアで `reactionEvent(for:)` を生成
+  - `ChatPayload` に `scores/dominantAxis` 追加、`mockResponse` を groove/hype・hit/immersion・chill/afterglow の動的分岐に変更
+  - `HowChatViewModel` のターン数を 3→2 に削減
+  - `backend/index.js` の `systemPrompt` / `buildContextMessage` / `normalizeChatRequest` を dominant 軸対応に改善
+  - xcodebuild（`-sdk iphonesimulator`）でビルド成功を確認
+- **評価**：採用
+- **採用 / 不採用の理由**：MLモデル不要のルールベースで実スコアをHowChatに接続でき、定型文応答を dominant 軸ベースの動的選択肢に差し替えられたため。PR #73 で完了。
+
 ---
 
 ## Day 3（2026-05-26）
