@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>HowTune — Lean Canvas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter','Noto Sans JP',sans-serif;
+    background: #fff; color: #18181b; padding: 16px;
+  }
+  .header { display:flex; align-items:baseline; gap:14px; margin-bottom:12px; }
+  .header h1 { font-size:26px; font-weight:800; letter-spacing:-.02em; }
+  .header .logo { font-size:24px; }
+  .header .sub { color:#6366f1; font-weight:600; font-size:14px; }
+  .header .date { margin-left:auto; color:#a1a1aa; font-size:12px; }
+  .canvas {
+    display:grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: auto auto auto;
+    gap:6px;
+    height: calc(100vh - 110px);
+    min-height: 460px;
+  }
+  .cell {
+    border:1.5px solid #e4e4e7; border-radius:10px; padding:10px 12px;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .cell h3 { font-size:12px; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+  .cell .num { background:#6366f1; color:#fff; width:17px; height:17px; border-radius:5px; display:inline-grid; place-items:center; font-size:11px; }
+  .cell ul { list-style:none; font-size:12.5px; line-height:1.55; }
+  .cell li { margin-bottom:4px; padding-left:11px; position:relative; }
+  .cell li::before { content:"•"; position:absolute; left:0; color:#a855f7; }
+  .cell .blank { color:#cbcbd3; font-style:italic; font-size:12px; }
+  .uvp { border-color:#6366f1; border-width:2px; background:#f5f3ff; }
+  .uvp .big { font-size:15px; font-weight:700; line-height:1.5; margin-bottom:6px; }
+  /* グリッド配置（標準リーンキャンバス） */
+  .problem    { grid-column:1; grid-row:1 / span 2; }
+  .solution   { grid-column:2; grid-row:1; }
+  .uvp        { grid-column:3; grid-row:1 / span 2; }
+  .advantage  { grid-column:4; grid-row:1; }
+  .segments   { grid-column:5; grid-row:1 / span 2; }
+  .metrics    { grid-column:2; grid-row:2; }
+  .channels   { grid-column:4; grid-row:2; }
+  .cost       { grid-column:1 / span 2; grid-row:3; }
+  .revenue    { grid-column:3 / span 3; grid-row:3; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <span class="logo">🎧</span>
+    <h1>HowTune</h1>
+    <span class="sub">Lean Canvas</span>
+    <span class="date">Team Othello / 2026-05-25</span>
+  </div>
+
+  <div class="canvas">
+    <div class="cell problem">
+      <h3><span class="num">1</span>課題 Problem</h3>
+      <ul>
+        <li>音楽の楽しみ方（How）を言語化できない</li>
+        <li>同じ聴き方をしている人と出会えない</li>
+        <li>曲名（What）以上の会話にならない</li>
+      </ul>
+      <h3 style="margin-top:10px;">既存の代替</h3>
+      <ul>
+        <li>Spotify / Apple Music（What 中心）</li>
+        <li>音楽 SNS・レコメンド（曲・人気軸）</li>
+      </ul>
+    </div>
+
+    <div class="cell solution">
+      <h3><span class="num">4</span>ソリューション Solution</h3>
+      <ul>
+        <li>AirPods センサーで身体反応を検出</li>
+        <li>AI 対話で「How」を言語化</li>
+        <li>Howカード生成</li>
+        <li>同じ How でマッチング</li>
+      </ul>
+    </div>
+
+    <div class="cell uvp">
+      <h3><span class="num">3</span>独自の価値提案 UVP</h3>
+      <div class="big">何を聴くかではなく、<br>どう聴いているかでつながる。</div>
+      <ul>
+        <li>見ていないのに、身体は反応している</li>
+        <li>聴き方（How）で出会う音楽コミュニティ</li>
+      </ul>
+      <h3 style="margin-top:10px;">ハイレベルコンセプト</h3>
+      <ul>
+        <li>「音楽版の "聴き方" 性格診断 × SNS」</li>
+      </ul>
+    </div>
+
+    <div class="cell advantage">
+      <h3><span class="num">9</span>圧倒的優位性 Unfair Advantage</h3>
+      <ul>
+        <li>データフライホイール（使うほど AI が聴き方を学習）</li>
+        <li>身体反応 × AI 対話の独自ラベルデータ</li>
+        <li>AirPods センサー活用の先行体験</li>
+      </ul>
+    </div>
+
+    <div class="cell segments">
+      <h3><span class="num">2</span>顧客セグメント Segments</h3>
+      <ul>
+        <li>音楽好きだが「なぜ好きか」を言語化できない人</li>
+        <li>自分の聴き方を発信したい考察好き</li>
+      </ul>
+      <h3 style="margin-top:10px;">アーリーアダプター</h3>
+      <ul>
+        <li>AirPods 利用のヘビーリスナー</li>
+        <li>音楽オタク・考察コミュニティ層</li>
+      </ul>
+    </div>
+
+    <div class="cell metrics">
+      <h3><span class="num">8</span>主要指標 Key Metrics</h3>
+      <ul>
+        <li>Howカード生成数</li>
+        <li>1セッションの AI 対話ターン数</li>
+        <li>マッチング後の会話発生率</li>
+        <li>週次リピート率</li>
+      </ul>
+    </div>
+
+    <div class="cell channels">
+      <h3><span class="num">5</span>チャネル Channels</h3>
+      <ul>
+        <li>App Store</li>
+        <li>Howカードの SNS シェア（口コミ）</li>
+      </ul>
+      <span class="blank">※ 獲得チャネル戦略は未定（空白）</span>
+    </div>
+
+    <div class="cell cost">
+      <h3><span class="num">7</span>コスト構造 Cost Structure</h3>
+      <ul>
+        <li>Claude API（Sonnet）利用料 — <span class="blank">概算未定</span></li>
+        <li>バックエンド / Firestore 運用 — <span class="blank">未定</span></li>
+        <li>iOS 開発・運用 — <span class="blank">未定</span></li>
+      </ul>
+    </div>
+
+    <div class="cell revenue">
+      <h3><span class="num">6</span>収益の流れ Revenue Streams</h3>
+      <span class="blank">※ 収益モデルは未定（空白）— 候補: フリーミアム / サブスク（How別レコメンド・分析）/ アーティスト・レーベル向けファンインサイト提供</span>
+    </div>
+  </div>
+</body>
+</html>

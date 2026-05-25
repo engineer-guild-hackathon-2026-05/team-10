@@ -17,21 +17,22 @@ final class ReactionDisplayViewModel: ObservableObject {
 
     private var displayUpdateTimer: AnyCancellable?
     private var pendingScore: ReactionScore = .empty
-    private var mockTimer: AnyCancellable?
 
     func startSession(sensorAvailable: Bool) {
         isSessionActive = true
         isSensorAvailable = sensorAvailable
+        pendingScore = .empty
+        score = .empty
         startDisplayUpdateTimer()
-        if sensorAvailable { startMockSensorSimulation() }
     }
 
-    func stopSession() {
+    func stopSession(presentTimeline: Bool = true) {
+        let wasSessionActive = isSessionActive
         isSessionActive = false
         stopDisplayUpdateTimer()
-        stopMockSensorSimulation()
+        pendingScore = .empty
         withAnimation(.easeOut(duration: 0.6)) { score = .empty }
-        showTimeline = true
+        showTimeline = presentTimeline && wasSessionActive
     }
 
     func updateScore(_ newScore: ReactionScore) {
@@ -50,31 +51,5 @@ final class ReactionDisplayViewModel: ObservableObject {
     private func stopDisplayUpdateTimer() {
         displayUpdateTimer?.cancel()
         displayUpdateTimer = nil
-    }
-
-    private var mockPhase: Double = 0
-
-    private func startMockSensorSimulation() {
-        mockTimer = Timer.publish(every: 0.3, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self else { return }
-                self.mockPhase += 0.15
-                let t = self.mockPhase
-                self.pendingScore = ReactionScore(
-                    groove:    max(0, sin(t * 1.1) * 0.6 + 0.3),
-                    hype:      max(0, sin(t * 0.7 + 1.0) * 0.5 + 0.2),
-                    chill:     max(0, cos(t * 0.5 + 0.5) * 0.4 + 0.3),
-                    immersion: max(0, sin(t * 0.9 + 2.0) * 0.55 + 0.25),
-                    hit:       max(0, sin(t * 1.3 + 0.3) * 0.35 + 0.1),
-                    afterglow: max(0, cos(t * 0.6 + 1.5) * 0.3 + 0.15)
-                )
-            }
-    }
-
-    private func stopMockSensorSimulation() {
-        mockTimer?.cancel()
-        mockTimer = nil
-        mockPhase = 0
     }
 }

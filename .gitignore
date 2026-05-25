@@ -15,6 +15,9 @@ Thumbs.db
 .env.*.local
 *.pem
 
+# Firebase
+**/serviceAccountKey.json
+
 # Node
 node_modules/
 npm-debug.log*
@@ -60,8 +63,9 @@ DerivedData/
 docs/share/index.html
 docs/slides/*.html
 docs/slides/*.pdf
-docs/slides/*.pptx
+docs/slides/howtune.pptx
 
 **/GoogleInfo.plist
+**/GoogleService-Info.plist
 
 **/ENV.plist

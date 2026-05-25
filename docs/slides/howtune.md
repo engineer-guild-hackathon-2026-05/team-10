@@ -2,61 +2,81 @@
 marp: true
 theme: uncover
 paginate: true
-backgroundColor: #fafafa
-color: #18181b
+backgroundColor: #0a0a0f
+color: #f0f0f5
 size: 16:9
 ---
 
 <style>
 :root {
-  --accent: #6366f1;
-  --accent2: #a855f7;
+  --accent: #ff4d4d;
+  --accent2: #3db8ff;
+  --groove: #3db8ff;
+  --dark: #0a0a0f;
+  --card: #141420;
+  --border: rgba(255,255,255,0.08);
 }
 section {
   font-family: 'Helvetica Neue', 'Hiragino Sans', 'Yu Gothic', sans-serif;
   font-size: 26px;
-  padding: 60px 70px;
-  background: #fafafa;
+  padding: 52px 70px;
+  background: var(--dark);
+  color: #f0f0f5;
   line-height: 1.6;
 }
 h1 {
   font-size: 52px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 h2 {
   font-size: 34px;
-  font-weight: 700;
-  color: #18181b;
-  border-bottom: 3px solid var(--accent);
-  padding-bottom: 12px;
+  font-weight: 800;
+  color: #fff;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 10px;
+  margin-bottom: 28px;
 }
-h3 { font-size: 26px; color: #6366f1; font-weight: 700; }
-strong { color: #6366f1; }
-table { font-size: 20px; }
-th { background: #6366f1; color: #fff; }
-td, th { padding: 8px 14px; }
+h3 { font-size: 22px; color: var(--accent2); font-weight: 700; margin-bottom: 8px; }
+strong { color: var(--accent); }
+em { color: var(--accent2); font-style: normal; }
+table { font-size: 20px; width: 100%; border-collapse: collapse; }
+th { background: var(--accent); color: #fff; padding: 8px 14px; }
+td { padding: 8px 14px; border-bottom: 1px solid var(--border); }
 code {
-  background: #eef2ff; color: #4f46e5; padding: 2px 8px; border-radius: 5px;
-  font-size: 0.85em;
+  background: rgba(61,184,255,0.12); color: var(--accent2); padding: 2px 8px;
+  border-radius: 5px; font-size: 0.85em;
 }
 blockquote {
-  border-left: 5px solid #a855f7; background: #f5f3ff; padding: 14px 24px;
-  font-style: normal; border-radius: 0 10px 10px 0;
+  border-left: 4px solid var(--accent); background: rgba(255,77,77,0.08);
+  padding: 14px 24px; font-style: normal; border-radius: 0 10px 10px 0;
+  color: #f0f0f5;
 }
-section.lead h1 { font-size: 64px; }
+section.lead h1 { font-size: 68px; }
 section.lead { text-align: center; }
-ul { line-height: 1.7; }
+section.lead p { color: rgba(240,240,245,0.72); }
+ul { line-height: 1.8; }
+li { margin-bottom: 2px; }
 .cols { display: flex; gap: 36px; }
 .cols > div { flex: 1; }
 .tag {
-  display: inline-block; background: #eef2ff; color: #4f46e5;
-  padding: 4px 16px; border-radius: 999px; font-size: 18px; font-weight: 600;
+  display: inline-block; background: rgba(255,77,77,0.18); color: var(--accent);
+  border: 1px solid rgba(255,77,77,0.4); padding: 4px 18px;
+  border-radius: 999px; font-size: 18px; font-weight: 600;
 }
-footer { color: #a1a1aa; font-size: 14px; }
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px 24px; margin: 4px 0;
+}
+.groove-bar {
+  height: 8px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent2), #a855f7, var(--accent));
+  margin-top: 6px;
+}
+footer { color: rgba(240,240,245,0.32); font-size: 14px; }
 </style>
 
 <!-- _class: lead -->
@@ -68,428 +88,342 @@ footer { color: #a1a1aa; font-size: 14px; }
 
 <br>
 
-🎵 音楽の "How" でつながるコミュニティ
-
-<br>
-
 <span class="tag">Engineer Guild Hackathon 2026/05 — Team 10</span>
 
 ---
 
 ## アジェンダ
 
-1. 🎯 **課題** — なぜ偏愛は広がらないのか
-2. 💡 **解決策** — How でつながる
-3. 🧩 **プロダクト** — HowTune の体験
-4. 🏗️ **アーキテクチャ** — 技術構成
-5. 🛠️ **開発体制** — リポジトリ・ガイドライン
-6. 🚀 **MVP と今後**
+1. **課題** — なぜ偏愛は伝わらないのか
+2. **解決策** — 歌詞 × How でつながる
+3. **プロダクト体験** — コアフロー
+4. **技術スタック**
+5. **MVP スコープ・今後の展望**
 
 ---
 
 <!-- _class: lead -->
 
-# 🎯 課題
+# 課題
 
 ---
 
-## 偏愛が広がらない理由
+## 音楽の「好き」は伝わらない
 
-> 今のプラットフォームでは **What** しか共有できない
+> 今のプラットフォームでは **What（何を聴くか）** しか共有できない
 
 <br>
-
-同じ曲を好きでも、楽しみ方は人それぞれ：
 
 <div class="cols">
 <div>
 
-- 🎤 歌詞に刺さる
-- 🎸 ベースラインが好き
-- 🥁 グルーヴに乗る
+同じ曲を好きでも、楽しみ方は違う：
+
+- 歌詞の一節に心が止まる
+- ベースラインが体を動かす
+- サビ前の「溜め」で上がる
+- 余韻にいつまでも浸る
 
 </div>
-<div>
+<div class="card">
 
-- ⏸️ サビ前の溜めで上がる
-- 🌙 余韻に浸る
-- ✨ 一瞬の音にハッとする
+### 問題
+その楽しみ方（**How**）を<br>うまく言語化できない
+
+だから共有できず、<br>
+**同じ聴き方の人と出会えない**
 
 </div>
 </div>
-
-<br>
-
-**でも、その楽しみ方をうまく言語化できない。**
-だから共有できず、同じ聴き方の人と一生出会えない。
 
 ---
 
-## ターゲットユーザー
+## ターゲット
 
 <div class="cols">
-<div>
+<div class="card">
 
-### 田中音さん（22）
-大学生・音楽好き
+### 田中音（22歳）
+大学生 / 音楽好き
 
-- 毎日1〜2時間音楽を聴く
-- 「なぜ好きか」を説明できない
-- 曲名以上の会話ができない
+毎日1〜2時間音楽を聴く。<br>
+「なぜ好きか」を説明できない。<br>
+曲名以上の会話ができない。
 
 </div>
-<div>
+<div class="card">
 
-### 鈴木聴さん（28）
-社会人・音楽マニア
+### 鈴木聴（28歳）
+社会人 / 音楽マニア
 
-- 年500枚聴くヘビーリスナー
-- 楽しみ方は言語化できる
-- でも語れる相手がいない
+年500枚聴くヘビーリスナー。<br>
+楽しみ方は言語化できる。<br>
+でも**語れる相手がいない**。
 
 </div>
 </div>
 
 <br>
 
-→ どちらも **「同じ聴き方の人と出会えない」** という共通課題
+→ どちらも「**同じ聴き方の人と出会えない**」という共通課題
 
 ---
 
 <!-- _class: lead -->
 
-# 💡 解決策
+# 解決策
 
 ---
 
-## What ではなく How でつながる
+## 歌詞を「鏡」にする
+
+<br>
 
 <div class="cols">
 <div>
 
-### 従来のSNS
-**What 中心**
+### 従来の音楽 SNS
+曲・アーティスト・ジャンル<br>（**What 中心**）
 
-- 好きな曲
-- 好きなアーティスト
-- 好きなジャンル
-- 再生履歴
+再生回数・いいね数<br>が価値の指標
 
 </div>
 <div>
 
 ### HowTune
-**How 中心**
+**この歌詞の、ここで、どう感じたか**<br>（**How 中心**）
 
-- どこでノるか
-- どこで上がるか
-- どこで刺さるか
-- どこで余韻に浸るか
+「1:18 のあの一節が刺さった」<br>が価値の指標
 
 </div>
 </div>
 
 <br>
 
-> 音楽の熱狂が本当に伝わるのは
-> **「どう聴いているか」が共有されたとき**
+> 音楽の熱狂が本当に伝わるのは<br>**「どう聴いているか」が共有されたとき**
 
 ---
 
-## コア体験：3ステップ
+## AI は「断定」しない — 鏡であること
 
 <br>
-
-### 1️⃣ 動く
-ただ音楽を聴くだけ。センサーが身体の反応・モメンタムを記録し、波形として可視化する。
-
-### 2️⃣ 問いかける
-AIが波形を見て問いかける。「1:18、ここで何か感じましたか？」言語はその後についてくる。
-
-### 3️⃣ つながる
-同じ波形を持つ見知らぬ人と出会う。What ではなく、身体の共鳴でつながる。
-
----
-
-<!-- _class: lead -->
-
-# 🧩 プロダクト
-
----
-
-## 体験フロー
-
-```
-🎵 聴く              ただ音楽を聴くだけ
-   ↓
-📲 動く              センサーが身体の反応・モメンタムを自動記録
-   ↓
-🧠 スコア推定        6軸スコアを推定（groove / hype / chill …）
-                      ※ ルールベース → 学習モデルへ進化
-   ↓
-🌊 見る              モメンタム波形が眼前に現れる（驚き）
-   ↓
-💬 問いかけられる    AIがスコアと波形を読んで問いかける（発見）
-   ↓
-🗣️ 答える           選択肢・自由入力・音声で答える
-   ↓
-🪪 言葉になる        「ベースの入りに反応する人」（Howカード）
-   ↓
-🤝 つながる          同じ波形を持つ見知らぬ人と出会う（共鳴）
-```
-
----
-
-## 聴取状態の6分類
-
-| 状態 | English | 特徴 |
-|---|---|---|
-| 🕺 ノリ | Groove | リズムに合わせ規則的に揺れる |
-| 🔥 高揚 | Hype | サビ・展開で急にテンションが上がる |
-| 🌊 チル | Chill | 穏やかにゆっくり揺れる |
-| 🧘 没入 | Immersion | 集中してほぼ動かない |
-| ⚡ 刺さり | Hit | 一瞬に短く強く反応する |
-| 🌅 余韻 | Afterglow | 盛り上がりの後、静かに浸る |
-
-→ センサーから推定し、**AIとの対話の起点**にする
-
----
-
-## AI は「断定」しない
 
 <div class="cols">
 <div>
 
-### ❌ 悪い例
-> あなたはここで楽しかったです
+### ❌ 断定する AI
+> あなたはここで感動しました
 > あなたはベースが好きです
 
-断定は対話を生まない
+断定は対話を閉じる
 
 </div>
 <div>
 
-### ✅ HowTune
-> ここで身体が反応していました
-> ノっていた感じですか？
-> リズム？それとも展開で上がった？
+### ✅ HowTune の AI
+> ここで反応していましたね
+> リズムに乗っていた感じ？
+> それとも歌詞が刺さった？
 
-問いかけが言語化を促す
+**問いかけが言語化を引き出す**
 
 </div>
 </div>
 
 <br>
 
-**AIの役割 = ユーザー自身の気づきを引き出すこと**
-
----
-
-## 聴き方が、あなたを語る。
-
-> 🎵 **Blinding Lights**
-> ─────────────────────
-> ### ベースの入りに反応する人
->
-> メロディより先に、低音の重心やリズムの
-> 入り方に反応するタイプ。曲が一段深くなる
-> 瞬間に気持ちよさを感じている。
->
-> `groove` `bass-driven`　📍 1:18 の瞬間
-
-<br>
-
-→ SNS シェア可能。**同じHowの人を見る** で繋がる
+*センサーは事実を捉える。AI は断面を差し出す。意味はユーザーが発見する。*
 
 ---
 
 <!-- _class: lead -->
 
-# 🏗️ アーキテクチャ
+# プロダクト体験
 
 ---
 
-## 技術スタック
+## コアフロー
 
-| レイヤー | 技術 |
-|---|---|
-| フロントエンド | **Next.js 15** (App Router) + Tailwind CSS |
-| バックエンド | **Node.js / Express** on Cloud Run |
-| ML | **TensorFlow.js**（MotionReactionClassifier） |
-| LLM | **Claude API**（claude-sonnet-4-6） |
-| データベース | **Firestore** / Cloud Storage |
-| 認証 | **Firebase Auth**（Google OAuth） |
-
----
-
-## システム構成
+<br>
 
 ```
-   📱 スマホ (Next.js)
-   SensorRecorder / ReactionTimeline / HowChat
-        │  HTTPS / SSE
-        ▼
-   ☁️ Cloud Run (Express)
-   ┌─────────────┬──────────────────┐
-   │ MotionAnalyzer │ HowDialogOrchestrator │
-   │   (TF.js)      │    (Claude API)        │
-   └─────────────┴──────────────────┘
-        │
-        ▼
-   🔥 Firestore / Cloud Storage
+🎵  曲を選んで再生する
+        ↓
+📜  歌詞が時刻同期で流れる  ← Musixmatch API
+        ↓
+👆  「この歌詞だ」とタップする
+        ↓
+🌊  Groove レベル（音量 × 盛り上がり）が自動記録
+        ↓
+💬  AI が歌詞と Groove を起点に問いかける
+        ↓
+🪪  対話が「Howカード」になる
+        ↓
+🤝  同じ歌詞に同じ How で反応した人と出会う
 ```
 
 ---
 
-## センサー解析アルゴリズム
+## 歌詞 × Groove インターフェース
 
-1〜3秒の時間窓ごとに特徴量を抽出 → 6軸スコアを推定
+<div class="card">
 
-<div class="cols">
-<div>
+**▶ Blinding Lights — 1:18**
 
-**抽出する特徴量**
-- meanMagnitude
-- maxDelta
-- energy
-- peakCount
-- rhythmRegularity
-- stillness
+<div class="groove-bar" style="width:78%"></div>
+<div style="font-size:16px; color:rgba(240,240,245,0.5); margin-top:4px;">Groove 78% · 揺れ</div>
+
+<br>
+
+「*I said, ooh, I'm blinded by the lights*」
+
+<br>
+
+<div style="display:flex; gap:12px; font-size:18px;">
+<span style="color:var(--accent)">💬 4 How</span>
+<span style="color:rgba(240,240,245,0.5)">コメント</span>
+<span style="color:var(--accent2); font-weight:700">✨ AIと深掘り →</span>
+</div>
 
 </div>
-<div>
 
-**判定ロジック例**
-- 規則的な揺れ → Groove
-- 急激な動き → Hype
-- 静止 → Immersion
-- 短いスパイク → Hit
+→ 歌詞行をタップすると AI 対話が始まる
 
-</div>
+---
+
+## Howカード — 聴き方が、あなたを語る
+
+<div class="card" style="max-width: 580px; margin: 0 auto;">
+
+**🎵 Blinding Lights**
+
+---
+
+### 余韻に浸るリスナー
+
+曲が終わっても世界に残り続けるタイプ。<br>
+サビの後の静寂に、一番の意味を感じている。
+
+<br>
+
+`余韻派` `immersion` `afterglow`
+
+📍 *1:18 — "ooh, I'm blinded by the lights"*
+
 </div>
 
 <br>
 
-→ MVPはルールベース、教師データ収集後にTF.jsモデルへ
-
----
-
-## セキュリティ・配慮
-
-- 🔑 **API キー**はサーバーサイドのみ（クライアント露出なし）
-- 🛡️ **プロンプトインジェクション対策**：ユーザー入力を system プロンプトと分離
-- 🔒 **Firestore セキュリティルール**：センサーデータは本人のみ閲覧可
-- 📜 **DeviceMotionEvent** の利用目的をプライバシーポリシーに明記
+→ 同じ How の人 / 同じ歌詞に反応した人 を表示
 
 ---
 
 <!-- _class: lead -->
 
-# 🛠️ 開発体制
+# 技術スタック
 
 ---
 
-## リポジトリ構成（モノレポ）
+## アーキテクチャ
 
 ```
-team-10/
-├── apps/
-│   ├── web/        # Next.js フロントエンド
-│   └── api/        # Express バックエンド
-├── packages/
-│   └── shared/     # 共通型定義 (SensorFrame, HowCard)
-├── docs/           # 6つの永続ドキュメント
-└── .claude/        # Claude Code 設定（agents/skills/commands）
-```
+   📱 iOS アプリ (SwiftUI / MusicKit)
+      HomeView [歌詞 + Groove]
+      HowChatView [AI 対話]
+           │  HTTPS / SSE
+           ▼
+   ☁️  backend (Node.js + Express)
+      POST /sessions/:id/chat   ← Claude API 中継
+      POST /sessions/:id/how-card
+      GET  /how-cards
+           │
+           ▼
+      🔥  Firestore  +  🤖 Claude API (claude-sonnet-4-6)
 
-pnpm workspace + Turborepo
+   ai-recognition (Create ML / TF.js) → Core ML → iOS
+```
 
 ---
 
-## 開発ガイドライン
+## 技術選定
 
-<div class="cols">
-<div>
+| レイヤー | 技術 | 選定理由 |
+|---|---|---|
+| iOS | SwiftUI + MusicKit | ネイティブ必須（ADR-0001） |
+| 歌詞 | Musixmatch API | 時刻同期歌詞の取得 |
+| Groove | 音量 + 本体モーション | AirPods 不要でデモできる（ADR-0005） |
+| LLM | Claude claude-sonnet-4-6 | バックエンド経由でキー秘匿（ADR-0002） |
+| ML | Create ML → Core ML | 端末推論、学習データ蓄積（ADR-0003） |
+| DB | Firestore | iOS SDK・リアルタイム |
 
-### コーディング
-- TypeScript / `any` 禁止
-- Zod でバリデーション
-- コメントは **WHY のみ**
+---
 
-### Git
-- `main` 直接 push 禁止
-- `feat/` `fix/` `docs/`
-- Squash merge
+## データフライホイール
 
-</div>
-<div>
+> AI 対話の回答が「暗黙のラベル」になる
 
-### テスト
-- Vitest（ユニット70%）
-- Firebase Emulator（統合）
-- iOS/Android 手動E2E
+```
+音量 + モーション → Groove レベル（今）
+    ↓ 歌詞タップで文脈付き反応を記録
+AI 対話の回答 → ラベル付きデータが蓄積
+    ↓
+Create ML で精度向上 → より良い問いかけ
+    ↓
+より良い HowCard → より多くの共鳴
+```
 
-### AI活用
-- **必ず AI_USAGE_LOG.md に記録**
-- 1日3件以上
-
-</div>
-</div>
+| フェーズ | モデル | 時期 |
+|---|---|---|
+| MVP | ルールベース Groove | 今 |
+| Phase 1 | 学習モデル 32次元 | 〜6ヶ月 |
+| Phase 2 | 個人最適化 128次元 | 〜1年 |
 
 ---
 
 <!-- _class: lead -->
 
-# 🚀 MVP と今後
+# MVP スコープ
 
 ---
 
-## MVP スコープ
+## 作ったもの / 作らなかったもの
 
 <div class="cols">
 <div>
 
-### ✅ 作る（P0）
-- 曲再生 × センサー取得
-- 反応区間の検出
-- AI 対話で言語化
-- Howカード生成
-- 同じHowの人を表示
+### ✅ P0（実装済み）
+- 曲再生 × MusicKit
+- 時刻同期歌詞（Musixmatch）
+- 歌詞タップ → AI 対話
+- Howカード生成・保存
+- Groove レベル表示
+- コミュニティ画面（ダミー）
 
 </div>
 <div>
 
-### 🚫 作らない
-- DM・フォロー
-- 完全SNSタイムライン
-- Spotify/Apple Music連携
-- 歌詞API
-- 本格的な音源解析
+### 🚫 スコープ外
+- DM・フォロー・タイムライン
+- Spotify 連携
+- 歌詞コメントのリアルタイム同期
+- AirPods 必須のセンサー精度
+- 完全な認証フロー
 
 </div>
 </div>
-
----
-
-## モデルの進化ロードマップ
-
-| フェーズ | モデル | 必要データ | 状態 |
-|---|---|---|---|
-| **MVP（今）** | ルールベース6軸 | 0 | ✅ 実装中 |
-| **β版** | 学習モデル 16〜32次元 | 〜1,000セッション | 📅 〜6ヶ月 |
-| **スケール** | 高次元埋め込み 128次元 | 10,000セッション〜 | 📅 1年〜 |
-
-> 6軸は「人間用のビューア」。モデルは高次元で学習し、表示時に射影する設計。
-> **使えば使うほど賢くなる** — AI対話の回答が暗黙のラベルになる。
 
 ---
 
 ## 将来の展望
 
-- 📊 **How別レコメンド** — 同じ聴き方の人が好む曲を推薦
-- 🎤 **ライブ会場での反応共有** — 同じ空間の熱狂を可視化
-- 🎼 **アーティスト向けファンインサイト** — ファンの聴き方を分析
-- 🧠 **高次元Howマッチング** — 6軸を超えた潜在空間で「本当に同じ聴き方」の人と繋がる
+- 🤝 **歌詞単位でのコミュニティ** — 同じ一節に反応した人と出会う
+- 📊 **アーティスト向けインサイト** — どの歌詞で誰がどう反応したか
+- 🎤 **ライブ会場での How 共有** — 同じ空間の集合的な感動を可視化
+- 🧠 **高次元 How マッチング** — 歌詞 × 反応の潜在空間で「本当に同じ聴き方」の人と
+
+<br>
+
+> 歌詞は音楽の共通言語。<br>「この一節が刺さった」は、世界中どこへでも届く。
 
 ---
 
@@ -497,10 +431,10 @@ pnpm workspace + Turborepo
 
 # 音楽は、どう聴くかだ。
 
-### 聴き方が、あなたを語る。
+### 歌詞が、あなたの How を語り始める。
 
 <br>
 
-🎵 **HowTune**
+**HowTune**
 
 <span class="tag">Team 10 — Engineer Guild Hackathon 2026/05</span>

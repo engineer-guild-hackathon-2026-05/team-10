@@ -11,3 +11,12 @@ struct SessionElapsedPlaybackPositionProvider: PlaybackPositionProviding {
         Date().timeIntervalSince(startedAt)
     }
 }
+
+struct SessionAnchoredPlaybackPositionProvider: PlaybackPositionProviding {
+    let startedAt: Date
+    let initialPlaybackTime: TimeInterval
+
+    func currentPlaybackTime() -> TimeInterval? {
+        initialPlaybackTime + Date().timeIntervalSince(startedAt)
+    }
+}

@@ -37,9 +37,9 @@ struct OnboardingWelcomePage: View {
                 // 機能説明
                 VStack(spacing: 12) {
                     featureRow(
-                        icon: "figure.walk.motion",
-                        title: "身体の反応を感知",
-                        description: "AirPods・iPhone のセンサーで、音楽への自然な反応を記録"
+                        icon: "airpods",
+                        title: "頭部の反応を感知",
+                        description: "AirPods の頭部モーションで、音楽への自然な反応を記録"
                     )
                     Divider().overlay(HowTuneDesign.divider)
                     featureRow(

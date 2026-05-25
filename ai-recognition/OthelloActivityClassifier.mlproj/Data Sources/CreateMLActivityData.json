@@ -1,0 +1,155 @@
+{
+  "activityEntities" : [
+    "dataSourceMetrics",
+    [
+      {
+        "createdDate" : "2026-05-24T09:38:59Z",
+        "event" : "dataSourceMetrics",
+        "id" : "32C0A343-D211-448A-8800-BBA9C4DE20F9",
+        "subtitle" : "3 Classes, 4 Items",
+        "title" : "Data Summary"
+      },
+      {
+        "createdDate" : "2026-05-24T14:25:12Z",
+        "event" : "dataSourceMetrics",
+        "id" : "852AE323-5781-4545-A3FC-A38D1F7055F9",
+        "subtitle" : "6 Classes, 12 Items",
+        "title" : "Data Summary"
+      }
+    ],
+    "dataSourceCreated",
+    [
+      {
+        "createdDate" : "2026-05-24T09:37:52Z",
+        "event" : "dataSourceCreated",
+        "id" : "AEED6AF7-2FFB-49B6-B51E-78156DF5675F",
+        "subtitle" : "CreateMLActivityData",
+        "title" : "Data Source Created"
+      }
+    ],
+    "dataSourceTrainingStarted",
+    [
+      {
+        "createdDate" : "2026-05-24T09:38:59Z",
+        "event" : "dataSourceTrainingStarted",
+        "id" : "F8D936CE-FEE4-4094-9EC7-947203FD1144",
+        "subtitle" : "OthelloActivityClassifier 1",
+        "title" : "Used By"
+      },
+      {
+        "createdDate" : "2026-05-24T14:25:12Z",
+        "event" : "dataSourceTrainingStarted",
+        "id" : "DD97876B-A2A6-4E50-8031-20A1394B92DA",
+        "subtitle" : "OthelloActivityClassifier 2",
+        "title" : "Used By"
+      }
+    ]
+  ],
+  "createdDate" : "2026-05-24T09:37:52Z",
+  "dataPathRelativeToProjectURL" : "../../../../../../Downloads/CreateMLActivityData/",
+  "dataResult" : {
+    "classesCount" : 6,
+    "columnTypes" : [
+      "Double",
+      "Double",
+      "Double",
+      "Double",
+      "Double",
+      "Double",
+      "Double",
+      "Double",
+      "Double",
+      "Double"
+    ],
+    "columnValues" : [
+      "-2.84, -2.83, -2.66, -2.52, -2.37…",
+      "5.40, 5.33, 5.32, 5.36, 5.22…",
+      "-7.92, -7.93, -8.02, -8.04, -8.11…",
+      "-0.07, -0.08, -0.09, -0.09, -0.06…",
+      "0.61, 0.59, 0.60, 0.62, 0.64…",
+      "0.05, 0.04, 0.04, 0.09, 0.08…",
+      "-0.58, -0.58, -0.58, -0.58, -0.58…",
+      "-0.34, -0.32, -0.31, -0.30, -0.29…",
+      "0.01, 0.03, 0.05, 0.09, 0.10…",
+      "0.03, 0.03, 0.03, 0.03, 0.03…"
+    ],
+    "columns" : [
+      "ax",
+      "ay",
+      "az",
+      "gx",
+      "gy",
+      "gz",
+      "pitch",
+      "roll",
+      "t",
+      "yaw"
+    ],
+    "createdDate" : "2026-05-24T09:37:52Z",
+    "dataAnalysis" : {
+      "classifierAnalysis" : {
+        "labelStats" : {
+          "afterglow" : 1,
+          "chill" : 3,
+          "groove" : 2,
+          "hit" : 1,
+          "hype" : 3,
+          "immersion" : 2
+        }
+      },
+      "issues" : [
+        {
+          "description" : "6 classes found, including chill, hype, groove",
+          "severity" : "debug"
+        },
+        {
+          "description" : "Less than 100 total activity recording files found - add more to improve model validation",
+          "severity" : "warning"
+        },
+        {
+          "description" : "Smallest class is \"afterglow\" with 1 activity recording files",
+          "severity" : "debug"
+        },
+        {
+          "description" : "Largest class is \"chill\" with 3 activity recording files",
+          "severity" : "debug"
+        },
+        {
+          "description" : "No features selected",
+          "severity" : "notReady"
+        }
+      ],
+      "objectDetectorAnalysis" : {
+        "details" : {
+
+        }
+      },
+      "summary" : {
+        "canUseValidation" : 0,
+        "classCount" : 6,
+        "sampleCount" : 12
+      }
+    },
+    "dataSourceID" : "1A8DE18D-A53A-46C4-BA94-B645F57E2E0B",
+    "dataURL" : "file:///Users/atsushi/Downloads/CreateMLActivityData/",
+    "error" : {
+      "code" : 1000,
+      "domain" : "composer.error.domain",
+      "errorType" : "notReady",
+      "reason" : "No features selected"
+    },
+    "itemsCount" : 12
+  },
+  "dataURL" : "file:///Users/atsushi/Downloads/CreateMLActivityData/",
+  "experimentIDs" : [
+    "2927DD50-DCE2-4C21-90D6-19E8267FF43E",
+    "A390AB00-A6B6-49B6-B072-D7B0C2CE05E3",
+    "0A0418FE-1F2A-4F35-AFAC-22A31D325B71"
+  ],
+  "id" : "1A8DE18D-A53A-46C4-BA94-B645F57E2E0B",
+  "modifiedDate" : "2026-05-24T14:25:12Z",
+  "pathType" : 0,
+  "preferredFilename" : "CreateMLActivityData",
+  "title" : "CreateMLActivityData",
+  "version" : "1.0"
+}
