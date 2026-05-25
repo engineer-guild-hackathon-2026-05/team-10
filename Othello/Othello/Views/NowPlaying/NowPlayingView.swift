@@ -56,15 +56,17 @@ struct NowPlayingView: View {
     // MARK: - 再生タブのコンテンツ
 
     private var playbackContent: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 0) {
-                circularVisualizer
-                    .padding(.top, 8)
-                songInfo
-                playbackControls
-                lyricsCard
-                    .padding(.top, 24)
-                Color.clear.frame(height: 104)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    circularVisualizer
+                        .padding(.top, 8)
+                    songInfo
+                    playbackControls
+                    lyricsCard(proxy: proxy)
+                        .padding(.top, 24)
+                    Color.clear.frame(height: 104)
+                }
             }
         }
     }
@@ -190,43 +192,114 @@ struct NowPlayingView: View {
         .padding(.top, 10)
     }
 
-    private var lyricsCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            switch lyricsViewModel.state {
-            case .idle, .loading:
-                Text("歌詞を読み込み中")
-                    .font(.body)
-                    .foregroundStyle(.white)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-            case .loaded:
-                if let loadedLyrics = lyricsViewModel.lyrics, !loadedLyrics.lines.isEmpty {
-                    ForEach(loadedLyrics.lines) { line in
-                        Text(line.text)
-                            .font(.body)
-                            .foregroundStyle(.white)
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                } else {
-                    Text("歌詞を表示できません")
-                        .font(.body)
-                        .foregroundStyle(.white)
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            case .unavailable(let message), .failed(let message):
-                Text(message)
-                    .font(.body)
-                    .foregroundStyle(.white)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+    private func lyricsCard(proxy: ScrollViewProxy) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            lyricsContent(proxy: proxy)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 28)
+    }
+
+    @ViewBuilder
+    private func lyricsContent(proxy: ScrollViewProxy) -> some View {
+        switch lyricsViewModel.state {
+        case .idle, .loading:
+            lyricsStatusMessage("歌詞を読み込み中")
+        case .loaded:
+            if let loadedLyrics = lyricsViewModel.lyrics, !loadedLyrics.lines.isEmpty {
+                immersiveLyricsView(loadedLyrics, proxy: proxy)
+            } else {
+                lyricsStatusMessage("歌詞を表示できません")
+            }
+        case .unavailable(let message), .failed(let message):
+            lyricsStatusMessage(message)
+        }
+    }
+
+    private func immersiveLyricsView(
+        _ loadedLyrics: SynchronizedLyrics,
+        proxy: ScrollViewProxy
+    ) -> some View {
+        let activeID = activeLyricLineID(in: loadedLyrics)
+        let activeIndex = activeLyricIndex(in: loadedLyrics)
+
+        return LazyVStack(alignment: .leading, spacing: 20) {
+            ForEach(Array(loadedLyrics.lines.enumerated()), id: \.element.id) { index, line in
+                lyricLineView(
+                    text: line.text,
+                    isActive: activeID == line.id,
+                    distanceFromActive: activeIndex.map { abs($0 - index) },
+                    hasActiveLine: activeID != nil
+                )
+                .id(line.id)
+            }
+        }
+        .padding(.vertical, 26)
+        .onAppear {
+            scrollToActiveLyric(activeID, proxy: proxy, animated: false)
+        }
+        .onChange(of: activeID) { _, newValue in
+            scrollToActiveLyric(newValue, proxy: proxy, animated: true)
+        }
+    }
+
+    private func lyricLineView(
+        text: String,
+        isActive: Bool,
+        distanceFromActive: Int?,
+        hasActiveLine: Bool
+    ) -> some View {
+        let opacity = lyricOpacity(isActive: isActive, distanceFromActive: distanceFromActive, hasActiveLine: hasActiveLine)
+        let font: Font = isActive ? .title.weight(.heavy) : .title3.weight(.bold)
+
+        return Text(text)
+            .font(font)
+            .foregroundStyle(.white.opacity(opacity))
+            .lineSpacing(4)
+            .lineLimit(nil)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .animation(.easeInOut(duration: 0.24), value: opacity)
+    }
+
+    private func lyricsStatusMessage(_ message: String) -> some View {
+        Text(message)
+            .font(.title3.weight(.bold))
+            .foregroundStyle(.white.opacity(0.64))
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 48)
+    }
+
+    private func activeLyricLineID(in lyrics: SynchronizedLyrics) -> String? {
+        guard lyrics.isTimeSynced else { return nil }
+        return lyrics.line(at: playback.playbackTime)?.id
+    }
+
+    private func activeLyricIndex(in lyrics: SynchronizedLyrics) -> Int? {
+        guard let activeID = activeLyricLineID(in: lyrics) else { return nil }
+        return lyrics.lines.firstIndex { $0.id == activeID }
+    }
+
+    private func lyricOpacity(isActive: Bool, distanceFromActive: Int?, hasActiveLine: Bool) -> Double {
+        guard hasActiveLine else { return 0.82 }
+        if isActive { return 1.0 }
+        guard let distanceFromActive else { return 0.34 }
+        if distanceFromActive <= 1 { return 0.64 }
+        if distanceFromActive <= 3 { return 0.42 }
+        return 0.28
+    }
+
+    private func scrollToActiveLyric(_ id: String?, proxy: ScrollViewProxy, animated: Bool) {
+        guard let id else { return }
+        let action = {
+            proxy.scrollTo(id, anchor: .center)
+        }
+        if animated {
+            withAnimation(.easeInOut(duration: 0.32), action)
+        } else {
+            action()
+        }
     }
 
     private var lyricsQuery: LyricsTrackQuery {

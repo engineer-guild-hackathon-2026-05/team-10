@@ -111,6 +111,7 @@ enum StaticLyricsParser {
         let metadataPrefixes = ["[ar:", "[ti:", "[al:", "[by:", "[offset:", "[length:"]
         let lowercased = text.lowercased()
         guard !metadataPrefixes.contains(where: { lowercased.hasPrefix($0) }) else { return nil }
+        guard !isBracketedSectionLabel(text) else { return nil }
         guard !text.hasPrefix("*******") else { return nil }
         guard !text.localizedCaseInsensitiveContains("This Lyrics is NOT for Commercial use") else {
             return nil
@@ -119,5 +120,35 @@ enum StaticLyricsParser {
             return nil
         }
         return text
+    }
+
+    private nonisolated static func isBracketedSectionLabel(_ text: String) -> Bool {
+        guard text.hasPrefix("["), text.hasSuffix("]") else { return false }
+
+        let content = text
+            .dropFirst()
+            .dropLast()
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let normalized = content.trimmingCharacters(in: .decimalDigits.union(.whitespaces))
+        let sectionNames: Set<String> = [
+            "intro",
+            "verse",
+            "pre chorus",
+            "chorus",
+            "post chorus",
+            "bridge",
+            "hook",
+            "refrain",
+            "interlude",
+            "instrumental",
+            "break",
+            "drop",
+            "outro"
+        ]
+        return sectionNames.contains(normalized)
     }
 }

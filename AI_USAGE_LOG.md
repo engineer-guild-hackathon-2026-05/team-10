@@ -1368,6 +1368,7 @@
   - Issue に挙がった英語 placeholder の `rg` 確認、`git diff --check`、iOS Simulator 向け `xcodebuild` で検証
 - **評価**：採用
 - **採用 / 不採用の理由**：実データ由来の正式名は変えず、デモ固定データと fallback 表示だけを絞って日本語化できたため。
+
 ### #060 Issue #81 再生ボタンのNowPlaying自動表示停止
 
 - **時刻**：22:50
@@ -1383,6 +1384,23 @@
   - `nowPlayingContext` が nil になった場合は NowPlaying を閉じ、空の fullScreenCover を避ける
 - **評価**：採用
 - **採用 / 不採用の理由**：再生開始と NowPlaying 表示の責務を分離し、MusicFeed に留まりながらミニプレイヤーへ反映できるようにしたため。
+
+### #061 Issue #82 歌詞表示UI刷新
+
+- **時刻**：22:55
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：Issue #82 の受け入れ条件に合わせ、NowPlaying の歌詞表示を Apple Music 風に刷新する
+- **プロンプト**：
+  ```text
+  issue81, 82それぞれに対してPRを立てるところまで実装して欲しい。mainとconflictしないように.
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `ui/issue-82-lyrics` を作成
+  - NowPlaying の歌詞カードを背景なしの没入型スクロール表示へ変更し、同期歌詞では現在行を強調・自動スクロール
+  - `StaticLyricsParser` で `[Intro]` / `[Verse 1]` などのセクション見出しを除外
+- **評価**：採用
+- **採用 / 不採用の理由**：既存の Musixmatch 取得経路を維持しながら、表示層だけを Issue #82 の体験要件へ寄せられたため。
+
 ### #060 Issue #83 切り抜きUI重複解消
 
 - **時刻**：22:35
@@ -1459,7 +1477,23 @@
 
 ## Day 3（2026-05-26）
 
-### #00X
+### #001 PR #96 レビュー対応
+
+- **時刻**：00:25
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #96 のレビューコメントを確認し、対応が必要な歌詞UIのスクロール挙動を修正する
+- **プロンプト**：
+  ```text
+  pr 96のレビューをみて、対応必要があるものは直して
+  ```
+- **出力サマリ**：
+  - PR #96 の Copilot review comments 3 件と CodeRabbit の rate limit コメントを確認
+  - 最新 `origin/main` を `ui/issue-82-lyrics` に merge し、`AI_USAGE_LOG.md` の conflict を両方のログを残して解消
+  - NowPlaying 歌詞表示の nested vertical `ScrollView` を解消し、親 `ScrollViewReader` / `ScrollView` で歌詞行の自動スクロールを制御
+  - 重複していた `.scrollIndicators(.hidden)` を削除
+  - 歌詞行の opacity animation を `isActive` ではなく computed opacity の変化で発火するよう修正
+- **評価**：採用
+- **採用 / 不採用の理由**：実害のあるスクロール競合を解消し、軽微な可読性・アニメーション指摘も小さな差分で改善できたため。
 
 ---
 
