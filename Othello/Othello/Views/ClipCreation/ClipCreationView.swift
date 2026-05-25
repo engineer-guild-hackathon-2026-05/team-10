@@ -12,22 +12,20 @@ struct ClipCreationView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
+            ZStack {
                 Color.black.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 28) {
                         albumArt
                         songInfo
-                        playerControls
                         waveformSection
                         commentSection
                         shareButton
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
-                    .padding(.bottom, 110)
+                    .padding(.bottom, 32)
                 }
-                tabSelector
             }
             .navigationTitle("切り抜きを作成")
             .navigationBarTitleDisplayMode(.inline)
@@ -59,7 +57,7 @@ struct ClipCreationView: View {
     // MARK: - Album Art
 
     private var albumArt: some View {
-        CircularArtworkView(song: song, size: 220, isPlaying: viewModel.isPlaying, showsCenterHole: true)
+        CircularArtworkView(song: song, size: 220, isPlaying: false, showsCenterHole: true)
     }
 
     // MARK: - Song Info
@@ -74,20 +72,6 @@ struct ClipCreationView: View {
                 .font(.subheadline)
                 .foregroundStyle(.gray)
         }
-    }
-
-    // MARK: - Player Controls
-
-    private var playerControls: some View {
-        ClipProgressControls(
-            currentTime: viewModel.currentTime,
-            totalDuration: viewModel.totalDuration,
-            isPlaying: viewModel.isPlaying,
-            leadingButtonSize: 50,
-            playButtonSize: 52,
-            progressKnobSize: 16,
-            onTogglePlayback: viewModel.togglePlayback
-        )
     }
 
     // MARK: - Waveform Section
@@ -192,72 +176,6 @@ struct ClipCreationView: View {
             get: { viewModel.postErrorMessage != nil },
             set: { if !$0 { viewModel.postErrorMessage = nil } }
         )
-    }
-
-    // MARK: - Tab Selector
-
-    private var tabSelector: some View {
-        HStack(spacing: 0) {
-            // 再生タブ（非アクティブ）
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    viewModel.selectedTab = .playback
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "waveform")
-                        .font(.subheadline)
-                    Text("再生")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-                .foregroundStyle(viewModel.selectedTab == .playback ? .white : .gray)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .background(
-                    viewModel.selectedTab == .playback
-                        ? Color.white.opacity(0.08)
-                        : Color.clear,
-                    in: Capsule()
-                )
-            }
-
-            // 切り抜きタブ（アクティブ）
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    viewModel.selectedTab = .clip
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "scissors")
-                        .font(.subheadline)
-                    Text("切り抜き")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-                .foregroundStyle(viewModel.selectedTab == .clip ? Color(red: 0.65, green: 0.5, blue: 1.0) : .gray)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .background(
-                    viewModel.selectedTab == .clip
-                        ? Color(red: 0.25, green: 0.18, blue: 0.45)
-                        : Color.clear,
-                    in: Capsule()
-                )
-            }
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 5)
-        .background(Color(red: 0.1, green: 0.1, blue: 0.12), in: RoundedRectangle(cornerRadius: 30))
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 16)
-        .background(Color.black)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Color.white.opacity(0.07))
-                .frame(height: 0.5)
-        }
     }
 }
 
