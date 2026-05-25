@@ -16,8 +16,8 @@ struct FeedPost: Identifiable {
 
 extension FeedPost {
     init(howCard: HowCardComment, song: Song, userProfile: UserProfile? = nil) {
-        let displayName = FeedPost.displayName(from: userProfile)
-        let displayHandle = FeedPost.displayHandle(from: userProfile)
+        let displayName = FeedPost.displayName(from: howCard, userProfile: userProfile)
+        let displayHandle = FeedPost.displayHandle(displayName: displayName)
         self.init(
             id: UUID(),
             cardID: howCard.documentID,
@@ -33,8 +33,8 @@ extension FeedPost {
         )
     }
 
-    private static func displayHandle(from profile: UserProfile?) -> String {
-        guard let displayName = normalizedDisplayName(from: profile) else {
+    private static func displayHandle(displayName: String) -> String {
+        guard displayName != "listener" else {
             return "@listener"
         }
 
@@ -43,12 +43,16 @@ extension FeedPost {
         return "@\(handle)"
     }
 
-    private static func displayName(from profile: UserProfile?) -> String {
-        normalizedDisplayName(from: profile) ?? "listener"
+    private static func displayName(from howCard: HowCardComment, userProfile: UserProfile?) -> String {
+        normalizedDisplayName(howCard.userName) ?? normalizedDisplayName(from: userProfile) ?? "listener"
     }
 
     private static func normalizedDisplayName(from profile: UserProfile?) -> String? {
-        guard let displayName = profile?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+        normalizedDisplayName(profile?.displayName)
+    }
+
+    private static func normalizedDisplayName(_ value: String?) -> String? {
+        guard let displayName = value?.trimmingCharacters(in: .whitespacesAndNewlines),
               !displayName.isEmpty else {
             return nil
         }

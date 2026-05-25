@@ -1,3 +1,4 @@
+import FirebaseAuth
 import FirebaseFirestore
 import Foundation
 
@@ -45,8 +46,12 @@ enum UserSeedService {
     }
 
     static func fetchUsers(ids: [String]) async throws -> [UserProfile] {
+        guard let currentUserID = Auth.auth().currentUser?.uid else {
+            return []
+        }
+
         var profiles: [UserProfile] = []
-        for userID in uniqueUserIDs(from: ids) {
+        for userID in uniqueUserIDs(from: ids).filter({ $0 == currentUserID }) {
             let ref = Firestore.firestore().collection(collectionName).document(userID)
             let snapshot = try await getDocument(ref)
             guard snapshot.exists, let profile = userProfile(from: snapshot) else {
@@ -58,13 +63,22 @@ enum UserSeedService {
     }
 
     static func seedProfiles(for howCards: [HowCardComment]) -> [UserSeedProfile] {
-        uniqueUserIDs(from: howCards.map(\.userID)).enumerated().map { index, userID in
-            UserSeedProfile(
-                userID: userID,
-                email: nil,
-                displayName: displayName(for: index)
-            )
+        guard let currentUser = Auth.auth().currentUser else {
+            return []
         }
+
+        let userIDs = uniqueUserIDs(from: howCards.map(\.userID))
+        guard let index = userIDs.firstIndex(of: currentUser.uid) else {
+            return []
+        }
+
+        return [
+            UserSeedProfile(
+                userID: currentUser.uid,
+                email: normalizedString(currentUser.email),
+                displayName: normalizedString(currentUser.displayName) ?? displayName(for: index)
+            )
+        ]
     }
 
     private static func upsertSeedUser(_ seed: UserSeedProfile) async throws -> UserProfile {
@@ -81,14 +95,14 @@ enum UserSeedService {
             data["display_name"] = seed.displayName
         }
 
-        if let email = seed.email?.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty,
+        if let email = normalizedString(seed.email),
            !snapshot.exists || stringValue(existingData["email"]) == nil {
             data["email"] = email
         } else if !snapshot.exists {
             data["email"] = NSNull()
         }
 
-        if !snapshot.exists || existingData["created_at"] == nil {
+        if !snapshot.exists {
             data["created_at"] = FieldValue.serverTimestamp()
         }
 
@@ -176,7 +190,15 @@ enum UserSeedService {
             return nil
         }
 
-        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return normalizedString(string)
+    }
+
+    private static func normalizedString(_ value: String?) -> String? {
+        guard let value else {
+            return nil
+        }
+
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 

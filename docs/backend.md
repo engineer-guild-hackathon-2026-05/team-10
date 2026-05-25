@@ -109,12 +109,19 @@ how-cards/{cardId}         ← 既存Howカード生成API用
 
 ### Firestore セキュリティルール
 
-バックエンドはすべて Admin SDK 経由（ルールをバイパス）。iOS クライアントからの直接アクセスは禁止。
+バックエンドは Admin SDK 経由（ルールをバイパス）で `how-cards` を扱う。
+iOS クライアントからの直接アクセスは、ログイン中ユーザー自身の `users/{uid}` の `get/create/update` のみに限定する。
+`users` の list や他ユーザーの書き込み、`how-cards` への直接アクセスは禁止する。
 
 ```text
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /users/{uid} {
+      allow get, create, update: if request.auth != null && request.auth.uid == uid;
+      allow list, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
@@ -278,7 +285,7 @@ Core ML がオンデバイスで計算した反応区間を受け取り、セッ
 
 ### Howカードコメント API
 
-iOS は Firestore に直接アクセスせず、Firebase ID トークン付きでこのAPIを呼び出す。
+iOS は `how-cards` へ直接アクセスせず、Firebase ID トークン付きでこのAPIを呼び出す。
 
 `POST /how-cards`:
 
@@ -293,6 +300,7 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 ```
 
 バックエンドは `user_id` をトークンから補完し、`goods: 0` で保存する。
+`GET /how-cards` / `GET /how-cards/:id` は `users/{user_id}.display_name` を Admin SDK で参照し、表示用の `user_name` だけをレスポンスへ付与する。
 
 `GET /how-cards?song_id=1704093812` は `{ "howCards": [...] }`、`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` は `{ "howCard": ... }` を返す。
 
@@ -306,6 +314,7 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
     "song_id": "1704093812",
     "artist_id": "ado",
     "user_id": "uid123",
+    "user_name": "Atsushi",
     "goods": 0
   }
 }

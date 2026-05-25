@@ -99,3 +99,16 @@
 - [x] Node 構文チェックと iOS ビルドを実行する
 - [x] `AI_USAGE_LOG.md` を更新する
 - [x] 変更をコミットして push する
+
+## フェーズ12: users 直接 Firestore アクセス用 Rules 修正
+
+- [x] `firestore.rules` が deny-all のため iOS の `users/{uid}` read/write が拒否されていることを確認する
+- [x] `users` の direct access を自分の `users/{uid}` の `get/create/update` のみに限定する
+- [x] iOS seed をログイン中ユーザー自身の `users/{uid}` 作成・更新だけに限定する
+- [x] 既存 user ドキュメント更新時に seed が `created_at` を追加しないようにする
+- [x] `GET /how-cards` / `GET /how-cards/:id` で `users.display_name` 由来の `user_name` だけを返す
+- [x] Community / MusicFeed が `how-cards.user_name` を優先表示する
+- [x] rules / Node / iOS ビルドを検証する
+- [x] `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する
+- [x] ~~Firestore rules を deploy する~~（Firebase CLI は `/private/tmp/firebase-tools` に導入済みだが、この端末に `firebase login` 認証情報がなく `Failed to authenticate` で未実行）

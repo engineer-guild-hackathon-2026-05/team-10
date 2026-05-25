@@ -89,7 +89,7 @@ final class CommunityViewModel: ObservableObject {
                 let song = songMetadata(for: card.songID)
                 return CommunityListener(
                     id: card.id,
-                    name: displayName(from: card.userID),
+                    name: displayName(from: card),
                     howTag: tag(for: card),
                     howTitle: card.comment,
                     trackTitle: song.title,
@@ -200,8 +200,14 @@ final class CommunityViewModel: ObservableObject {
         return .neutral
     }
 
-    private func displayName(from userID: String) -> String {
-        if let displayName = userProfilesByID[userID]?.displayName?
+    private func displayName(from card: HowCardComment) -> String {
+        if let displayName = card.userName?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !displayName.isEmpty {
+            return displayName
+        }
+
+        if let displayName = userProfilesByID[card.userID]?.displayName?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !displayName.isEmpty {
             return displayName

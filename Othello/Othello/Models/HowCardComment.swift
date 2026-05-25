@@ -8,6 +8,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
     var songID: String
     var artistID: String
     var userID: String
+    var userName: String?
     var goods: Int
 
     var id: String {
@@ -22,6 +23,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         songID: String,
         artistID: String,
         userID: String = UUID().uuidString,
+        userName: String? = nil,
         goods: Int = 0
     ) {
         self.documentID = documentID
@@ -31,6 +33,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         self.songID = songID
         self.artistID = artistID
         self.userID = userID
+        self.userName = userName
         self.goods = goods
     }
 
@@ -42,6 +45,8 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         case songID = "song_id"
         case artistID = "artist_id"
         case userID = "user_id"
+        case userName = "user_name"
+        case displayName = "display_name"
         case goods
         case likes
     }
@@ -55,6 +60,8 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         self.songID = try container.decode(String.self, forKey: .songID)
         self.artistID = try container.decode(String.self, forKey: .artistID)
         self.userID = try container.decode(String.self, forKey: .userID)
+        self.userName = try container.decodeIfPresent(String.self, forKey: .userName)
+            ?? container.decodeIfPresent(String.self, forKey: .displayName)
         self.goods = try container.decodeIfPresent(Int.self, forKey: .goods)
             ?? container.decodeIfPresent(Int.self, forKey: .likes)
             ?? 0
@@ -69,6 +76,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         try container.encode(songID, forKey: .songID)
         try container.encode(artistID, forKey: .artistID)
         try container.encode(userID, forKey: .userID)
+        try container.encodeIfPresent(userName, forKey: .userName)
         try container.encode(goods, forKey: .goods)
     }
 }

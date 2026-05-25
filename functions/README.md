@@ -186,11 +186,14 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "song_id": "1704093812",
       "artist_id": "ado",
       "user_id": "uid123",
+      "user_name": "Atsushi",
       "goods": 3
     }
   ]
 }
 ```
+
+`user_name` は `users/{user_id}.display_name` から Admin SDK で参照した表示用フィールド。メールアドレスなどの user 詳細は返さない。
 
 ### `POST /how-cards/:id/like`
 

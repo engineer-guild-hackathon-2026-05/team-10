@@ -789,6 +789,28 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：ユーザー意図どおり、Functions を追加せず iOS 起点で `users` コレクションを直接 seed する実装に戻したため。
 
+### #041 users Firestore rules と表示名取得経路の安全化
+
+- **時刻**：20:44
+- **ツール**：Codex / Firebase CLI / xcodebuild
+- **目的**：iOS からの `users/{uid}` 直接書き込みが Firestore rules で拒否される問題を修正し、可能なら rules を deploy する
+- **プロンプト**：
+  ```text
+  12.13.0 - [FirebaseFirestore][I-FST000001] Listen for query at users/7Ez4X2acWsNnW0XOSELj3UudhBl1|f:|ob:__name__asc failed: Missing or insufficient permissions.
+  [HowCards] user seed failed: Error Domain=FIRFirestoreErrorDomain Code=7 "Missing or insufficient permissions." UserInfo={NSLocalizedDescription=Missing or insufficient permissions.}
+
+  可能なら Firestore rules を deploy する とあるけど、firebase cliが足りないのかな？入れていいですよ
+  ```
+- **出力サマリ**：
+  - `firestore.rules` が deny-all で、iOS の `users/{uid}` get/create/update が拒否される状態だったことを確認
+  - direct Firestore access はログイン中ユーザー自身の `users/{uid}` のみ許可し、`users` list / 他ユーザー書き込み / `how-cards` 直接アクセスは引き続き禁止
+  - iOS の `UserSeedService` はログイン中ユーザー自身の user doc だけを seed するよう制限
+  - Community / MusicFeed の他ユーザー表示名は、既存 `GET /how-cards` が Admin SDK で `users.display_name` を参照して `user_name` だけ返す構成に変更
+  - Firebase CLI 15.18.0 を `/private/tmp/firebase-tools` に導入し deploy を試行したが、この端末に `firebase login` 認証情報がなく `Failed to authenticate` で未実行
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：Firestore rules を過度に広げず、iOS 直接 seed の必要範囲とコミュニティ表示名取得を分離できたため。
+
 ---
 
 ## Day 3（2026-05-26）

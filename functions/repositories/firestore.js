@@ -30,15 +30,16 @@ async function getHowCards({ songId, limit = 50 } = {}) {
   }
 
   const snapshot = await query.limit(limit).get();
-  return snapshot.docs
+  const howCards = snapshot.docs
     .map(doc => serializeHowCard(doc.id, doc.data()))
     .filter(Boolean);
+  return attachUserNames(howCards);
 }
 
 async function getHowCard(cardId) {
   const doc = await db().collection('how-cards').doc(cardId).get();
   if (!doc.exists) return null;
-  return serializeHowCard(doc.id, doc.data());
+  return attachUserName(serializeHowCard(doc.id, doc.data()));
 }
 
 async function updateHowCard({ uid, cardId, comment, songStart, songEnd, songId, artistId }) {
@@ -143,9 +144,36 @@ function serializeHowCard(id, data) {
     user_id: data.user_id,
     goods: currentGoodsCount(data),
     likes: currentGoodsCount(data),
+    user_name: data.user_name ?? data.display_name ?? data.displayName ?? null,
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
   };
+}
+
+async function attachUserNames(howCards) {
+  const userIds = [...new Set(howCards.map(card => card.user_id).filter(Boolean))];
+  if (userIds.length === 0) return howCards;
+
+  const snapshots = await Promise.all(
+    userIds.map(userId => db().collection('users').doc(userId).get())
+  );
+  const userNames = new Map();
+  snapshots.forEach((snapshot, index) => {
+    if (!snapshot.exists) return;
+    const displayName = displayNameFromUserData(snapshot.data());
+    if (displayName) userNames.set(userIds[index], displayName);
+  });
+
+  return howCards.map(card => ({
+    ...card,
+    user_name: userNames.get(card.user_id) ?? card.user_name ?? null,
+  }));
+}
+
+async function attachUserName(howCard) {
+  if (!howCard) return null;
+  const [withUserName] = await attachUserNames([howCard]);
+  return withUserName;
 }
 
 function currentGoodsCount(data) {
@@ -163,6 +191,13 @@ function serializeUser(id, data = {}) {
     created_at: timestampToISOString(data.created_at ?? data.createdAt),
     updated_at: timestampToISOString(data.updated_at ?? data.updatedAt),
   };
+}
+
+function displayNameFromUserData(data = {}) {
+  const displayName = data.display_name ?? data.displayName;
+  if (typeof displayName !== 'string') return null;
+  const trimmed = displayName.trim();
+  return trimmed ? trimmed : null;
 }
 
 function isHowCardComment(data) {
