@@ -1,9 +1,7 @@
 const admin = require('firebase-admin');
-const { seedHowCardsIfNeeded } = require('../seed/howCardSeedData');
 
 const db = () => admin.firestore();
 const { FieldValue } = admin.firestore;
-let seedPromise;
 
 async function createHowCard({ uid, comment, songStart, songEnd, songId, artistId }) {
   const ref = db().collection('how-cards').doc();
@@ -23,8 +21,6 @@ async function createHowCard({ uid, comment, songStart, songEnd, songId, artistI
 }
 
 async function getHowCards({ songId, limit = 50 } = {}) {
-  await ensureSeededHowCards();
-
   let query = db().collection('how-cards');
 
   if (songId) {
@@ -150,21 +146,6 @@ function serializeHowCard(id, data) {
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
   };
-}
-
-async function ensureSeededHowCards() {
-  if (process.env.HOWTUNE_DISABLE_HOW_CARD_SEED === 'true') {
-    return;
-  }
-
-  if (!seedPromise) {
-    seedPromise = seedHowCardsIfNeeded(db(), FieldValue).catch(error => {
-      seedPromise = null;
-      throw error;
-    });
-  }
-
-  await seedPromise;
 }
 
 function currentGoodsCount(data) {

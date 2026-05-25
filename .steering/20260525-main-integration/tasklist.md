@@ -44,7 +44,7 @@
 
 - [x] Functions の `how-cards` レスポンスを `goods` に統一する
 - [x] 既存 UI モックコメントを `how-cards` seed データとして定義する
-- [x] Functions 初回取得時に seed データを Firestore へ投入する
+- [x] ~~Functions 初回取得時に seed データを Firestore へ投入する~~（フェーズ8で iOS から `POST /how-cards` を逐次呼ぶ方式へ変更）
 - [x] iOS の Howカード取得先を Functions の本番 URL に向ける
 - [x] MusicFeed の mock fallback を削除し、Functions 取得結果だけで表示する
 - [x] Community を `GET /how-cards` の取得結果から構成する
@@ -55,8 +55,18 @@
 
 ## フェーズ7: Howカード seed warmup 修正
 
-- [x] `ContentView` の main 起動時に `GET /how-cards?limit=1` を叩く
-- [x] Community 導線に依存せず Functions の seed 判定が走るようにする
+- [x] ~~`ContentView` の main 起動時に `GET /how-cards?limit=1` を叩く~~（フェーズ8で iOS 逐次 POST 方式へ変更）
+- [x] ~~Community 導線に依存せず Functions の seed 判定が走るようにする~~（フェーズ8で iOS 逐次 POST 方式へ変更）
 - [x] iOS ビルドを実行する
+- [x] `AI_USAGE_LOG.md` を更新する
+- [x] 変更をコミットして push する
+
+## フェーズ8: iOS 逐次 POST seed 方式への変更
+
+- [x] Functions 側の GET 自動 seed と seed スクリプトを削除する
+- [x] iOS 側に初期 Howカード seed データを移す
+- [x] main 起動時に既存 Howカードを取得して重複を判定する
+- [x] 不足している Howカードだけ `POST /how-cards` を逐次呼び出して追加する
+- [x] Node 構文チェックと iOS ビルドを実行する
 - [x] `AI_USAGE_LOG.md` を更新する
 - [x] 変更をコミットして push する

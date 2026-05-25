@@ -118,7 +118,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | メソッド | パス | 認証 | 用途 |
 |---------|------|------|------|
 | GET | `/health` | ❌ | 死活確認 |
-| GET | `/how-cards` | ✅ | Howカードコメント一覧（最新50件） |
+| GET | `/how-cards` | ✅ | Howカードコメント一覧（最新250件） |
 | GET | `/how-cards?song_id=...` | ✅ | 曲ごとのHowカードコメント一覧 |
 | GET | `/how-cards/:id` | ✅ | Howカードコメント取得 |
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
@@ -126,20 +126,6 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | POST | `/how-cards/:id/like` | ✅ | いいね（冪等、二重防止） |
 | GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
 | PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
-
-### 初期 Howカード seed
-
-フィードの初期表示用データは `functions/seed/howCardSeedData.js` に定義し、`how-cards` コレクションへ保存する。
-`GET /how-cards` 実行時に `app-metadata/how-card-seed-*` を確認し、未投入なら一度だけ seed を投入する。
-
-ローカルから明示実行する場合:
-
-```powershell
-cd functions
-npm run seed:how-cards
-```
-
-再投入したい場合は `node scripts/seed-how-cards.js --force` を使う。
 
 ### `POST /how-cards`
 

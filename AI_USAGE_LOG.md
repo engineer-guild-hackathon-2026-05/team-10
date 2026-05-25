@@ -712,6 +712,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：ユーザーが特定画面を開く操作に依存せず、ログイン後に Functions の seed 処理が実行される経路を作れたため。
 
+### #037 iOS からの Howカード逐次 seed 方式へ変更
+
+- **時刻**：18:53
+- **ツール**：Codex / xcodebuild
+- **目的**：Functions 側に seed 処理を持たせず、iOS 側から既存の Howカード作成 API を逐次呼び出して初期データを追加する
+- **プロンプト**：
+  ```text
+  functionsに追加するんじゃなくて、ios側から開いたら追加するfunctionを逐次呼び出すようにして欲しい
+  ```
+- **出力サマリ**：
+  - Functions の GET 時自動 seed と seed スクリプトを削除
+  - iOS に `HowCardSeedService` を追加し、既存のフィード / コミュニティ用コメントから 202 件分の seed 候補を生成
+  - main 起動時に `GET /how-cards` で既存カードを取得し、同じ曲・区間・コメントがないものだけ `POST /how-cards` を 1 件ずつ呼ぶように変更
+  - Functions は `goods` schema と通常の create / fetch / like API のみを維持
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：seed 専用処理を Functions 側に置かず、iOS 起点で既存の作成 endpoint を使う要件に合わせられたため。
+
 ---
 
 ## Day 3（2026-05-26）
