@@ -6,4 +6,4 @@
 - [x] API docs と data model docs を更新する
 - [x] AI_USAGE_LOG.md を更新する
 - [x] Functions の静的検証を実行する
-- [x] Firebase Functions deploy を試行する（認証未設定のため未完了: `firebase login` / `FIREBASE_TOKEN` が必要）
+- [x] Firebase Functions deploy を実行する

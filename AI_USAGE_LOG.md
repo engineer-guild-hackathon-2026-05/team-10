@@ -653,9 +653,25 @@
   - 既存 Firestore document に `song_id` slug と `itunes_id` がある場合は、response の `song_id` を `itunes_id` に正規化し、元 slug を `song_slug` として返すようにした
   - API docs / data model docs を `song_id`, `itunes_id`, `song_slug`, `likes` の実装に合わせて更新
   - `node --check` と `git diff --check` で検証
-  - `npx --yes firebase-tools deploy --only functions` を試行したが、Firebase CLI 認証がなく `firebase login` が必要なため deploy は未完了
+  - Firebase login 後に `npx --yes firebase-tools deploy --only functions` を再実行し、`api` と `onUserSignup` の deploy 完了を確認
 - **評価**：採用
-- **採用 / 不採用の理由**：client 側の workaround ではなく、Functions の read/write contract と docs を揃える修正にできた。deploy は認証情報不足で未完了だが、repo 内を汚さずに失敗を確認できたため。
+- **採用 / 不採用の理由**：client 側の workaround ではなく、Functions の read/write contract と docs を揃える修正にし、Firebase Functions まで反映できたため。
+
+### #034 おすすめコメント取得Function issue作成
+
+- **時刻**：20:59
+- **ツール**：Codex / GitHub CLI
+- **目的**：おすすめコメント一覧を取得する Firebase Function 追加を GitHub issue 化する
+- **プロンプト**：
+  ```text
+  おすすめコメント一覧を取得するfirebase functionも追加したい。issueたてておいて
+  ```
+- **出力サマリ**：
+  - `functions/app.js`、`functions/routes/how-cards.js`、`functions/repositories/firestore.js`、iOS の `FirebaseAPI` / `HomeDashboardViewModel` を確認
+  - 既存 `GET /how-cards` は最新/曲別一覧であり、「おすすめコメント一覧」としての意味・並び替えが未分離であることを整理
+  - `GET /recommended-comments` または `GET /home/recommended-comments` を追加する Issue #85 を作成
+- **評価**：採用
+- **採用 / 不採用の理由**：既存APIとの重複を避け、おすすめ表示専用Functionとして責務・返却形式・初期おすすめロジック・受け入れ条件を明確化できたため。
 
 ---
 
