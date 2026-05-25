@@ -26,10 +26,12 @@ how-cards/{cardId}
   comment:      string       // ユーザーコメント
   song_start:   number       // コメント対象範囲の開始秒
   song_end:     number       // コメント対象範囲の終了秒
-  song_id:      string       // MusicKit / Apple Music 側の曲 ID
+  song_id:      string       // MusicKit / Apple Music / iTunes の曲 ID
+  itunes_id:    string       // canonical 曲 ID（song_id と同じ値を保持）
+  song_slug:    string?      // 表示・移行用の曲 slug
   artist_id:    string       // アーティスト ID
   user_id:      string       // Firebase Auth uid
-  goods:        integer      // いいね数
+  likes:        integer      // いいね数
   created_at:   Timestamp
   updated_at:   Timestamp | absent
 
@@ -57,7 +59,7 @@ users/{uid}
 
 ## Howカードコメント API データ構造
 
-`POST /how-cards` では iOS が `comment`, `song_start`, `song_end`, `song_id`, `artist_id` を送り、Functions が Firebase ID token から `user_id` を補完して `goods: 0` で保存する。
+`POST /how-cards` では iOS が `comment`, `song_start`, `song_end`, `song_id`, `artist_id` を送る。`song_id` は MusicKit / Apple Music / iTunes の曲 ID として扱い、slug や表示用文字列は `song_slug` / `song_title` など別フィールドに分離する。バックエンドは Firebase ID トークンから `user_id` を決めて `likes: 0` で保存する。
 
 ```json
 {
@@ -69,7 +71,7 @@ users/{uid}
 }
 ```
 
-レスポンスでは `goods` と互換用の `likes` を同じ値で返す。
+レスポンスの公開カウンタは `likes`。新規書き込み・API contract ともに `likes` へ統一する。
 
 ```json
 {
@@ -78,10 +80,11 @@ users/{uid}
   "song_start": 78.4,
   "song_end": 84.2,
   "song_id": "1704093812",
+  "itunes_id": "1704093812",
+  "song_slug": "ado-show",
   "artist_id": "ado",
   "user_id": "uid123",
   "user_name": "Atsushi",
-  "goods": 3,
   "likes": 3,
   "created_at": "2026-05-25T12:00:00.000Z",
   "updated_at": "2026-05-25T12:05:00.000Z"
@@ -130,6 +133,6 @@ iOS 内部の反応区間は Firestore へ永続化していない。AirPods 頭
 
 - iOS クライアントは Howカードコメントを Firestore に直接書き込まない。例外として、ログイン中ユーザー自身の `users/{uid}` だけは Firestore rules の範囲内で read/write する。
 - `how-cards.user_id` は Firebase Auth の `uid` と一致させる。
-- `song_start` / `song_end` は秒単位の数値として扱い、`song_end > song_start` を前提にする。
-- `goods` は Firestore 上では integer、API では `goods` と `likes` の両方として返す。
+- `song_start` / `song_end` は秒単位の数値として扱い、`song_end > song_start` を前提にする
+- `likes` はクライアント上では `Int`、Firestore 上では integer として扱う。
 - `sessions` collection は現行 Functions では作成していない。旧 `backend/` の設計が残っているだけで、本番 contract ではない。
