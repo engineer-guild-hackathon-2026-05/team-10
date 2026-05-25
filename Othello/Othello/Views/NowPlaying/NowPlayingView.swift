@@ -25,11 +25,21 @@ struct NowPlayingView: View {
                     playbackContent
                 } else {
                     clipContent
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
+                            nowPlayingFooterSpacer
+                        }
                 }
+            }
+            VStack {
+                Spacer()
                 nowPlayingFooter
             }
         }
         .preferredColorScheme(.dark)
+    }
+
+    private var nowPlayingFooterSpacer: some View {
+        Color.clear.frame(height: 80)
     }
 
     // MARK: - 再生タブのコンテンツ
