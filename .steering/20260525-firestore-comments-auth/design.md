@@ -2,18 +2,21 @@
 
 ## 変更方針
 
-- `docs/data-model.md` の `how-cards` / `users` を今回の Firestore 直書き前提に更新する。
-- `Othello/Othello/Models/` に Firestore 保存用モデルを追加する。
-- `Othello/Othello/Services/` に Firestore API を追加し、Firestore の collection name と encode/decode を集約する。
-- `AuthViewModel.signUp` は Firebase Auth 作成後、Firestore API を呼んで user document を upsert する。
-- `Othello.xcodeproj` に `FirebaseFirestore` package product を追加する。
-- `firestore.rules` は認証済みユーザーの own user document と、`user_id == request.auth.uid` の Howカード作成を許可する。
+- `docs/data-model.md` の `how-cards` / `users` をバックエンド経由の Firestore 保存前提に更新する。
+- `backend/` と `functions/` に `how-cards` コメントAPIと `users/me` APIを追加する。
+- `Othello/Othello/Models/` にバックエンドAPI用 Codable model を追加する。
+- `Othello/Othello/Services/FirebaseAPI` は名前を維持しつつ、Firestore SDK ではなく URLSession + Firebase ID token で backend/functions を呼ぶ。
+- `AuthViewModel.signUp` は Firebase Auth 作成後、backend API を呼んで user document を upsert する。
+- `Othello.xcodeproj` から `FirebaseFirestore` package product を外す。
+- `firestore.rules` はクライアント直接アクセスを禁止する deny-all に戻す。
 
 ## Firestore schema
 
 ```text
 how-cards/{cardId}
   comment: string
+  song_start: number
+  song_end: number
   song_id: string
   artist_id: string
   user_id: string
@@ -33,7 +36,7 @@ users/{uid}
 - `FirebaseAPI.fetchHowCard(id:)`
 - `FirebaseAPI.fetchHowCards(songID:limit:)`
 - `FirebaseAPI.updateHowCard(_:)`
-- `FirebaseAPI.incrementGoods(cardID:by:)`
+- `FirebaseAPI.incrementGoods(cardID:)`
 - `FirebaseAPI.upsertUser(_:)`
 - `FirebaseAPI.createUserDocument(from:)`
 
@@ -41,4 +44,4 @@ users/{uid}
 
 - Firestore field 名はユーザー提示の snake_case に合わせる。
 - `goods` は `Int` とし、作成時の default を `0` にする。
-- `@DocumentID` は Swift 側の識別子として使い、Firestore field には保存しない。
+- Swift 側の `id` は backend response の `id` を使い、Firestore SDK の property wrapper は使わない。

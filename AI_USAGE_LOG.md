@@ -205,6 +205,77 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘4件をすべて反映し、Firestore Rules と iOS 書き込み実装の整合性を保ったままビルド通過できたため。
 
+### #011 PR #60 Firestoreアクセスのバックエンド経由化
+
+- **時刻**：13:55
+- **ツール**：Codex
+- **目的**：iOS から Firestore を直接呼ばず、既存 backend/functions API 経由で Howカードコメントとユーザー保存を扱う構成へ変更する
+- **プロンプト**：
+  ```text
+  ごめん、現在でているPRをみてみると、バックエンドサーバーを通してFirebaseの色々をいじるような構成になってますよね。それを使えるような繋ぎ込みを先にやった方がいいかもしれない。よくPRの変更を見ながら、直接Firestoreを呼び出さないように変更してもらってもいいですか？
+  ```
+- **出力サマリ**：
+  - `backend/` と `functions/` に `POST/GET/PATCH /how-cards`、`POST /how-cards/:id/goods`、`GET/PUT /users/me` を追加
+  - iOS の `FirebaseAPI` を Firestore SDK 直呼びから Firebase ID トークン付き URLSession API クライアントへ変更
+  - `HowCardComment` / `UserProfile` を backend response/request 用 Codable model に変更し、`FirebaseFirestore` 依存を削除
+  - Firestore Rules を deny-all に戻し、Firestore 書き込みは Admin SDK を持つバックエンドに集約
+  - data model / backend docs / steering docs をバックエンド経由構成に更新
+- **評価**：採用
+- **採用 / 不採用の理由**：既存の backend/functions 構成に合わせ、クライアントがFirestoreに直接触らない境界へ整理できたため。
+
+### #012 Howカードコメントの範囲フィールド追加
+
+- **時刻**：14:09
+- **ツール**：Codex
+- **目的**：Howカードコメント型を `song_start` / `song_end` を含む新スキーマへ更新する
+- **プロンプト**：
+  ```text
+  how_cardについて、今後バックエンド（functions）の中で方が変わることになった：
+  comment, song_start, song_end(rangeが別れた）, song_id, artist_id, user_id, goods
+  そうなるようにiosのドキュメント・実装を変更して欲しい
+  ```
+- **出力サマリ**：
+  - `HowCardComment` と `FirebaseAPI` の Howカードコメント payload に `songStart` / `songEnd` を追加
+  - `backend/` と `functions/` の Howカードコメント API で `song_start` / `song_end` を必須入力として検証・保存・返却するよう更新
+  - `docs/data-model.md`、`docs/backend.md`、`backend/README.md`、steering docs を新スキーマへ更新
+- **評価**：採用
+- **採用 / 不採用の理由**：iOS の Codable model / API payload と backend/functions の入出力スキーマを同じ `song_start` / `song_end` 前提に揃えられたため。
+
+### #013 PR #63 レビュー対応と main conflict 解消
+
+- **時刻**：14:35
+- **ツール**：Codex
+- **目的**：PR #63 のレビューコメント反映、`origin/main` 取り込みによる functions 競合解消、main 側 backend(functions) 機能との整合性確認
+- **プロンプト**：
+  ```text
+  レビューコメントがついているのと、main conflictがあるから、そこをなおして。現状のmainのbackend(functions)の機能と競合していないかどうかについてもチェックして欲しい
+  ```
+- **出力サマリ**：
+  - `origin/main` を取り込み、`functions/README.md` / `functions/repositories/firestore.js` / `functions/routes/how-cards.js` の競合を解消
+  - main 側の `onUserSignup` と冪等な `/how-cards/:id/like` を残しつつ、Howカードコメントの Firestore スキーマを `comment/song_start/song_end/song_id/artist_id/user_id/goods` に統一
+  - `users/me` の email は Firebase ID トークンを正とし、body の email が異なる場合は 400 を返すよう修正
+  - iOS の API クライアントを `/how-cards/:id/like` と 401/403 ハンドリングに合わせ、直接 Firestore 依存が戻っていないことを確認
+  - Markdown fence の言語指定、review nit の route コメント削除、deprecated backend 側の同等修正も反映
+- **評価**：採用
+- **採用 / 不採用の理由**：main 側 functions の Auth トリガーと idempotent like を保持したまま、PR の新スキーマ・レビュー指摘・競合解消を同時に成立させられたため。
+
+### #014 PR #63 再レビュー対応
+
+- **時刻**：14:47
+- **ツール**：Codex
+- **目的**：CodeRabbit の追加レビュー指摘を反映し、再検証して push する
+- **プロンプト**：
+  ```text
+  再度レビューがつけられた。修正してpushして
+  ```
+- **出力サマリ**：
+  - functions の `GET /how-cards?song_id=...` を `created_at` 降順にし、対応する Firestore composite index を追加
+  - `users.created_at` は有効な snake_case Timestamp のみ保持し、legacy `createdAt` を流用しないよう修正
+  - `FirebaseAPI.swift` から `FirebaseAPIError` / Envelope / Payload 型を分割し、Swift の 1ファイル1型ルールへ合わせた
+  - deprecated backend 側も同じ timestamp/order 方針へ合わせた
+- **評価**：採用
+- **採用 / 不採用の理由**：レビューの実指摘を最小差分で解消しつつ、Firestore index とローカル backend の挙動も揃えられたため。
+
 ---
 
 ## Day 3（2026-05-26）

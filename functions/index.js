@@ -21,13 +21,16 @@ exports.onUserSignup = functionsV1
   .onCreate(async (user) => {
     const userRef = admin.firestore().collection('users').doc(user.uid);
     try {
+      const now = admin.firestore.FieldValue.serverTimestamp();
       await userRef.create({
+        user_id: user.uid,
         email: user.email ?? null,
-        displayName: user.displayName ?? null,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        display_name: user.displayName ?? null,
+        created_at: now,
+        updated_at: now,
       });
     } catch (err) {
-      // grpc code 6 = ALREADY_EXISTS. Trigger re-fired, user doc already created — no-op.
+      // grpc code 6 = ALREADY_EXISTS. Trigger re-fired, user doc already created.
       if (err.code !== 6) throw err;
     }
   });

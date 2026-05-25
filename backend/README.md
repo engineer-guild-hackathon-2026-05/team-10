@@ -18,7 +18,7 @@ LLM プロキシ + データ API。Node.js + Express + Firestore + Anthropic SDK
 
 ## ディレクトリ構成
 
-```
+```text
 backend/
 ├── index.js                  # エントリーポイント（Firebase 初期化・ルートマウント）
 ├── middleware/
@@ -67,7 +67,7 @@ Firebase の認証情報は `serviceAccountKey.json`（Firebase コンソール 
 
 iOS 側は Firebase Auth（Email/Password）でサインイン後、すべてのリクエストに以下のヘッダーを付与する:
 
-```
+```http
 Authorization: Bearer <firebase-id-token>
 ```
 
@@ -94,6 +94,12 @@ iOS チーム向けの実装例は [`docs/backend.md` の「iOS 実装ガイド�
 | POST | `/sessions/:id/chat` | ✅ | AI 対話（1ターン） |
 | POST | `/sessions/:id/how-card` | ✅ | Howカード生成・保存 |
 | GET | `/how-cards?tag=...` | ✅ | Howカード一覧（タグ検索） |
+| GET | `/how-cards?song_id=...` | ✅ | Howカードコメント一覧 |
+| POST | `/how-cards` | ✅ | Howカードコメント作成 |
+| PATCH | `/how-cards/:id` | ✅ | 自分のHowカードコメント更新 |
+| POST | `/how-cards/:id/like` | ✅ | Howカードコメントのいいね（冪等、二重防止） |
+| GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
+| PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
 
 ---
 
@@ -272,12 +278,73 @@ Core ML がオンデバイスで計算した反応区間を受け取り、Firest
 
 ---
 
+### Howカードコメント API
+
+iOS は Firestore に直接アクセスせず、Firebase ID トークン付きで以下の API を呼び出す。
+
+`POST /how-cards` のリクエスト:
+
+```json
+{
+  "comment": "このベースラインの入りが好き",
+  "song_start": 78.4,
+  "song_end": 84.2,
+  "song_id": "1704093812",
+  "artist_id": "ado"
+}
+```
+
+バックエンドが `user_id` を Firebase ID トークンから補完し、`goods: 0` で `how-cards/{id}` に保存する。
+
+`GET /how-cards/:id` / `POST /how-cards` / `PATCH /how-cards/:id` は以下の形式を返す:
+
+```json
+{
+  "howCard": {
+    "id": "card789",
+    "comment": "このベースラインの入りが好き",
+    "song_start": 78.4,
+    "song_end": 84.2,
+    "song_id": "1704093812",
+    "artist_id": "ado",
+    "user_id": "uid123",
+    "goods": 0
+  }
+}
+```
+
+`GET /how-cards?song_id=1704093812` は同じオブジェクト配列を `{ "howCards": [...] }` で返す。
+
+`POST /how-cards/:id/like` は同じユーザーの二重いいねを防ぎ、`{ "goods": 4, "likes": 4 }` を返す。
+
+---
+
+### `GET /users/me` / `PUT /users/me`
+
+Firebase Auth で作成したユーザーを、バックエンド経由で `users/{uid}` に保存する。
+
+```json
+{
+  "email": "user@example.com",
+  "display_name": null
+}
+```
+
+---
+
 ## Firestore データモデル
 
-```
+```text
 users/{uid}
-  email: string             ← トークンから自動取得
-  displayName: string       ← トークンから自動取得（iOS で profile に設定したもの）
+  user_id: string
+  email: string
+  display_name: string | null
+  created_at: timestamp
+  updated_at: timestamp
+
+users/{uid}                  ← 既存Howカード生成API用
+  email: string
+  displayName: string
   howTags: string[]         ← HowCard 生成のたびに追記
   updatedAt: timestamp
 
@@ -291,6 +358,21 @@ sessions/{sessionId}
   createdAt: timestamp
 
 how-cards/{cardId}
+  comment: string
+  song_start: number
+  song_end: number
+  song_id: string
+  artist_id: string
+  user_id: string
+  goods: number
+  created_at: timestamp
+  updated_at: timestamp
+
+how-cards/{cardId}/liked-by/{uid}
+  user_id: string
+  liked_at: timestamp
+
+how-cards/{cardId}           ← 既存Howカード生成API用
   userId: string
   displayName: string       ← 非正規化（コミュニティ表示用）
   sessionId: string
@@ -302,7 +384,7 @@ how-cards/{cardId}
   createdAt: timestamp
 ```
 
-`users/{uid}` は初回 HowCard 生成時に自動作成される（明示的な登録 API は無い）。
+クライアントからの直接 Firestore アクセスは禁止し、`firestore.rules` は deny-all にする。
 
 ---
 
