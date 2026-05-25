@@ -21,7 +21,8 @@ final class AirPodsMotionViewModel: ObservableObject {
 
         manager.onStatusChange = { [weak self] status in
             Task { @MainActor in
-                self?.status = status
+                guard let self, self.status != status else { return }
+                self.status = status
             }
         }
 
@@ -49,6 +50,10 @@ final class AirPodsMotionViewModel: ObservableObject {
         default:
             return false
         }
+    }
+
+    var recentInteractionIntensity: Double {
+        samples.suffix(18).map(\.interactionIntensity).max() ?? latestSample?.interactionIntensity ?? 0
     }
 
     func start(playbackPositionProvider: PlaybackPositionProviding? = nil) {

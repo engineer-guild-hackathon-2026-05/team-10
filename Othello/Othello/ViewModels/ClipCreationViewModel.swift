@@ -72,4 +72,3 @@ final class ClipCreationViewModel: ObservableObject {
         return String(format: "%d:%02d", mins, secs)
     }
 }
-

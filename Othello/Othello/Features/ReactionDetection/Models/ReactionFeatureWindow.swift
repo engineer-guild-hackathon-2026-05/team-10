@@ -100,9 +100,11 @@ struct ReactionFeatureExtractor {
             return nil
         }
 
-        let magnitudes = windowSamples.map { sample in
+        let rawMagnitudes = windowSamples.map { sample in
             sqrt(pow(sample.accelerationMagnitude, 2) + pow(sample.rotationMagnitude * 0.18, 2))
         }
+        let baseline = rawMagnitudes.mean
+        let magnitudes = rawMagnitudes.map { abs($0 - baseline) }
         let mean = magnitudes.mean
         let std = magnitudes.standardDeviation(mean: mean)
         let deltas = zip(magnitudes.dropFirst(), magnitudes).map { abs($0 - $1) }
@@ -121,7 +123,7 @@ struct ReactionFeatureExtractor {
             energy: energy,
             peakCount: peakIndexes.count,
             rhythmRegularity: Self.rhythmRegularity(peakTimes: peakTimes),
-            stillness: Self.clamp(1 - (mean / 0.18))
+            stillness: Self.clamp(1 - ((mean + std * 0.65 + maxDelta * 0.25) / 0.10))
         )
     }
 

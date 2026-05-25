@@ -51,6 +51,11 @@ enum AirPodsMotionStatus: Equatable {
     }
 
     var isRecording: Bool {
-        self == .recording
+        switch self {
+        case .starting, .recording:
+            return true
+        default:
+            return false
+        }
     }
 }
