@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum NowPlayingTab {
-    case playback, clip
+    case lyrics, rangeSelection
 }
 
 struct NowPlayingView: View {
@@ -10,7 +10,7 @@ struct NowPlayingView: View {
     @ObservedObject var airPods: AirPodsMotionViewModel
     @Environment(\.dismiss) private var dismiss
     @StateObject private var lyricsViewModel = LyricsViewModel()
-    @State private var activeTab: NowPlayingTab = .playback
+    @State private var activeTab: NowPlayingTab = .lyrics
     @State private var selectedLyricDraft: LyricHowCardDraft?
 
     private var song: Song { context.song }
@@ -30,14 +30,7 @@ struct NowPlayingView: View {
             Color.black.ignoresSafeArea()
             VStack(spacing: 0) {
                 topBar
-                if activeTab == .playback {
-                    playbackContent
-                } else {
-                    clipContent
-                        .safeAreaInset(edge: .bottom, spacing: 0) {
-                            nowPlayingFooterSpacer
-                        }
-                }
+                mainContent
             }
             VStack {
                 Spacer()
@@ -56,32 +49,39 @@ struct NowPlayingView: View {
         }
     }
 
-    private var nowPlayingFooterSpacer: some View {
-        Color.clear.frame(height: 80)
-    }
+    // MARK: - Main Content
 
-    // MARK: - 再生タブのコンテンツ
-
-    private var playbackContent: some View {
+    private var mainContent: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-                    circularVisualizer
-                        .padding(.top, 8)
-                    songInfo
-                    playbackControls
-                    lyricsCard(proxy: proxy)
-                        .padding(.top, 24)
+                    sharedPlaybackSurface
+                    tabContent(proxy: proxy)
                     Color.clear.frame(height: 104)
                 }
             }
         }
     }
 
-    // MARK: - 切り抜きタブのコンテンツ
+    private var sharedPlaybackSurface: some View {
+        VStack(spacing: 0) {
+            circularVisualizer
+                .padding(.top, 8)
+            songInfo
+            playbackControls
+        }
+    }
 
-    private var clipContent: some View {
-        ClipCreationInlineView(song: song)
+    @ViewBuilder
+    private func tabContent(proxy: ScrollViewProxy) -> some View {
+        switch activeTab {
+        case .lyrics:
+            lyricsCard(proxy: proxy)
+                .padding(.top, 24)
+        case .rangeSelection:
+            ClipCreationInlineView(song: song)
+                .padding(.top, 24)
+        }
     }
 
     private var topBar: some View {
@@ -518,54 +518,36 @@ struct NowPlayingView: View {
 
     private var nowPlayingFooter: some View {
         HStack(spacing: 0) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { activeTab = .playback }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "waveform")
-                        .font(.subheadline)
-                    Text("再生")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-                .foregroundStyle(activeTab == .playback ? .white : Color.gray)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    activeTab == .playback ? Color.white.opacity(0.12) : Color.clear,
-                    in: Capsule()
-                )
-            }
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { activeTab = .clip }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "scissors")
-                        .font(.subheadline)
-                    Text("切り抜き")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-                .foregroundStyle(
-                    activeTab == .clip
-                        ? Color(red: 0.65, green: 0.5, blue: 1.0)
-                        : Color.gray
-                )
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    activeTab == .clip
-                        ? Color(red: 0.25, green: 0.18, blue: 0.45)
-                        : Color.clear,
-                    in: Capsule()
-                )
-            }
+            footerTabButton(tab: .lyrics, title: "歌詞", systemImage: "music.note.list")
+            footerTabButton(tab: .rangeSelection, title: "範囲選択", systemImage: "slider.horizontal.3")
         }
         .padding(4)
-        .background(Color(red: 0.1, green: 0.1, blue: 0.12), in: RoundedRectangle(cornerRadius: 30))
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
         .padding(.horizontal, 20)
         .padding(.bottom, 32)
+    }
+
+    private func footerTabButton(tab: NowPlayingTab, title: String, systemImage: String) -> some View {
+        let isActive = activeTab == tab
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) { activeTab = tab }
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: systemImage)
+                    .font(.subheadline.weight(.semibold))
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(isActive ? Color.black : Color.white.opacity(0.58))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .background(isActive ? Color.white : Color.clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
