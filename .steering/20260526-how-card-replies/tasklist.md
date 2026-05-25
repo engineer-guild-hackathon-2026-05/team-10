@@ -13,6 +13,7 @@
 - [x] PRレビューコメントを確認し、返信数同期・再入防止・View分割・counter更新を修正する
 - [x] 返信送信失敗の原因を確認し、未デプロイendpointを検知できるようにする
 - [x] `functions:api` をデプロイし、本番 `/how-cards/:id/replies` が auth middleware まで到達することを確認する
+- [x] 追加レビューの未宣言 `replyCount` 代入を削除し、再デプロイする
 
 ## 振り返り
 

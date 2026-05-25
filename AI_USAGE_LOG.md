@@ -1594,6 +1594,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘を反映しつつ、実際の送信失敗原因がクライアントではなく未デプロイの Functions endpoint であることを確認できたため。
 
+### #007 Howカード返信 PR追加レビュー対応
+
+- **時刻**：07:07
+- **ツール**：Codex / GitHub CLI / node / xcodebuild / Firebase CLI
+- **目的**：PR #101 の追加レビューで指摘された Functions の未宣言変数代入を修正する
+- **プロンプト**：
+  ```text
+  レビューついてるから修正しておいて
+  ```
+- **出力サマリ**：
+  - CodeRabbit の最新レビューを確認し、`createHowCardReply` 内に未宣言の `replyCount = ...` 代入が残っていることを確認
+  - transaction 内では `FieldValue.increment(1)` のみを使い、返却用の `replyCount` は transaction 後の親 Howカード再取得から計算する形へ整理
+  - Functions 構文チェックと iOS ビルドで検証
+  - `functions:api` を再デプロイし、本番 endpoint が認証必須の 401 を返すことを再確認
+- **評価**：採用
+- **採用 / 不採用の理由**：暗黙グローバル化のリスクを消し、レビュー指摘と本番 Functions の状態を揃えられたため。
+
 ---
 
 ## 全体振り返り

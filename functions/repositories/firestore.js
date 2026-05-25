@@ -118,7 +118,6 @@ async function createHowCardReply({ cardId, uid, body }) {
       throwFirestoreError('Howカードが見つかりません', 'not-found');
     }
 
-    replyCount = currentReplyCount(cardDoc.data()) + 1;
     replyData = {
       body,
       user_id: uid,
