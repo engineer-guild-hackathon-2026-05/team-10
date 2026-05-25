@@ -9,8 +9,8 @@ iOS ネイティブアプリ（`Othello/`）を中心に、バックエンド・
 ```
 team-10/
 ├── Othello/            # iOS ネイティブアプリ（Xcode / SwiftUI）
-├── backend/            # バックエンド（Express・LLMプロキシ・データAPI）
-├── functions/          # Firebase Functions（backend の一部を Functions 化）
+├── functions/          # Firebase Functions（本番 API）
+├── backend/            # 旧 Express 実装（deprecated / 参照用）
 ├── ai-recognition/     # 反応分類モデル（Create ML + TS）+ 教師データ収集アプリ
 ├── frontend/           # フロントエンド置き場（MVP 未使用）
 ├── docs/               # プロジェクトドキュメント
@@ -66,7 +66,7 @@ Othello/Othello/
 │   ├── FirestoreUser.swift
 │   ├── HowCardComment.swift
 │   ├── PermissionState.swift
-│   ├── ReactionEvent.swift       # 6軸 HowTag（groove/hype/chill/immersion/hit/afterglow）
+│   ├── ReactionEvent.swift       # 3状態 HowTag（groove/chill/neutral）
 │   └── SensorStatus.swift
 ├── Services/
 │   └── FirebaseAPI.swift         # Firebase/backend 通信（横断）
@@ -78,7 +78,7 @@ Othello/Othello/
 │   └── ReactionTimelineViewModel.swift
 └── Views/                        # 横断 View
     ├── Auth/                     # LoginView / SignUpView
-    ├── Home/                     # HomeView / LiveReactionScoreCard / SyncBeatCircularWaveformView
+    ├── Home/                     # HomeView / AirPodsReactiveWaveformView / MetalWaveformRenderer
     ├── Onboarding/               # OnboardingView / WelcomePage / MotionPage / HealthPage / Components
     ├── ReactionDisplay/          # ReactionDisplayView / RealtimeReactionDisplayView / ReactionAxisBar
     ├── Timeline/                 # ReactionTimelineView / ReactionEventRow / TimelineBar
@@ -92,14 +92,14 @@ Othello/Othello/
 
 ---
 
-## backend/ と functions/（二重構成）
+## functions/ と backend/
 
 | ディレクトリ | 内容 | エンドポイント |
 |---|---|---|
-| `backend/` | Express。**全機能を備えたローカル/汎用サーバー** | `routes/sessions.js`（/sessions, /chat, /how-card）, `routes/how-cards.js`（GET /how-cards） |
-| `functions/` | Firebase Functions。**backend の一部を Functions 化** | `routes/how-cards.js` のみ（`app.js` で統合） |
+| `functions/` | Firebase Functions。**本番 API** | `/health`, `/how-cards`, `/users/me` |
+| `backend/` | deprecated な旧 Express 実装 | `/sessions` や Claude 連携の参照実装が残るが、本番には反映されない |
 
-> ⚠️ backend/ と functions/ で how-cards が重複している。どちらを本番にするかは要整理（移行中）。
+> 新規 API 変更は `functions/` に追加する。`backend/` を編集しても本番 deploy には反映されない。
 
 ---
 
@@ -137,12 +137,12 @@ ai-recognition/
 ## 依存関係のルール
 
 ```
-Othello (iOS)  ──HTTP/SSE──▶  backend / functions  ──▶  Claude API / Firestore
+Othello (iOS)  ──HTTPS + Firebase ID token──▶  functions  ──▶  Firestore
                                        ▲
 ai-recognition (Create ML/TS) ──.mlmodel──┘（学習成果物を Othello に組み込み）
 ```
 
-- iOS から Claude API キーを直接保持しない（backend/functions 経由）
+- Howカードコメントは Functions API を経由する。`users/{uid}` はログイン中ユーザー自身に限り Firestore rules 経由で read/write する
 - View はセンサー/通信を直接制御せず、Service（Protocol 経由）を使う
 - Feature 間の直接依存は避け、共通モデル（`Models/`）を介する
 
