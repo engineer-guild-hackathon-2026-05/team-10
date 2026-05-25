@@ -1351,6 +1351,21 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：最新 main のドキュメント更新を残しつつ、PR #86 の canonical song ID 契約とレビュー指摘を最小差分で反映できたため。
 
+### #060 Issue #81 再生ボタンのNowPlaying自動表示停止
+
+- **時刻**：22:50
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：Issue #81 の受け入れ条件に合わせ、MusicFeed の再生操作で NowPlaying を自動全画面表示しないようにする
+- **プロンプト**：
+  ```text
+  issue81, 82それぞれに対してPRを立てるところまで実装して欲しい。mainとconflictしないように.
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `fix/issue-81-feed-playback` を作成
+  - `nowPlayingContext` 更新時の `showNowPlaying = true` を削除し、全画面表示は GlobalMiniPlayer tap に限定
+  - `nowPlayingContext` が nil になった場合は NowPlaying を閉じ、空の fullScreenCover を避ける
+- **評価**：採用
+- **採用 / 不採用の理由**：再生開始と NowPlaying 表示の責務を分離し、MusicFeed に留まりながらミニプレイヤーへ反映できるようにしたため。
 ### #060 Issue #83 切り抜きUI重複解消
 
 - **時刻**：22:35
