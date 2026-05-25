@@ -50,6 +50,7 @@ final class CommunityViewModel: ObservableObject {
         for artist in Artist.catalog {
             for song in artist.songs {
                 result[song.firestoreSongID] = (song.title, song.artistName)
+                result[song.howCardLookupSongID] = (song.title, song.artistName)
             }
         }
         return result
@@ -160,15 +161,10 @@ final class CommunityViewModel: ObservableObject {
         }
 
         do {
-            let seededUsers = try await UserSeedService.seedUsers(for: cards)
-            userProfilesByID = profilesByID(seededUsers)
+            let users = try await UserProfileService.fetchUsers(ids: userIDs)
+            userProfilesByID = profilesByID(users)
         } catch {
-            do {
-                let users = try await UserSeedService.fetchUsers(ids: userIDs)
-                userProfilesByID = profilesByID(users)
-            } catch {
-                userProfilesByID = [:]
-            }
+            userProfilesByID = [:]
         }
     }
 

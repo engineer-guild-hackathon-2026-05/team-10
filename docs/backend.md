@@ -200,7 +200,7 @@ Home dashboard 向けにおすすめ Howカードコメント一覧を返す。`
 ### GET /users/me / PUT /users/me
 
 `GET /users/me` は現在ログイン中の `users/{uid}` を返す。
-現行 iOS では `UserSeedService` がログイン中ユーザー自身の `users/{uid}` を Firestore SDK で read/write する経路もある。Firestore rules は自分自身の get/create/update のみに制限する。
+現行 iOS では起動時や Howカード読み込み時の users seed は行わない。ユーザー情報の作成・更新は Auth トリガーと `PUT /users/me` に寄せ、iOS は必要に応じて自分自身の `users/{uid}` を読み取るだけにする。
 
 `PUT /users/me`:
 

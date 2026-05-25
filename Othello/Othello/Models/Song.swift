@@ -8,6 +8,7 @@ struct Song: Identifiable {
     let gradientColors: [Color]
     let durationSeconds: Int
     let musicKitID: String?
+    let firestoreLookupID: String?
     let artistID: String
     let artworkURL: URL?
 
@@ -18,6 +19,7 @@ struct Song: Identifiable {
         gradientColors: [Color],
         durationSeconds: Int,
         musicKitID: String? = nil,
+        firestoreLookupID: String? = nil,
         artistID: String? = nil,
         artworkURL: URL? = nil
     ) {
@@ -27,12 +29,17 @@ struct Song: Identifiable {
         self.gradientColors = gradientColors
         self.durationSeconds = durationSeconds
         self.musicKitID = musicKitID
+        self.firestoreLookupID = firestoreLookupID
         self.artistID = artistID ?? Song.stableIdentifier(from: artistName)
         self.artworkURL = artworkURL
     }
 
     var firestoreSongID: String {
-        musicKitID ?? "\(artistID)-\(Song.stableIdentifier(from: title))"
+        musicKitID ?? firestoreLookupID ?? "\(artistID)-\(Song.stableIdentifier(from: title))"
+    }
+
+    var howCardLookupSongID: String {
+        firestoreLookupID ?? firestoreSongID
     }
 
     var firestoreArtistID: String {
@@ -66,6 +73,7 @@ extension Song {
             gradientColors: fallback.gradientColors,
             durationSeconds: Int(playbackTrack.duration ?? fallback.duration),
             musicKitID: playbackTrack.musicKitID,
+            firestoreLookupID: fallback.firestoreLookupID,
             artistID: fallback.artistID,
             artworkURL: playbackTrack.artworkURL
         )

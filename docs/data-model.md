@@ -6,7 +6,7 @@
 
 | データ種別 | ストレージ | 理由 |
 |---|---|---|
-| ユーザー情報 | Firestore | Firebase Auth uid と表示名を保存。Functions の `onUserSignup` と、iOS からの自分自身の `users/{uid}` seed で同期 |
+| ユーザー情報 | Firestore | Firebase Auth uid と表示名を保存。Functions の `onUserSignup` と `PUT /users/me` で同期 |
 | Howカードコメント | Firestore | 曲中区間に紐づくコメント、いいね、投稿者表示名を扱う |
 | 認証状態 | Firebase Auth / iOS Keychain | Firebase SDK がセッションを保持 |
 | 歌詞取得設定 | `ENV.plist` | Musixmatch API key など、git 管理しない値を端末側で注入 |
@@ -55,7 +55,7 @@ users/{uid}
   updated_at:   Timestamp
 ```
 
-`onUserSignup` が初回サインアップ時に作成し、`PUT /users/me` または iOS の `UserSeedService` が追加同期する。Firestore rules はログイン中ユーザー自身の `users/{uid}` の get/create/update のみ許可する。
+`onUserSignup` が初回サインアップ時に作成し、`PUT /users/me` が追加同期する。現行 iOS は起動時や Howカード読み込み時に users seed を行わず、必要に応じてログイン中ユーザー自身の `users/{uid}` を読み取るだけにする。
 
 ### `artists`
 

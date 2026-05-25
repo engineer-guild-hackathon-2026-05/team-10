@@ -23,6 +23,7 @@ struct HomeDashboardComment: Identifiable, Equatable {
             gradientColors: gradientColors,
             durationSeconds: durationSeconds,
             musicKitID: Self.musicKitID(from: howCard.songID),
+            firestoreLookupID: Self.nonEmpty(howCard.songID),
             artistID: Self.nonEmpty(howCard.artistID),
             artworkURL: artworkURL
         )

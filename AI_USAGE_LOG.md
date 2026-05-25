@@ -1535,6 +1535,26 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：実 Firestore データと API contract の不一致が主因だったため、読み取り互換を入れて既存データを表示できる状態に戻しつつ、新規書き込みの MusicKit ID 契約は崩さない方針が最小リスクだったため。
 
+### #004 アーティスト詳細の Howカード取得と seed 削除
+
+- **時刻**：01:14
+- **ツール**：Codex / xcodebuild
+- **目的**：Home からアーティスト詳細へ遷移した時に曲別 Howカードが取得できない問題と、カード overlay / users seed の残存を修正する
+- **プロンプト**：
+  ```text
+  [Image #1] こんな感じで、cardの上に表示されているUIがcardの外に表示されちゃってます。[Image #2] また、アーティストのviewに入ったらまたコメントがfetchできていない。修正してください。
+  ... あとseedってもう必要ないんじゃないの？消してください
+  ```
+- **出力サマリ**：
+  - Home dashboard で MusicKit metadata 解決後の表示タイトルから別 slug が再生成され、Firestore の元 `song_id` と一致しないことを特定
+  - `Song` に `firestoreLookupID` を追加し、Home dashboard 由来の Song は元 Howカード `song_id` で曲別 API を叩くよう修正
+  - Artist card の上部 badge を下部メタ情報へ移し、play icon / badge がカード外へ出て見えない構成に変更
+  - `UserSeedService` / `UserSeedProfile` と起動時・読み込み時の users seed 呼び出しを削除し、読み取り専用の `UserProfileService` に置換
+  - backend / data model docs から iOS users seed 記述を削除
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：表示 metadata と Firestore lookup key を分離することで、MusicKit の英語タイトル解決後も既存 Howカードの曲別取得を壊さず、不要になった seed write も削除できたため。
+
 ---
 
 ## 全体振り返り
