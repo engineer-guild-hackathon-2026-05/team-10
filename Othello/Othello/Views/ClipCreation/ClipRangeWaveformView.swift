@@ -86,6 +86,7 @@ struct ClipRangeWaveformView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("クリップ範囲")
             .accessibilityValue(accessibilityValue)
+            .accessibilityHint("上下にスワイプして範囲を前後に移動")
             .accessibilityAdjustableAction { direction in
                 adjustRange(for: direction)
             }
@@ -114,16 +115,17 @@ struct ClipRangeWaveformView: View {
         let step = max(totalDuration * 0.01, 0.1)
         let start = clipStart.clamped(to: 0...totalDuration)
         let end = clipEnd.clamped(to: 0...totalDuration)
+        let rangeDuration = max(end - start, step)
         let nextStart: Double
         let nextEnd: Double
 
         switch direction {
         case .increment:
-            nextStart = start
-            nextEnd = min(totalDuration, max(end + step, start))
+            nextEnd = min(totalDuration, end + step)
+            nextStart = max(0, nextEnd - rangeDuration)
         case .decrement:
-            nextStart = max(0, min(start - step, end))
-            nextEnd = end
+            nextStart = max(0, start - step)
+            nextEnd = min(totalDuration, nextStart + rangeDuration)
         @unknown default:
             return
         }
@@ -134,7 +136,7 @@ struct ClipRangeWaveformView: View {
     private func formatTime(_ seconds: Double) -> String {
         let clampedSeconds = max(0, seconds)
         let minutes = Int(clampedSeconds) / 60
-        let seconds = Int(clampedSeconds) % 60
-        return String(format: "%d:%02d", minutes, seconds)
+        let secondsComponent = Int(clampedSeconds) % 60
+        return String(format: "%d:%02d", minutes, secondsComponent)
     }
 }

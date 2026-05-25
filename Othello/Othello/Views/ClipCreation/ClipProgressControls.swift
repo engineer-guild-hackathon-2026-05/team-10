@@ -15,7 +15,7 @@ struct ClipProgressControls: View {
                 Circle()
                     .stroke(Color.white.opacity(0.4), lineWidth: 1.5)
                     .frame(width: leadingButtonSize, height: leadingButtonSize)
-                Text("30")
+                Text("\(Self.maxClipDurationSeconds)")
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
@@ -40,6 +40,9 @@ struct ClipProgressControls: View {
                         .offset(x: width * progress - progressKnobSize / 2)
                 }
                 .frame(maxHeight: .infinity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("再生位置")
+                .accessibilityValue("\(Int((progress * 100).rounded()))%")
             }
             .frame(height: 20)
 
@@ -61,4 +64,6 @@ struct ClipProgressControls: View {
     private var playIconSize: CGFloat {
         playButtonSize >= 52 ? 20 : 18
     }
+
+    private static let maxClipDurationSeconds = 30
 }

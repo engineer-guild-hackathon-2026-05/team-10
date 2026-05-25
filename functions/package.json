@@ -6,6 +6,7 @@
   "scripts": {
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
+    "migrate:how-card-song-ids": "node scripts/migrate-how-card-song-ids.js",
     "serve": "firebase emulators:start --only functions"
   },
   "engines": {

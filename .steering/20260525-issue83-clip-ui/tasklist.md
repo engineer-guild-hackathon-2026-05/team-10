@@ -12,6 +12,7 @@
 - [x] 最新 `origin/main` を取り込み、ログ conflict を解消する
 - [x] progress / waveform accessibility / clamp 指摘を修正する
 - [x] 再検証して PR ブランチへ push する
+- [x] PR #93 の再レビュー指摘（30秒定数化、進捗バー accessibility、VoiceOver 範囲移動、formatTime shadowing）を修正する
 
 ## 振り返り
 

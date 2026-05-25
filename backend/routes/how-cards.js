@@ -9,13 +9,21 @@ const {
   likeHowCardComment,
   getHowCardsByTag,
 } = require('../repositories/firestore');
+const { normalizeMusicKitSongId } = require('../utils/musicKit');
+
+const INVALID_SONG_ID_ERROR = 'song_id には MusicKit / Apple Music / iTunes の数値曲IDを指定してください';
 
 router.get('/', auth, async (req, res) => {
   const { song_id: songId, tag } = req.query;
 
   try {
-    if (songId) {
-      const howCards = await getHowCardCommentsBySong(String(songId), parseLimit(req.query.limit));
+    if (Object.prototype.hasOwnProperty.call(req.query, 'song_id')) {
+      const normalizedSongId = normalizeMusicKitSongId(songId);
+      if (!normalizedSongId) {
+        return res.status(400).json({ error: INVALID_SONG_ID_ERROR });
+      }
+
+      const howCards = await getHowCardCommentsBySong(normalizedSongId, parseLimit(req.query.limit));
       res.json({ howCards });
       return;
     }
@@ -49,7 +57,9 @@ router.get('/:id', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
-    return res.status(400).json({ error: 'comment, song_start, song_end, song_id, artist_id が必要です' });
+    return res.status(400).json({
+      error: `comment, song_start, song_end, artist_id が必要です。${INVALID_SONG_ID_ERROR}`,
+    });
   }
 
   try {
@@ -64,7 +74,9 @@ router.post('/', auth, async (req, res) => {
 router.patch('/:id', auth, async (req, res) => {
   const payload = normalizeCommentPayload(req.body);
   if (!payload) {
-    return res.status(400).json({ error: 'comment, song_start, song_end, song_id, artist_id が必要です' });
+    return res.status(400).json({
+      error: `comment, song_start, song_end, artist_id が必要です。${INVALID_SONG_ID_ERROR}`,
+    });
   }
 
   try {
@@ -103,7 +115,7 @@ function normalizeCommentPayload(body) {
   const comment = normalizeString(body.comment, 140);
   const songStart = normalizeRangePoint(body.song_start);
   const songEnd = normalizeRangePoint(body.song_end);
-  const songId = normalizeString(body.song_id, 120);
+  const songId = normalizeMusicKitSongId(body.song_id);
   const artistId = normalizeString(body.artist_id, 120);
   if (!comment || songStart == null || songEnd == null || songEnd <= songStart || !songId || !artistId) {
     return null;

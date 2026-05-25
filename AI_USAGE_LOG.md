@@ -1046,6 +1046,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #73 の主目的である6軸 HowChat 深掘りを失わず、main 側で入った AirPods / Metal / 3状態波形制御ともコンパイル可能な形で統合できたため。
 
+### #033 how-cards song_id 契約修正
+
+- **時刻**：21:35
+- **ツール**：Codex / GitHub CLI / Apple Music
+- **目的**：Issue #78 の `how-cards.song_id` に slug が返る問題を修正し、MusicKit ID 契約を API 境界で保証する
+- **プロンプト**：
+  ```text
+  issue 78 https://github.com/engineer-guild-hackathon-2026-05/team-10/issues/78 を修正するプルリクを出して欲しい。ブランチ切って実装して。
+  ```
+- **出力サマリ**：
+  - `song_id` を MusicKit / Apple Music / iTunes の数値曲 ID として validation する共通 helper を追加
+  - Functions / backend の `GET` / `POST` / `PATCH /how-cards` で slug や表示名由来の `song_id` を 400 にするよう修正
+  - Firestore serializer でも不正な既存 `song_id` を持つドキュメントを返さないようにした
+  - legacy slug を `song_slug` に退避し、既知の RADWIMPS 曲を MusicKit ID へ置換する migration script を追加
+  - Functions / backend / data model docs を更新し、`song_slug` / `song_title` を表示用フィールドとして分離
+- **評価**：採用
+- **採用 / 不採用の理由**：API 境界・永続化データ・既存データ移行・ドキュメントの4点で `song_id` 契約を揃えられたため。
+
 ### #045 UI改善issue作成
 
 - **時刻**：20:46
@@ -1352,7 +1370,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：切り抜き範囲を操作できる場所を中央波形だけに整理し、sheet版とinline版で同じ見た目・操作を使う構成にできたため。
 
-### #061 PR #93 再レビュー対応と main merge
+### #061 PR #90 main merge とレビュー対応
+
+- **時刻**：22:45
+- **ツール**：Codex / GitHub CLI / node
+- **目的**：PR #90 に最新 `main` を merge し、CodeRabbit の migration batch 指摘が解消済みか確認して push する
+- **プロンプト**：
+  ```text
+  pr 90で、merge mainしてレビュー修正してpushして
+  ```
+- **出力サマリ**：
+  - PR #90 の head `issue-78-how-cards-song-id` を確認し、最新 `origin/main` を merge
+  - `AI_USAGE_LOG.md` / backend docs / data model docs / Functions README / Functions how-cards route の conflict を解消
+  - main 側の `likes` / `itunes_id` / `/recommended-comments` を残しつつ、`song_id` は MusicKit の数値 ID のみ受け付ける契約へ統一
+  - CodeRabbit 指摘の migration batch 分割は `MAX_BATCH_WRITES = 450` と逐次 commit 実装で解消済みであることを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：PR #90 の `song_id` 契約と最新 main の Functions API 変更を両立し、migration の大規模 write リスクにも対応済みと確認できたため。
+
+### #062 PR #93 再レビュー対応と main merge
 
 - **時刻**：22:47
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1369,6 +1404,24 @@
   - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘の境界値・アクセシビリティ不備を最小差分で解消し、最新 main との conflict も解消できたため。
+
+### #063 PR #93 追加レビュー対応
+
+- **時刻**：23:07
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #93 の追加 CodeRabbit review comments を修正して push する
+- **プロンプト**：
+  ```text
+  pr 93のレビューを修正して
+  ```
+- **出力サマリ**：
+  - PR #93 の最新レビューを確認し、`fix/issue-83-clip-selection-ui` に最新 `origin/main` を merge
+  - `AI_USAGE_LOG.md` の conflict を既存作業ログを残す形で解消
+  - `ClipProgressControls` の 30 秒表示を定数化し、再生位置バーに accessibility value を追加
+  - `ClipRangeWaveformView` の VoiceOver adjustable action を選択範囲全体の前後移動に変更
+  - `formatTime` のローカル変数名を変更し、引数 shadowing を解消
+- **評価**：採用
+- **採用 / 不採用の理由**：追加レビューで指摘された保守性・アクセシビリティ・可読性の問題を小さな差分で解消できたため。
 
 ---
 
