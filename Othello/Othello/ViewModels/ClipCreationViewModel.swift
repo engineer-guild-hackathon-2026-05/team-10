@@ -1,12 +1,6 @@
 import SwiftUI
 import Combine
 
-enum ClipTab: String, CaseIterable, Identifiable {
-    case playback = "再生"
-    case clip = "切り抜き"
-    var id: Self { self }
-}
-
 @MainActor
 final class ClipCreationViewModel: ObservableObject {
     let song: Song
@@ -23,7 +17,11 @@ final class ClipCreationViewModel: ObservableObject {
 
     init(song: Song) {
         self.song = song
-        self.totalDuration = Double(song.durationSeconds)
+        let duration = Double(song.durationSeconds)
+        self.totalDuration = duration
+        let end = min(35.0, duration)
+        self.clipEnd = end
+        self.clipStart = min(5.0, end)
         var seed: UInt64 = 42
         self.waveformData = (0..<80).map { _ in
             seed = seed &* 6364136223846793005 &+ 1442695040888963407
@@ -35,6 +33,9 @@ final class ClipCreationViewModel: ObservableObject {
     func togglePlayback() {
         isPlaying.toggle()
         if isPlaying {
+            if currentTime >= totalDuration {
+                currentTime = 0
+            }
             timerCancellable = Timer.publish(every: 0.1, on: .main, in: .common)
                 .autoconnect()
                 .sink { [weak self] _ in

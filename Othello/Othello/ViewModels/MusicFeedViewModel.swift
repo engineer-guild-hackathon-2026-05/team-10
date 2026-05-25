@@ -7,7 +7,7 @@ final class MusicFeedViewModel: ObservableObject {
     @Published var selectedSongIndex: Int = 0
 
     var selectedSong: Song? {
-        guard !artist.songs.isEmpty else { return nil }
+        guard artist.songs.indices.contains(selectedSongIndex) else { return nil }
         return artist.songs[selectedSongIndex]
     }
 
