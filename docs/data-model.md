@@ -26,9 +26,11 @@ how-cards/{cardId}
   comment:      string       // ユーザーコメント
   song_start:   number       // コメント対象範囲の開始秒
   song_end:     number       // コメント対象範囲の終了秒
-  song_id:      string       // MusicKit / Apple Music / iTunes の曲 ID
-  itunes_id:    string       // canonical 曲 ID（song_id と同じ値を保持）
+  song_id:      string       // MusicKit / Apple Music / iTunes の数値曲 ID
+  itunes_id:    string       // canonical 曲 ID（song_id と同じ値）
   song_slug:    string?      // 表示・移行用の曲 slug
+  song_title:   string?      // 表示用タイトル
+  artist_name:  string?      // 表示用アーティスト名
   artist_id:    string       // アーティスト ID
   user_id:      string       // Firebase Auth uid
   likes:        integer      // いいね数
@@ -59,7 +61,7 @@ users/{uid}
 
 ## Howカードコメント API データ構造
 
-`POST /how-cards` では iOS が `comment`, `song_start`, `song_end`, `song_id`, `artist_id` を送る。`song_id` は MusicKit / Apple Music / iTunes の曲 ID として扱い、slug や表示用文字列は `song_slug` / `song_title` など別フィールドに分離する。バックエンドは Firebase ID トークンから `user_id` を決めて `likes: 0` で保存する。
+`POST /how-cards` では iOS が `comment`, `song_start`, `song_end`, `song_id`, `artist_id` を送る。`song_id` は MusicKit / Apple Music / iTunes の数値曲 ID として扱い、`radwimps-愛にできることはまだあるかい` のような slug や表示名は入れない。表示用の slug / タイトルは `song_slug` / `song_title` など別フィールドに分離する。バックエンドは Firebase ID トークンから `user_id` を決めて `likes: 0` で保存する。
 
 ```json
 {
@@ -67,6 +69,7 @@ users/{uid}
   "song_start": 78.4,
   "song_end": 84.2,
   "song_id": "1704093812",
+  "song_slug": "ado-show",
   "artist_id": "ado"
 }
 ```

@@ -1046,6 +1046,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #73 の主目的である6軸 HowChat 深掘りを失わず、main 側で入った AirPods / Metal / 3状態波形制御ともコンパイル可能な形で統合できたため。
 
+### #033 how-cards song_id 契約修正
+
+- **時刻**：21:35
+- **ツール**：Codex / GitHub CLI / Apple Music
+- **目的**：Issue #78 の `how-cards.song_id` に slug が返る問題を修正し、MusicKit ID 契約を API 境界で保証する
+- **プロンプト**：
+  ```text
+  issue 78 https://github.com/engineer-guild-hackathon-2026-05/team-10/issues/78 を修正するプルリクを出して欲しい。ブランチ切って実装して。
+  ```
+- **出力サマリ**：
+  - `song_id` を MusicKit / Apple Music / iTunes の数値曲 ID として validation する共通 helper を追加
+  - Functions / backend の `GET` / `POST` / `PATCH /how-cards` で slug や表示名由来の `song_id` を 400 にするよう修正
+  - Firestore serializer でも不正な既存 `song_id` を持つドキュメントを返さないようにした
+  - legacy slug を `song_slug` に退避し、既知の RADWIMPS 曲を MusicKit ID へ置換する migration script を追加
+  - Functions / backend / data model docs を更新し、`song_slug` / `song_title` を表示用フィールドとして分離
+- **評価**：採用
+- **採用 / 不採用の理由**：API 境界・永続化データ・既存データ移行・ドキュメントの4点で `song_id` 契約を揃えられたため。
+
 ### #045 UI改善issue作成
 
 - **時刻**：20:46
@@ -1333,6 +1351,40 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：最新 main のドキュメント更新を残しつつ、PR #86 の canonical song ID 契約とレビュー指摘を最小差分で反映できたため。
 
+### #060 Issue #84 デモ表示文言の日本語化
+
+- **時刻**：22:52
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：Issue #84 の英語デモ曲タイトル・タグ・fallback 文言を日本語中心に揃え、PRを作成する
+- **プロンプト**：
+  ```text
+  issue84を実装するPRをたてて。
+  ```
+- **出力サマリ**：
+  - Issue #84 の受け入れ条件を確認し、最新 `main` から `fix/issue-84-japanese-demo-copy` を作成
+  - `Artist.catalog` のデモ曲タイトル、タグ、反応数表示を日本語中心に差し替え
+  - `HomeDashboardComment` の `reactions` 表示を `件の反応` に変更
+  - `HomeDashboardViewModel` の fallback を `不明なアーティスト` / `不明な曲` / `曲ID ...` / `アーティストID ...` に日本語化
+  - Issue に挙がった英語 placeholder の `rg` 確認、`git diff --check`、iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：実データ由来の正式名は変えず、デモ固定データと fallback 表示だけを絞って日本語化できたため。
+
+### #060 Issue #81 再生ボタンのNowPlaying自動表示停止
+
+- **時刻**：22:50
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：Issue #81 の受け入れ条件に合わせ、MusicFeed の再生操作で NowPlaying を自動全画面表示しないようにする
+- **プロンプト**：
+  ```text
+  issue81, 82それぞれに対してPRを立てるところまで実装して欲しい。mainとconflictしないように.
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `fix/issue-81-feed-playback` を作成
+  - `nowPlayingContext` 更新時の `showNowPlaying = true` を削除し、全画面表示は GlobalMiniPlayer tap に限定
+  - `nowPlayingContext` が nil になった場合は NowPlaying を閉じ、空の fullScreenCover を避ける
+- **評価**：採用
+- **採用 / 不採用の理由**：再生開始と NowPlaying 表示の責務を分離し、MusicFeed に留まりながらミニプレイヤーへ反映できるようにしたため。
+
 ### #061 Issue #82 歌詞表示UI刷新
 
 - **時刻**：22:55
@@ -1349,11 +1401,99 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：既存の Musixmatch 取得経路を維持しながら、表示層だけを Issue #82 の体験要件へ寄せられたため。
 
+### #060 Issue #83 切り抜きUI重複解消
+
+- **時刻**：22:35
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：Issue #83 の切り抜き作成UIで、上部バーと中央波形の範囲選択が重複して見える問題を解消する
+- **プロンプト**：
+  ```text
+  issue 83を修正するprを実装して立ててください
+  ```
+- **出力サマリ**：
+  - `fix/issue-83-clip-selection-ui` を `origin/main` 起点で作成
+  - 上部再生バーから `clipStart` / `clipEnd` のピンク丸マーカーを削除し、現在再生位置のみを示す `ClipProgressControls` に共通化
+  - sheet版と NowPlaying inline版の範囲選択を `ClipRangeSelectionView` / `ClipRangeWaveformView` に一本化
+  - 波形上に選択範囲の塗り・枠・左右ハンドルを追加し、説明文に頼らず操作点が見えるUIへ変更
+  - `WaveformView` / `InlineWaveformView` の重複実装を削除
+  - `git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：切り抜き範囲を操作できる場所を中央波形だけに整理し、sheet版とinline版で同じ見た目・操作を使う構成にできたため。
+
+### #061 PR #90 main merge とレビュー対応
+
+- **時刻**：22:45
+- **ツール**：Codex / GitHub CLI / node
+- **目的**：PR #90 に最新 `main` を merge し、CodeRabbit の migration batch 指摘が解消済みか確認して push する
+- **プロンプト**：
+  ```text
+  pr 90で、merge mainしてレビュー修正してpushして
+  ```
+- **出力サマリ**：
+  - PR #90 の head `issue-78-how-cards-song-id` を確認し、最新 `origin/main` を merge
+  - `AI_USAGE_LOG.md` / backend docs / data model docs / Functions README / Functions how-cards route の conflict を解消
+  - main 側の `likes` / `itunes_id` / `/recommended-comments` を残しつつ、`song_id` は MusicKit の数値 ID のみ受け付ける契約へ統一
+  - CodeRabbit 指摘の migration batch 分割は `MAX_BATCH_WRITES = 450` と逐次 commit 実装で解消済みであることを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：PR #90 の `song_id` 契約と最新 main の Functions API 変更を両立し、migration の大規模 write リスクにも対応済みと確認できたため。
+
+### #062 PR #93 再レビュー対応と main merge
+
+- **時刻**：22:47
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #93 の CodeRabbit review comments を修正し、最新 `main` を取り込んで conflict を解消する
+- **プロンプト**：
+  ```text
+  またレビューがついているから修正して main mergeも忘れずに
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` を `fix/issue-83-clip-selection-ui` へ merge し、`AI_USAGE_LOG.md` の conflict を両方のログを残して解消
+  - `ClipProgressControls` の progress 計算を `totalDuration > 0` の場合だけ割り算する形に修正
+  - `ClipRangeWaveformView` のドラッグ更新直前で start / end ratio を再 clamp
+  - 波形範囲に VoiceOver 用の accessibility label / value / adjustable action を追加
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘の境界値・アクセシビリティ不備を最小差分で解消し、最新 main との conflict も解消できたため。
+
+### #063 PR #93 追加レビュー対応
+
+- **時刻**：23:07
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #93 の追加 CodeRabbit review comments を修正して push する
+- **プロンプト**：
+  ```text
+  pr 93のレビューを修正して
+  ```
+- **出力サマリ**：
+  - PR #93 の最新レビューを確認し、`fix/issue-83-clip-selection-ui` に最新 `origin/main` を merge
+  - `AI_USAGE_LOG.md` の conflict を既存作業ログを残す形で解消
+  - `ClipProgressControls` の 30 秒表示を定数化し、再生位置バーに accessibility value を追加
+  - `ClipRangeWaveformView` の VoiceOver adjustable action を選択範囲全体の前後移動に変更
+  - `formatTime` のローカル変数名を変更し、引数 shadowing を解消
+- **評価**：採用
+- **採用 / 不採用の理由**：追加レビューで指摘された保守性・アクセシビリティ・可読性の問題を小さな差分で解消できたため。
+
 ---
 
 ## Day 3（2026-05-26）
 
-### #00X
+### #001 PR #96 レビュー対応
+
+- **時刻**：00:25
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #96 のレビューコメントを確認し、対応が必要な歌詞UIのスクロール挙動を修正する
+- **プロンプト**：
+  ```text
+  pr 96のレビューをみて、対応必要があるものは直して
+  ```
+- **出力サマリ**：
+  - PR #96 の Copilot review comments 3 件と CodeRabbit の rate limit コメントを確認
+  - 最新 `origin/main` を `ui/issue-82-lyrics` に merge し、`AI_USAGE_LOG.md` の conflict を両方のログを残して解消
+  - NowPlaying 歌詞表示の nested vertical `ScrollView` を解消し、親 `ScrollViewReader` / `ScrollView` で歌詞行の自動スクロールを制御
+  - 重複していた `.scrollIndicators(.hidden)` を削除
+  - 歌詞行の opacity animation を `isActive` ではなく computed opacity の変化で発火するよう修正
+- **評価**：採用
+- **採用 / 不採用の理由**：実害のあるスクロール競合を解消し、軽微な可読性・アニメーション指摘も小さな差分で改善できたため。
 
 ---
 

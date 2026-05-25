@@ -47,96 +47,28 @@ struct ClipCreationInlineView: View {
     }
 
     private var playerControls: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.4), lineWidth: 1.5)
-                    .frame(width: 44, height: 44)
-                Text("30")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
-            }
-
-            GeometryReader { geo in
-                let w = geo.size.width
-                let safeDuration = max(viewModel.totalDuration, 1e-6)
-                let progress = viewModel.currentTime / safeDuration
-                let startX = CGFloat(viewModel.clipStart / safeDuration) * w
-                let endX = CGFloat(viewModel.clipEnd / safeDuration) * w
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(height: 3)
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(width: w * progress, height: 3)
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 14, height: 14)
-                        .offset(x: w * progress - 7)
-                    Circle()
-                        .fill(Color(red: 1.0, green: 0.25, blue: 0.5))
-                        .frame(width: 10, height: 10)
-                        .offset(x: startX - 5)
-                    Circle()
-                        .fill(Color(red: 1.0, green: 0.25, blue: 0.5))
-                        .frame(width: 10, height: 10)
-                        .offset(x: endX - 5)
-                }
-                .frame(maxHeight: .infinity)
-            }
-            .frame(height: 20)
-
-            Button { viewModel.togglePlayback() } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 48, height: 48)
-                    Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color.black)
-                }
-            }
-        }
+        ClipProgressControls(
+            currentTime: viewModel.currentTime,
+            totalDuration: viewModel.totalDuration,
+            isPlaying: viewModel.isPlaying,
+            leadingButtonSize: 44,
+            playButtonSize: 48,
+            progressKnobSize: 14,
+            onTogglePlayback: viewModel.togglePlayback
+        )
     }
 
     private var waveformSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("好きな部分を選ぶ")
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-                Spacer()
-                Text("\(viewModel.clipStartFormatted) – \(viewModel.clipEndFormatted)")
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-            }
-
-            InlineWaveformView(
-                waveformData: viewModel.waveformData,
-                totalDuration: viewModel.totalDuration,
-                clipStart: viewModel.clipStart,
-                clipEnd: viewModel.clipEnd
-            ) { startRatio, endRatio in
-                viewModel.updateClipRange(startRatio: startRatio, endRatio: endRatio)
-            }
-            .frame(height: 100)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-
-            HStack {
-                Text("枠をドラッグして範囲を調整")
-                    .font(.caption2)
-                    .foregroundStyle(.gray)
-                Spacer()
-                Text("\(viewModel.clipDurationSeconds)s")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color(red: 0.3, green: 0.2, blue: 0.55), in: Capsule())
-            }
+        ClipRangeSelectionView(
+            waveformData: viewModel.waveformData,
+            totalDuration: viewModel.totalDuration,
+            clipStart: viewModel.clipStart,
+            clipEnd: viewModel.clipEnd,
+            clipStartFormatted: viewModel.clipStartFormatted,
+            clipEndFormatted: viewModel.clipEndFormatted,
+            clipDurationSeconds: viewModel.clipDurationSeconds
+        ) { startRatio, endRatio in
+            viewModel.updateClipRange(startRatio: startRatio, endRatio: endRatio)
         }
     }
 

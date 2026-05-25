@@ -56,15 +56,17 @@ struct NowPlayingView: View {
     // MARK: - 再生タブのコンテンツ
 
     private var playbackContent: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 0) {
-                circularVisualizer
-                    .padding(.top, 8)
-                songInfo
-                playbackControls
-                lyricsCard
-                    .padding(.top, 24)
-                Color.clear.frame(height: 104)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    circularVisualizer
+                        .padding(.top, 8)
+                    songInfo
+                    playbackControls
+                    lyricsCard(proxy: proxy)
+                        .padding(.top, 24)
+                    Color.clear.frame(height: 104)
+                }
             }
         }
     }
@@ -190,22 +192,22 @@ struct NowPlayingView: View {
         .padding(.top, 10)
     }
 
-    private var lyricsCard: some View {
+    private func lyricsCard(proxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            lyricsContent
+            lyricsContent(proxy: proxy)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 28)
     }
 
     @ViewBuilder
-    private var lyricsContent: some View {
+    private func lyricsContent(proxy: ScrollViewProxy) -> some View {
         switch lyricsViewModel.state {
         case .idle, .loading:
             lyricsStatusMessage("歌詞を読み込み中")
         case .loaded:
             if let loadedLyrics = lyricsViewModel.lyrics, !loadedLyrics.lines.isEmpty {
-                immersiveLyricsView(loadedLyrics)
+                immersiveLyricsView(loadedLyrics, proxy: proxy)
             } else {
                 lyricsStatusMessage("歌詞を表示できません")
             }
@@ -214,45 +216,30 @@ struct NowPlayingView: View {
         }
     }
 
-    private func immersiveLyricsView(_ loadedLyrics: SynchronizedLyrics) -> some View {
+    private func immersiveLyricsView(
+        _ loadedLyrics: SynchronizedLyrics,
+        proxy: ScrollViewProxy
+    ) -> some View {
         let activeID = activeLyricLineID(in: loadedLyrics)
         let activeIndex = activeLyricIndex(in: loadedLyrics)
 
-        return ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(alignment: .leading, spacing: 20) {
-                    ForEach(Array(loadedLyrics.lines.enumerated()), id: \.element.id) { index, line in
-                        lyricLineView(
-                            text: line.text,
-                            isActive: activeID == line.id,
-                            distanceFromActive: activeIndex.map { abs($0 - index) },
-                            hasActiveLine: activeID != nil
-                        )
-                        .id(line.id)
-                    }
-                }
-                .padding(.vertical, 26)
-            }
-            .frame(minHeight: 260, maxHeight: 380)
-            .scrollIndicators(.hidden)
-            .mask(
-                LinearGradient(
-                    stops: [
-                        .init(color: .clear, location: 0),
-                        .init(color: .black, location: 0.08),
-                        .init(color: .black, location: 0.92),
-                        .init(color: .clear, location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
+        return LazyVStack(alignment: .leading, spacing: 20) {
+            ForEach(Array(loadedLyrics.lines.enumerated()), id: \.element.id) { index, line in
+                lyricLineView(
+                    text: line.text,
+                    isActive: activeID == line.id,
+                    distanceFromActive: activeIndex.map { abs($0 - index) },
+                    hasActiveLine: activeID != nil
                 )
-            )
-            .onAppear {
-                scrollToActiveLyric(activeID, proxy: proxy, animated: false)
+                .id(line.id)
             }
-            .onChange(of: activeID) { _, newValue in
-                scrollToActiveLyric(newValue, proxy: proxy, animated: true)
-            }
+        }
+        .padding(.vertical, 26)
+        .onAppear {
+            scrollToActiveLyric(activeID, proxy: proxy, animated: false)
+        }
+        .onChange(of: activeID) { _, newValue in
+            scrollToActiveLyric(newValue, proxy: proxy, animated: true)
         }
     }
 
@@ -272,7 +259,7 @@ struct NowPlayingView: View {
             .lineLimit(nil)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
-            .animation(.easeInOut(duration: 0.24), value: isActive)
+            .animation(.easeInOut(duration: 0.24), value: opacity)
     }
 
     private func lyricsStatusMessage(_ message: String) -> some View {

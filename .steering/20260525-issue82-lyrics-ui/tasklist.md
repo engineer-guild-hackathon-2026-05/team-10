@@ -7,3 +7,4 @@
 - [x] AI_USAGE_LOG.md を更新する
 - [x] iOS build で検証する
 - [x] commit / push / PR 作成を行う
+- [x] PR #96 のレビュー指摘（nested ScrollView、重複 scrollIndicators、歌詞 opacity animation）を修正する

@@ -90,8 +90,7 @@ Validation:
 - `comment`: string, 1〜140 chars
 - `song_start`: number, 0 以上
 - `song_end`: number, `song_start` より大きい
-- `song_id`: string, 1〜64 chars, numeric MusicKit / Apple Music / iTunes ID
-- `itunes_id`: optional string, 1〜64 chars, numeric canonical 曲 ID
+- `song_id`: string, 1〜32 chars, numeric MusicKit / Apple Music / iTunes ID
 - `song_slug`: optional string, 1〜120 chars, 表示・移行用の slug
 - `artist_id`: string, 1〜120 chars
 
@@ -241,9 +240,11 @@ how-cards/{cardId}
   comment: string
   song_start: number
   song_end: number
-  song_id: string
-  itunes_id: string
-  song_slug: string | null
+  song_id: string            # MusicKit / Apple Music / iTunes の数値曲 ID
+  itunes_id: string          # canonical 曲 ID（song_id と同じ値）
+  song_slug: string | null   # 表示・移行用 slug
+  song_title: string | null
+  artist_name: string | null
   artist_id: string
   user_id: string
   likes: number
