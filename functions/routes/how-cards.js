@@ -152,7 +152,7 @@ function normalizeRangePoint(value) {
 function parseLimit(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 50;
-  return Math.min(100, Math.max(1, Math.floor(number)));
+  return Math.min(250, Math.max(1, Math.floor(number)));
 }
 
 module.exports = router;

@@ -3,7 +3,7 @@ import SwiftUI
 struct GlobalMiniPlayerView: View {
     let song: Song?
     let onTap: () -> Void
-    @Binding var isPlaying: Bool
+    @ObservedObject var playback: PlaybackViewModel
 
     var body: some View {
         if let song {
@@ -13,16 +13,9 @@ struct GlobalMiniPlayerView: View {
 
     private func playerContent(song: Song) -> some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 46, height: 46)
-                Image(systemName: "music.note")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.secondary)
-            }
+            CircularArtworkView(song: song, size: 46, isPlaying: playback.isPlaying)
 
-            Text(isPlaying ? song.title : "再生停止中")
+            Text(playback.isPlaying ? song.title : "再生停止中")
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
@@ -31,12 +24,9 @@ struct GlobalMiniPlayerView: View {
             Spacer()
 
             Button {
-                onTap()
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    isPlaying.toggle()
-                }
+                Task { await playback.togglePlayback() }
             } label: {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
                     .font(.title3)
                     .foregroundStyle(.primary)
                     .frame(width: 36, height: 36)

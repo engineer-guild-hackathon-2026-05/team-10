@@ -49,6 +49,38 @@ final class PlaybackViewModel: ObservableObject {
         return service.currentTrack
     }
 
+    @discardableResult
+    func select(song: Song) async -> PlaybackTrack? {
+        if let musicKitID = song.musicKitID {
+            let track = PlaybackTrack(
+                id: MusicItemID(rawValue: musicKitID),
+                musicKitID: musicKitID,
+                title: song.title,
+                artistName: song.artistName,
+                albumTitle: nil,
+                isrc: nil,
+                hasLyrics: false,
+                duration: song.duration,
+                artworkURL: song.artworkURL
+            )
+            return await select(track: track)
+        }
+
+        do {
+            let results = try await service.search(query: "\(song.title) \(song.artistName)")
+            guard let track = bestMatch(for: song, in: results) else {
+                positionUnavailableMessage = "Apple Music で \(song.title) を見つけられませんでした。"
+                positionUnavailableAlertShown = true
+                return nil
+            }
+            return await select(track: track)
+        } catch {
+            positionUnavailableMessage = "Apple Music の曲検索に失敗しました。"
+            positionUnavailableAlertShown = true
+            return nil
+        }
+    }
+
     func togglePlayback() async {
         await service.togglePlayback()
     }
@@ -105,5 +137,14 @@ final class PlaybackViewModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+    }
+
+    private func bestMatch(for song: Song, in tracks: [PlaybackTrack]) -> PlaybackTrack? {
+        tracks.first {
+            $0.title.localizedCaseInsensitiveContains(song.title)
+                && $0.artistName.localizedCaseInsensitiveContains(song.artistName)
+        } ?? tracks.first {
+            $0.title.localizedCaseInsensitiveContains(song.title)
+        }
     }
 }

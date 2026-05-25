@@ -49,7 +49,7 @@ functions/
 │   └── firestore.js          # Firestore 読み書き（how-cards / users）
 ├── routes/
 │   ├── how-cards.js          # /how-cards 配下
-│   └── users.js              # /users/me
+│   └── users.js              # /users / /users/me
 ├── package.json
 └── .gitignore
 ```
@@ -118,7 +118,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | メソッド | パス | 認証 | 用途 |
 |---------|------|------|------|
 | GET | `/health` | ❌ | 死活確認 |
-| GET | `/how-cards` | ✅ | Howカードコメント一覧（最新50件） |
+| GET | `/how-cards` | ✅ | Howカードコメント一覧（最新250件） |
 | GET | `/how-cards?song_id=...` | ✅ | 曲ごとのHowカードコメント一覧 |
 | GET | `/how-cards/:id` | ✅ | Howカードコメント取得 |
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
@@ -176,7 +176,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 
 ### `GET /how-cards`
 
-最新の Howカードコメント一覧を返す（最大 50 件、`created_at` 降順）。
+最新の Howカードコメント一覧を返す（最大 250 件、`created_at` 降順）。
 `song_id` を指定した場合は曲ごとのコメント一覧を返す。
 
 **レスポンス**
@@ -193,11 +193,14 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "itunes_id": "1704093812",
       "artist_id": "ado",
       "user_id": "uid123",
+      "user_name": "Atsushi",
       "likes": 3
     }
   ]
 }
 ```
+
+`user_name` は `users/{user_id}.display_name` から Admin SDK で参照した表示用フィールド。メールアドレスなどの user 詳細は返さない。
 
 ### `POST /how-cards/:id/like`
 
@@ -218,13 +221,13 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 ### `GET /users/me` / `PUT /users/me`
 
 `onUserSignup` で自動生成された `users/{uid}` を取得・追加同期する。
-`PUT /users/me` では ID トークンのメールアドレスを正とし、body の `email` が異なる場合は 400 を返す。
+`PUT /users/me` では ID トークンのメールアドレスを正とし、body の `email` が異なる場合は 400 を返す。ID トークンにメールアドレスがない場合は `null` として保存する。
 
 **リクエスト**
 
 ```json
 {
-  "email": "user@example.com",
+  "email": null,
   "display_name": "Atsushi"
 }
 ```

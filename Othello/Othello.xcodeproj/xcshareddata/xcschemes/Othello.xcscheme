@@ -53,8 +53,8 @@
       </BuildableProductRunnable>
       <EnvironmentVariables>
          <EnvironmentVariable
-            key = "Name: API_BASE_URL / Value: http://localhost:3000"
-            value = ""
+            key = "API_BASE_URL"
+            value = "https://asia-northeast1-egh-howtune.cloudfunctions.net/api"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>
