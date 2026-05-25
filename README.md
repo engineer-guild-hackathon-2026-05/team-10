@@ -2,7 +2,7 @@
 
 > **1行ピッチ**：何を聴くかではなく、どう聴いているかでつながる。
 
-スマホと AirPods のセンサーから「曲中のどこで身体・心が反応したか」を捉え、AI との対話で音楽の楽しみ方（How）を言語化。同じ聴き方の人とつながる iOS アプリ。
+AirPods の頭部モーションから「曲中のどこで身体が反応したか」を捉え、歌詞や曲中区間への How コメントで音楽の楽しみ方を言語化。同じ聴き方の人とつながる iOS アプリ。
 
 ## スクリーンショット
 
@@ -33,7 +33,7 @@
 
 ## プロダクト概要
 
-既存の音楽サービスは「何を聴くか（What）」でつながる。しかし熱狂が本当に伝わるのは「どう聴いているか（How）」が共有されたときだ。HowTune は AirPods の頭部モーション・心拍と iPhone のモーションから曲中の身体・生理反応を検出し、AI との対話を通じて聴き方を「Howカード」として可視化。曲やジャンルではなく、**同じ聴き方をしている人**との出会いを生み出す。
+既存の音楽サービスは「何を聴くか（What）」でつながる。しかし熱狂が本当に伝わるのは「どう聴いているか（How）」が共有されたときだ。HowTune は AirPods の頭部モーションから曲中の身体反応を検出し、歌詞や区間に対するコメントを「Howカード」として可視化。曲やジャンルではなく、**同じ聴き方をしている人**との出会いを生み出す。
 
 ### 解決したい課題
 
@@ -46,10 +46,10 @@
 
 ### コア機能
 
-- AirPods 頭部モーション・心拍 / iPhone 本体モーションの取得（曲中時刻に同期）
+- AirPods 頭部モーションの取得（曲中時刻に同期）
 - 3状態スコア（groove / chill / neutral）の推定
-- 反応地点に基づく AI 対話（断定せず問いかけ、ユーザー自身が言語化）
-- Howカードの生成・編集・共有
+- 反応地点や歌詞行に紐づく How コメント作成
+- Howカードコメントの保存・編集・いいね
 - 同じ How を持つ人・曲・リスナーの表示
 
 ## 提出ステータス（運営チェック用 — 各 Day 終了時に記入）
@@ -78,29 +78,28 @@
 ## 技術スタック
 
 - **iOS アプリ（`Othello/`）**：Swift / SwiftUI（Xcode）
-- **センサー**：Core Motion（本体）/ CMHeadphoneMotionManager（AirPods 頭部）/ HealthKit（心拍）
+- **センサー**：CMHeadphoneMotionManager（AirPods 頭部）
 - **音楽再生**：MusicKit
 - **ML（`ai-recognition/`）**：TensorFlow で学習 → Core ML に変換し端末推論
-- **バックエンド（`backend/`）**：LLM プロキシ・データ API
-- **LLM**：Claude API（`claude-sonnet-4-6`、バックエンド経由でキーを秘匿）
-- **データ**：Firestore / CloudKit
-- **利用 AI ツール**：Claude Code
+- **バックエンド（`functions/`）**：Firebase Cloud Functions v2 + Express + Firestore Admin SDK
+- **AI 対話**：HowChat に mock/legacy client が残る。Functions 本番 contract には未接続
+- **データ**：Firestore
+- **利用 AI ツール**：Codex / Claude Code
 
 ### 使用した外部 API / サービス
 
 | サービス名 | 用途 | プラン | 備考 |
 |---|---|---|---|
-| Anthropic Claude API | 問いかけ生成・Howカード生成 | Pay-as-you-go | バックエンド経由 |
 | Apple MusicKit | 楽曲情報・再生位置取得 | — | MVP は MusicKit 前提。Spotify は使用しない |
-| Musixmatch | 静的歌詞取得・反応地点の歌詞表示 | 要 API key | `ENV.plist` の `MUSIXMATCH_API_KEY` に設定 |
+| Musixmatch | 時間同期歌詞または静的歌詞取得 | 要 API key | `ENV.plist` の `MUSIXMATCH_API_KEY` に設定 |
 
-→ API キー・秘匿情報は `.env`（`.gitignore` 対象）で管理。クライアントには置かない。
+→ API キー・秘匿情報は `.env` / `ENV.plist`（`.gitignore` 対象）で管理し、git に含めない。
 
 ### MusicKit / Musixmatch 連携メモ
 
 - MusicKit の `Song` から曲名・アーティスト名・アルバム名・ISRC・曲長を取り出し、Musixmatch の照合に使う。
-- Musixmatch の `matcher.track.get` で `track_id` を解決し、`track.lyrics.get` で静的歌詞を取得する。
-- Basic プランは Static lyrics 対象のため、MVP では subtitle / richsync は使用しない。実機検証では Xcode コンソールの `[MusixmatchLyricsProvider]` ログで `status` / `hint` / 試行した ID を確認する。
+- Musixmatch の `matcher.track.get` で `track_id` を解決し、`track.subtitle.get` で LRC 形式の時間同期歌詞を試す。
+- 同期歌詞が取得できない場合は `track.lyrics.get` の静的歌詞へ fallback する。実機検証では Xcode コンソールの `[MusixmatchLyricsProvider]` ログで `status` / `hint` / 試行した ID を確認する。
 - Spotify Web API は MVP では使用しない。
 
 ## リポジトリ構成
@@ -108,7 +107,8 @@
 ```
 team-10/
 ├── Othello/          # iOS ネイティブアプリ（Xcode / SwiftUI）
-├── backend/          # バックエンド（LLM プロキシ・データ API）
+├── functions/        # Firebase Functions（本番 API）
+├── backend/          # 旧 Express 実装（deprecated / 参照用）
 ├── ai-recognition/   # AIモデル（TensorFlow 学習 → Core ML 変換）
 ├── frontend/         # フロントエンド置き場（LP/管理画面・MVP未使用）
 └── docs/             # ドキュメント（仕様は docs/frontend-spec.md が正）
@@ -118,22 +118,19 @@ team-10/
 
 詳細な手順は **[`docs/setup.md`](./docs/setup.md)** を参照してください。
 
-> ⚠️ **iOS アプリを動かす前に、必ずバックエンドを起動してください。**
-> バックエンドが起動していないと、AI 対話・Howカード生成・Firestore 保存がすべて動作しません。
+> 本番 API は Firebase Functions にデプロイ済みです。通常の実機確認ではローカル backend の起動は不要です。
 
 ```bash
-cd backend
-cp .env.example .env          # .env を作成し API キーを記入
-npm install
-npm start                      # localhost:3000 で起動
+cp Othello/Othello/ENV.example.plist Othello/Othello/ENV.plist
+# API_BASE_URL と MUSIXMATCH_API_KEY を設定
 ```
 
 `.env` に必要なキー：
 
 | 変数名 | 説明 |
 |---|---|
-| `ANTHROPIC_API_KEY` | Claude API キー |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Firebase Admin SDK サービスアカウント JSON のパス |
+| `API_BASE_URL` | Functions API の URL |
+| `MUSIXMATCH_API_KEY` | Musixmatch API キー |
 
 ### 2. iOS アプリを起動する
 
@@ -147,8 +144,8 @@ open Othello/Othello.xcodeproj
 # 署名チームを設定し、実機（iPhone）を選んで Run
 ```
 
-- **実機必須**：AirPods の頭部モーション・心拍はシミュレータで取得できません（iPhone + 対応 AirPods が必要）
-- **権限**：`Info.plist` に `NSMotionUsageDescription` / `NSHealthShareUsageDescription` が必要
+- **実機必須**：AirPods の頭部モーションはシミュレータで取得できません（iPhone + 対応 AirPods が必要）
+- **権限**：`Info.plist` に `NSMotionUsageDescription` が必要
 - **MusicKit**：Apple Developer の App ID で MusicKit App Service を有効化し、プロビジョニングプロファイルを更新してから実機ビルドする
 - **Musixmatch**：`Othello/Othello/ENV.example.plist` を `ENV.plist` にコピーし、`MUSIXMATCH_API_KEY` を設定する。`matcher.track.get` と `track.lyrics.get` が 401/402/403 を返す場合は API key・利用上限・契約プランを確認する
 

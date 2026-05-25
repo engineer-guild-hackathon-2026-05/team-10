@@ -906,6 +906,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #73 の主目的である6軸 HowChat 深掘りを失わず、main 側で入った AirPods / Metal / 3状態波形制御ともコンパイル可能な形で統合できたため。
 
+### #044 現行実装に合わせたドキュメント同期
+
+- **時刻**：21:45
+- **ツール**：Codex / GitHub CLI
+- **目的**：実装とドキュメントの食い違いを解消し、HealthKit 連携削除・Functions 本番 API・HowCard コメント仕様に合わせて更新する
+- **プロンプト**：
+  ```text
+  では、ブランチを切ってこのドキュメントを更新するPRを立ててください 全部その通りなので。 healthkit連携は完璧に削除されました。
+  ```
+- **出力サマリ**：
+  - README / setup / architecture / backend / data-model / frontend-spec / PRD / functional-design を現行 Functions + Firestore + AirPods 頭部モーション仕様へ更新
+  - HealthKit / 心拍連携を MVP から削除済みとして明記し、ADR-0006 を追加
+  - legacy `backend/` と `/sessions` 系 HowChat API は本番未接続であることを整理
+  - Musixmatch は同期歌詞を試して静的歌詞へ fallback する実装に合わせて更新
+- **評価**：採用
+- **採用 / 不採用の理由**：実装の正しい contract をドキュメント側に反映し、デモ・開発時の参照先を `functions/` と現行 iOS 実装へ揃えたため。
+
 ---
 
 ## Day 3（2026-05-26）
