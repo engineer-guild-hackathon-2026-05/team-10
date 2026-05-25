@@ -39,7 +39,25 @@ extension FeedPost {
             song: song,
             howCardComment: howCard,
             likeCount: howCard.goods,
-            commentCount: 0
+            commentCount: howCard.replyCount
+        )
+    }
+
+    func replacingCommentCount(_ commentCount: Int) -> FeedPost {
+        let updatedHowCardComment = howCardComment?.replacingReplyCount(commentCount)
+        return FeedPost(
+            id: id,
+            cardID: cardID,
+            userName: userName,
+            userHandle: userHandle,
+            avatarLetter: avatarLetter,
+            avatarColor: avatarColor,
+            timeAgo: timeAgo,
+            comment: comment,
+            song: song,
+            howCardComment: updatedHowCardComment,
+            likeCount: likeCount,
+            commentCount: commentCount
         )
     }
 

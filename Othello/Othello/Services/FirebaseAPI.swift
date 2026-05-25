@@ -69,6 +69,23 @@ final class FirebaseAPI {
         )
     }
 
+    func fetchHowCardReplies(cardID: String, limit: Int = 50) async throws -> [HowCardReply] {
+        let response: HowCardRepliesResponseEnvelope = try await send(
+            path: "how-cards/\(cardID)/replies",
+            method: "GET",
+            queryItems: [URLQueryItem(name: "limit", value: String(limit))]
+        )
+        return response.replies
+    }
+
+    func createHowCardReply(cardID: String, body: String) async throws -> HowCardReplyResponseEnvelope {
+        try await send(
+            path: "how-cards/\(cardID)/replies",
+            method: "POST",
+            body: HowCardReplyPayload(body: body)
+        )
+    }
+
     @discardableResult
     func upsertUser(_ user: UserProfile) async throws -> UserProfile {
         let response: UserResponseEnvelope = try await send(
@@ -217,13 +234,31 @@ final class FirebaseAPI {
         }
 
         if httpResponse.statusCode == 404 {
+            if Self.errorMessage(from: data) == nil {
+                throw FirebaseAPIError.badServerResponse(statusCode: httpResponse.statusCode, message: "API endpoint not found")
+            }
             throw FirebaseAPIError.documentNotFound
         }
 
         guard (200..<300).contains(httpResponse.statusCode) else {
-            throw FirebaseAPIError.badServerResponse(statusCode: httpResponse.statusCode)
+            throw FirebaseAPIError.badServerResponse(
+                statusCode: httpResponse.statusCode,
+                message: Self.errorMessage(from: data)
+            )
         }
 
         return try decoder.decode(Response.self, from: data)
     }
+
+    private static func errorMessage(from data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+        if let envelope = try? JSONDecoder().decode(ErrorResponseEnvelope.self, from: data) {
+            return envelope.error.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : envelope.error
+        }
+        return nil
+    }
+}
+
+private struct ErrorResponseEnvelope: Decodable {
+    let error: String
 }

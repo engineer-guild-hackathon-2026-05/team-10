@@ -39,9 +39,11 @@ functions/
 | GET | `/how-cards` | 必須 | Howカードコメント一覧 |
 | GET | `/how-cards?song_id=...` | 必須 | 曲ごとの Howカードコメント一覧 |
 | GET | `/how-cards/:id` | 必須 | Howカードコメント詳細 |
+| GET | `/how-cards/:id/replies` | 必須 | Howカードへの返信一覧 |
 | POST | `/how-cards` | 必須 | Howカードコメント作成 |
 | PATCH | `/how-cards/:id` | 必須 | 自分の Howカードコメント更新 |
 | POST | `/how-cards/:id/like` | 必須 | いいね。冪等、二重防止 |
+| POST | `/how-cards/:id/replies` | 必須 | Howカードへ返信 |
 | GET | `/recommended-comments` | 必須 | Home dashboard 向けおすすめコメント一覧 |
 | GET | `/users/me` | 必須 | 自分のユーザー情報取得 |
 | PUT | `/users/me` | 必須 | 自分のユーザー情報作成・更新 |
@@ -136,6 +138,7 @@ Response:
       "user_id": "uid123",
       "user_name": "Atsushi",
       "likes": 3,
+      "reply_count": 2,
       "created_at": "2026-05-25T12:00:00.000Z",
       "updated_at": "2026-05-25T12:05:00.000Z"
     }
@@ -150,6 +153,49 @@ Response:
 ### GET /how-cards/:id
 
 指定 ID の Howカードコメントを `{ "howCard": ... }` で返す。存在しない場合は 404。
+
+### GET /how-cards/:id/replies
+
+指定 Howカードへの返信一覧を `{ "replies": [...] }` で返す。`limit` は 1〜100、未指定時は 50。存在しない Howカードは 404。
+
+```json
+{
+  "replies": [
+    {
+      "id": "reply123",
+      "how_card_id": "card456",
+      "body": "その聴き方わかる",
+      "user_id": "uid123",
+      "user_name": "Atsushi",
+      "created_at": "2026-05-26T12:00:00.000Z",
+      "updated_at": null
+    }
+  ]
+}
+```
+
+### POST /how-cards/:id/replies
+
+指定 Howカードへ返信を作成する。本文は `body` に 1〜180 文字で送る。作成時は transaction で `how-cards/{cardId}/replies/{replyId}` を作成し、親 Howカードの `reply_count` を更新する。
+
+```json
+{ "body": "ここの声の掠れ方、同じところで止まりました" }
+```
+
+```json
+{
+  "reply": {
+    "id": "reply123",
+    "how_card_id": "card456",
+    "body": "ここの声の掠れ方、同じところで止まりました",
+    "user_id": "uid123",
+    "user_name": "Atsushi",
+    "created_at": null,
+    "updated_at": null
+  },
+  "reply_count": 3
+}
+```
 
 ### PATCH /how-cards/:id
 
@@ -250,12 +296,19 @@ how-cards/{cardId}
   artist_id: string
   user_id: string
   likes: number
+  reply_count: number
   created_at: timestamp
   updated_at: timestamp | absent
 
 how-cards/{cardId}/liked-by/{uid}
   user_id: string
   liked_at: timestamp
+
+how-cards/{cardId}/replies/{replyId}
+  body: string
+  user_id: string
+  created_at: timestamp
+  updated_at: timestamp | absent
 ```
 
 ---

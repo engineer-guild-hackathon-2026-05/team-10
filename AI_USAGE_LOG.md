@@ -1555,6 +1555,61 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：表示 metadata と Firestore lookup key を分離することで、MusicKit の英語タイトル解決後も既存 Howカードの曲別取得を壊さず、不要になった seed write も削除できたため。
 
+### #005 Howカード返信機能の実装
+
+- **時刻**：2026-05-25 21:31 UTC（2026-05-26 06:31 JST）
+- **ツール**：Codex / node / xcodebuild
+- **目的**：Howカード投稿に返信する画面・Functions API・Firestore 設計を追加し、投稿から会話できるようにする
+- **プロンプト**：
+  ```text
+  投稿でhow cardに返信する画面・機能が全くないと思う。firebase ,functionsの設計から始めて、ここを完成させて。
+  ```
+- **出力サマリ**：
+  - `how-cards/{cardId}/replies/{replyId}` と親 `reply_count` の Firestore 設計を作成
+  - Functions に `GET /how-cards/:id/replies` と `POST /how-cards/:id/replies` を追加
+  - 返信作成を transaction 化し、親 Howカードの存在確認・返信保存・`reply_count` 更新を一体化
+  - iOS に `HowCardReply` / reply API / 返信 sheet を追加し、MusicFeed の吹き出しから返信一覧・投稿を開けるようにした
+  - backend / data-model / architecture / functions README と steering docs を更新
+- **評価**：採用
+- **採用 / 不採用の理由**：Howカード本体の投稿・いいね導線を崩さず、返信をサブコレクションに分離して会話機能を追加できたため。
+
+### #006 Howカード返信 PRレビュー対応と送信失敗調査
+
+- **時刻**：06:48
+- **ツール**：Codex / GitHub CLI / curl / node / xcodebuild
+- **目的**：PR #101 のレビュー指摘を反映し、実機で返信送信に失敗する原因を確認する
+- **プロンプト**：
+  ```text
+  返信を送信できませんでした。ちゃんとみて。
+
+  また、prにレビューついてるからそれも直して
+  ```
+- **出力サマリ**：
+  - 本番 Functions の `/how-cards/:id/replies` が未デプロイで `Cannot GET` の 404 になっていることを確認
+  - `FeedPost.replacingCommentCount` が nested `HowCardComment.replyCount` も更新するよう修正
+  - 返信投稿の連打で複数 Task が走らないよう `isPosting` guard を追加
+  - `HowCardReplyRow` を独立ファイルへ分離し、1ファイル1型ルールへ合わせた
+  - Firestore の `reply_count` 更新を `FieldValue.increment(1)` に変更し、送信失敗時の HTTP エラー内容を確認しやすくした
+  - `functions:api` をデプロイし、`/how-cards/test/replies` が未デプロイ時の 404 から認証必須の 401 へ変わったことを確認
+- **評価**：採用
+- **採用 / 不採用の理由**：レビュー指摘を反映しつつ、実際の送信失敗原因がクライアントではなく未デプロイの Functions endpoint であることを確認できたため。
+
+### #007 Howカード返信 PR追加レビュー対応
+
+- **時刻**：07:07
+- **ツール**：Codex / GitHub CLI / node / xcodebuild / Firebase CLI
+- **目的**：PR #101 の追加レビューで指摘された Functions の未宣言変数代入を修正する
+- **プロンプト**：
+  ```text
+  レビューついてるから修正しておいて
+  ```
+- **出力サマリ**：
+  - CodeRabbit の最新レビューを確認し、`createHowCardReply` 内に未宣言の `replyCount = ...` 代入が残っていることを確認
+  - transaction 内では `FieldValue.increment(1)` のみを使い、返却用の `replyCount` は transaction 後の親 Howカード再取得から計算する形へ整理
+  - Functions 構文チェックと iOS ビルドで検証
+  - `functions:api` を再デプロイし、本番 endpoint が認証必須の 401 を返すことを再確認
+- **評価**：採用
+- **採用 / 不採用の理由**：暗黙グローバル化のリスクを消し、レビュー指摘と本番 Functions の状態を揃えられたため。
 ### #005 How Resonance（共鳴マッチング + リアルタイムDM）一晩実装
 
 - **時刻**：深夜（ヘッドレス自律実装）

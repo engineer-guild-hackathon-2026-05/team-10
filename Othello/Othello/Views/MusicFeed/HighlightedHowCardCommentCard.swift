@@ -2,8 +2,22 @@ import SwiftUI
 
 struct HighlightedHowCardCommentCard: View {
     let item: HomeDashboardComment
+    let replyCount: Int
     let onSongTap: () -> Void
+    let onReply: () -> Void
     @State private var isLiked = false
+
+    init(
+        item: HomeDashboardComment,
+        replyCount: Int? = nil,
+        onSongTap: @escaping () -> Void,
+        onReply: @escaping () -> Void = {}
+    ) {
+        self.item = item
+        self.replyCount = replyCount ?? item.howCard.replyCount
+        self.onSongTap = onSongTap
+        self.onReply = onReply
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -60,8 +74,15 @@ struct HighlightedHowCardCommentCard: View {
                             .foregroundStyle(.white)
                     }
                 }
-                Image(systemName: "bubble.left")
-                    .foregroundStyle(.white)
+                Button(action: onReply) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bubble.left")
+                            .foregroundStyle(.white)
+                        Text("\(replyCount)")
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                    }
+                }
                 Spacer()
                 Image(systemName: "paperplane")
                     .foregroundStyle(.gray)
