@@ -14,6 +14,7 @@ struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var playback = PlaybackViewModel()
     @StateObject private var lyrics = LyricsViewModel()
+    @StateObject private var motionViewModel = AirPodsMotionViewModel()
 
     @State private var showSearchSheet = false
     @State private var showReactionDisplay = false
@@ -87,6 +88,9 @@ struct HomeView: View {
             RealtimeReactionDisplayView(isSensorAvailable: !viewModel.useManualMode)
         }
         .sensoryFeedback(.selection, trigger: selectedHowChatEvent?.id)
+        .onChange(of: displayIsPlaying) { _, isPlaying in
+            if isPlaying { motionViewModel.start() } else { motionViewModel.stop() }
+        }
         .onReceive(volumeTimer) { _ in
             outputVolume = AVAudioSession.sharedInstance().outputVolume
         }
@@ -790,8 +794,22 @@ struct HomeView: View {
         let text = line.text.isEmpty ? "♪" : line.text
         let startTime = line.startTime
         let endTime = line.endTime ?? min(startTime + 6, displayTrack?.duration ?? startTime + 6)
-        let intensity = min(max(grooveLevel, 0.28), 1.0)
-        let tags = grooveTags(for: intensity)
+
+        let score: ReactionScore
+        let intensity: Double
+        let tags: [HowTag]
+
+        if let sample = motionViewModel.latestSample {
+            score = MotionReactionScoreEstimator.score(from: sample)
+            intensity = min(max(score.intensity, 0.28), 1.0)
+            tags = score.activeTags(threshold: 0.35).isEmpty
+                ? grooveTags(for: intensity)
+                : score.activeTags(threshold: 0.35)
+        } else {
+            score = .empty
+            intensity = min(max(grooveLevel, 0.28), 1.0)
+            tags = grooveTags(for: intensity)
+        }
 
         return ReactionEvent(
             id: UUID(),
@@ -799,6 +817,7 @@ struct HomeView: View {
             endTime: max(endTime, startTime + 2),
             intensity: intensity,
             tags: tags,
+            score: score,
             lyricLine: text,
             lyricTranslation: nil,
             heartRateTrend: intensity > 0.72 ? .rising : .stable

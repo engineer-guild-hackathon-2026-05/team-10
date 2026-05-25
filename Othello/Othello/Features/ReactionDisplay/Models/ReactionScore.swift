@@ -29,6 +29,12 @@ struct ReactionScore: Equatable {
     }
 }
 
+extension ReactionScore {
+    var asDictionary: [String: Double] {
+        Dictionary(uniqueKeysWithValues: axes.map { ($0.id, $0.value) })
+    }
+}
+
 struct ReactionAxis: Identifiable {
     let id: String
     let label: String

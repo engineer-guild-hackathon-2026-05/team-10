@@ -73,6 +73,7 @@ final class ReactionDetectionViewModel: ObservableObject {
                 endTime: playbackTime + 1.4,
                 intensity: 1,
                 tags: [tag],
+                score: currentScore,
                 lyricLine: nil,
                 lyricTranslation: nil,
                 heartRateTrend: .stable
@@ -131,6 +132,7 @@ final class ReactionDetectionViewModel: ObservableObject {
                 endTime: pending.endTime,
                 intensity: min(max(pending.maxIntensity, 0), 1),
                 tags: Array(pending.tags).sorted { $0.rawValue < $1.rawValue },
+                score: currentScore,
                 lyricLine: nil,
                 lyricTranslation: nil,
                 heartRateTrend: .stable
