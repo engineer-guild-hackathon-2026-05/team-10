@@ -17,18 +17,15 @@
 
 ### `how-cards`
 
-Howカード1件を1ドキュメントで管理する。
+Howカードコメント1件を1ドキュメントで管理する。iOS SDK から直接読み書きする最小スキーマ。
 
 ```
 how-cards/{cardId}
-  uid:          string       // ユーザー ID（未認証時は "anonymous"）
-  sessionId:    string       // 生成元セッション ID
-  songTitle:    string       // 曲名
-  title:        string       // Howカードのタイトル
-  description:  string       // 説明文
-  howTags:      string[]     // Howタグ（例: ["グルーヴ派", "余韻に浸る人"]）
-  reactions:    object[]     // 反応区間スナップショット
-  createdAt:    Timestamp
+  comment:      string       // ユーザーコメント
+  song_id:      string       // 曲 ID
+  artist_id:    string       // アーティスト ID
+  user_id:      string       // Firebase Auth uid
+  goods:        integer      // いいね数
 ```
 
 ### `sessions`
@@ -50,25 +47,40 @@ sessions/{sessionId}
 
 ```
 users/{uid}
-  displayName:  string
-  howCards:     string[]    // 生成済み Howカード ID の配列
-  createdAt:    Timestamp
+  user_id:      string       // Firebase Auth uid
+  email:        string
+  display_name: string | null
+  created_at:   Timestamp
+  updated_at:   Timestamp
 ```
 
 ---
 
-## Howカード データ構造（iOS ← backend）
+## Howカードコメント データ構造（iOS ↔ Firestore）
 
-バックエンドが返す Howカード生成レスポンス：
+Firestore に保存する Howカードコメント：
 
 ```json
 {
-  "howCard": {
-    "id": "50Q4oDFypDok6x1WMb20",
-    "title": "余韻に浸るリスナー",
-    "description": "曲が終わった後も世界に残り続けるタイプ。",
-    "howTags": ["余韻派", "immersion"]
-  }
+  "comment": "このベースラインの入りが好き",
+  "song_id": "1704093812",
+  "artist_id": "ado",
+  "user_id": "firebase-uid",
+  "goods": 0
+}
+```
+
+## ユーザー データ構造（Firebase Auth → Firestore）
+
+Firebase Auth で作成したユーザーを `users/{uid}` に保存する。
+
+```json
+{
+  "user_id": "firebase-uid",
+  "email": "user@example.com",
+  "display_name": null,
+  "created_at": "server timestamp",
+  "updated_at": "server timestamp"
 }
 ```
 
@@ -99,4 +111,5 @@ users/{uid}
 
 - 心拍の生データは HealthKit 内に留め、Firestore には書き込まない
 - センサー生ログ（全フレーム）は Cloud Storage に保存し、Firestore には反応区間サマリのみ持つ（DECISION-04）
-- `uid: "anonymous"` はハッカソン期間中の暫定対応。本番では Firebase Auth と連携する
+- `how-cards.user_id` は Firebase Auth の `uid` と一致させる
+- `goods` はクライアント上では `Int`、Firestore 上では integer として扱う

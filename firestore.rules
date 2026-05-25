@@ -2,6 +2,66 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidHowCard(data) {
+      return data.keys().hasOnly(['comment', 'song_id', 'artist_id', 'user_id', 'goods'])
+        && data.keys().hasAll(['comment', 'song_id', 'artist_id', 'user_id', 'goods'])
+        && data.comment is string
+        && data.comment.size() > 0
+        && data.comment.size() <= 140
+        && data.song_id is string
+        && data.song_id.size() > 0
+        && data.artist_id is string
+        && data.artist_id.size() > 0
+        && data.user_id is string
+        && data.goods is int
+        && data.goods >= 0;
+    }
+
+    function isValidUser(data, uid) {
+      return data.keys().hasOnly(['user_id', 'email', 'display_name', 'created_at', 'updated_at'])
+        && data.keys().hasAll(['user_id', 'email', 'display_name', 'created_at', 'updated_at'])
+        && data.user_id == uid
+        && data.email is string
+        && data.email.size() > 0
+        && (data.display_name == null || data.display_name is string)
+        && data.created_at is timestamp
+        && data.updated_at is timestamp;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidUser(request.resource.data, uid);
+      allow delete: if false;
+    }
+
+    match /how-cards/{cardId} {
+      allow read: if isSignedIn();
+
+      allow create: if isOwner(request.resource.data.user_id)
+        && isValidHowCard(request.resource.data);
+
+      allow update: if isValidHowCard(request.resource.data)
+        && request.resource.data.user_id == resource.data.user_id
+        && (
+          isOwner(resource.data.user_id)
+          || (
+            isSignedIn()
+            && request.resource.data.diff(resource.data).changedKeys().hasOnly(['goods'])
+            && request.resource.data.goods == resource.data.goods + 1
+          )
+        );
+
+      allow delete: if isOwner(resource.data.user_id);
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

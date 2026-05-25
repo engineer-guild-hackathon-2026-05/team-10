@@ -40,7 +40,13 @@ final class AuthViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            try await Auth.auth().createUser(withEmail: email, password: password)
+            let result = try await Auth.auth().createUser(withEmail: email, password: password)
+            do {
+                try await FirebaseAPI.shared.createUserDocument(from: result.user)
+            } catch {
+                try? Auth.auth().signOut()
+                throw error
+            }
         } catch {
             errorMessage = localizedError(error)
         }
@@ -71,6 +77,9 @@ final class AuthViewModel: ObservableObject {
         case .networkError:
             return "ネットワークエラーが発生しました"
         default:
+            if error is FirebaseAPIError {
+                return "ユーザー情報の保存に失敗しました"
+            }
             return "エラーが発生しました。もう一度お試しください"
         }
     }
