@@ -1,6 +1,6 @@
 # 開発ガイドライン (Development Guidelines)
 
-> 対象: **iOS ネイティブ（Swift / SwiftUI）**。コードは `Othello/`、バックエンドは `backend/`、学習は `ai-recognition/`。
+> 対象: **iOS ネイティブ（Swift / SwiftUI）**。コードは `Othello/`、本番バックエンドは `functions/`、学習は `ai-recognition/`。
 
 ## コーディング規約（Swift）
 
@@ -66,30 +66,31 @@ guard let session = currentSession else { return }
 ```swift
 enum HowTuneError: Error {
     case headphoneNotConnected
-    case healthAuthorizationDenied
-    case llmUnavailable
+    case apiUnavailable
 }
 
 // 予期されるエラーは型で表現し、UI でフォールバックを用意する
 do {
-    try await heartRateService.requestAuthorization()
+    try await headphoneMotionService.start()
 } catch {
-    // 心拍を無効化してモーションのみで継続（P4: センサーを前提にしない）
-    enableMotionOnlyMode()
+    // AirPods が使えない場合も手動選択で体験を継続する
+    enableManualReactionMode()
 }
 ```
 
 **原則**:
-- センサー/LLM の障害は必ずフォールバック（手動ラベル・本体モーション・デフォルト質問）
+- センサー/API の障害は必ずフォールバック（手動ラベル・デフォルト表示）
 - エラーを握りつぶさない
 
-### Claude API（backend 経由）
-- **API キーは iOS アプリに置かない**。`backend/` のプロキシ経由で呼ぶ
-- LLM の system プロンプトにユーザー入力を混入しない（プロンプトインジェクション対策）
-- model は `claude-sonnet-4-6`、対話はストリーミング（SSE）
+### Functions API
+- Howカードコメントは Firestore へ直接書き込まず、Firebase ID token 付きで `functions/` の API を呼ぶ
+- `users/{uid}` はログイン中ユーザー自身のみ、Firestore rules の範囲内で iOS から read/write してよい
+- `backend/` は deprecated な参照実装。新規 API は `functions/` に追加する
+- HowChat の mock/legacy client は現行 Functions 本番 contract ではない
+- LLM 連携を本番化する場合は Functions 側に endpoint を追加し、API key をクライアントへ含めない
 
 ### プライバシー
-- 心拍は HealthKit の機微情報。最小権限・明示同意・端末内処理優先
+- HealthKit / 心拍連携は現行 MVP から削除済み。ヘルスデータを取得しない
 - 認証トークンは Keychain に保持（UserDefaults に生トークンを置かない）
 
 ---
@@ -101,7 +102,7 @@ do {
 ```
 main
   └─ feat/headphone-motion      ← 機能開発
-  └─ feat/heart-rate
+  └─ docs/sync-current-implementation
   └─ feat/how-chat
   └─ fix/airpods-disconnect     ← バグ修正
   └─ docs/update-spec           ← ドキュメント
@@ -115,7 +116,7 @@ main
 ```
 <type>(<scope>): <subject>
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+Co-Authored-By: Codex <noreply@anthropic.com>
 ```
 
 | Type | 用途 |
@@ -133,9 +134,9 @@ feat(motion): AirPods 頭部モーションの記録を実装
 
 - HeadphoneMotionService を追加
 - CMHeadphoneMotionManager で姿勢・加速度を取得
-- 未接続時は DeviceMotionService へフォールバック
+- 未接続時は手動リアクション選択へフォールバック
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+Co-Authored-By: Codex <noreply@anthropic.com>
 ```
 
 ### PR プロセス
@@ -171,8 +172,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 |------|------|--------|
 | ユニット | 特徴量抽出、ReactionClassifier、APIClient のデコード | XCTest |
 | 統合 | センサー → 特徴量 → Core ML 推論 | XCTest |
-| backend | LLM をモックした対話・カード生成 | （backend のテスト framework） |
-| E2E（手動） | 実機 AirPods 接続 → 再生 → 取得 → 対話 → Howカード | 手動 |
+| Functions | HowCard API・users API | Node test / Firebase emulator |
+| E2E（手動） | 実機 AirPods 接続 → 再生 → 取得 → Howコメント投稿 | 手動 |
 
 ### ユニットテスト例
 
@@ -190,8 +191,8 @@ final class ReactionClassifierTests: XCTestCase {
 ```
 
 ### モック方針
-- HealthKit / CMHeadphoneMotionManager は **protocol で抽象化**してモック注入
-- backend / Claude API はスタブレスポンス
+- CMHeadphoneMotionManager は **protocol で抽象化**してモック注入
+- Functions API はスタブレスポンスまたは Firebase emulator
 
 ---
 
@@ -199,22 +200,22 @@ final class ReactionClassifierTests: XCTestCase {
 
 **機能性**:
 - [ ] frontend-spec の受け入れ条件（AC）を満たすか
-- [ ] AirPods 未接続・権限拒否・心拍非対応のフォールバックがあるか
-- [ ] LLM 障害時のフォールバックがあるか
+- [ ] AirPods 未接続・権限拒否時のフォールバックがあるか
+- [ ] Functions API 障害時のフォールバックがあるか
 
 **可読性**:
 - [ ] 命名が具体的か（`data` より `motionFrames`）
 - [ ] コメントは WHY のみか
 
 **セキュリティ・プライバシー**:
-- [ ] Claude API キーをアプリに埋め込んでいないか（backend 経由か）
-- [ ] 心拍データを最小権限・端末内処理で扱っているか
+- [ ] API キーを git に含めていないか
+- [ ] HealthKit / 心拍データを取得していないか
 - [ ] トークンを Keychain に保持しているか
 
 **レビューコメント例**:
 ```
 [必須] AirPods 切断時に deviceMotion が nil になりクラッシュします。
-DeviceMotionService へのフォールバックを入れてください（P4 準拠）。
+手動モードへのフォールバックを入れてください（P4 準拠）。
 
 [提案] この特徴量計算は ReactionClassifier に寄せると View が薄くなります。
 ```
@@ -230,7 +231,7 @@ DeviceMotionService へのフォールバックを入れてください（P4 準
 | Xcode 15+ | iOS ビルド・実機デバッグ |
 | iPhone + 対応 AirPods | センサー実機テスト（必須） |
 | SwiftLint / SwiftFormat | 静的解析・整形 |
-| （backend）Node.js or Python | LLM プロキシ |
+| Node.js 20 / Firebase CLI | Functions 開発・デプロイ |
 | （ai-recognition）Python + TensorFlow | モデル学習 |
 
 ### セットアップ手順
@@ -244,23 +245,24 @@ cd team-10
 open Othello/Othello.xcodeproj
 # Xcode で署名チームを設定し、実機を選んで Run
 
-# 3. backend（例）
-cd backend && (依存インストール・起動)
+# 3. Functions
+cd functions && npm install
+firebase emulators:start --only functions,firestore
 
 # 4. ai-recognition（学習）
 cd ai-recognition && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 ```
 
 ### 実機テストの要点
-- **Info.plist に権限文言が必須**: `NSMotionUsageDescription` / `NSHealthShareUsageDescription`
+- **Info.plist に権限文言が必須**: `NSMotionUsageDescription`
 - AirPods の頭部モーションは対応機種でのみ取得可。シミュレータでは取得不可なので実機必須
-- 心拍は対応 AirPods + ヘルス権限が必要
+- HealthKit / 心拍連携は現行 MVP から削除済み
 
 ### AI 活用ログの記録
-**Claude を使った作業は必ず `AI_USAGE_LOG.md` に記録**。最低 1 日 3 件以上。
+**AI ツールを使った作業は必ず `AI_USAGE_LOG.md` に記録**。最低 1 日 3 件以上。
 
 ```markdown
 | 日時 | 担当 | 利用ツール | 用途 | 効果 |
 |------|------|-----------|------|------|
-| 5/24 14:00 | @username | Claude Code | HeadphoneMotionService 設計 | CMHeadphoneMotion の使い方を整理 |
+| 5/24 14:00 | @username | Codex | HeadphoneMotionService 設計 | CMHeadphoneMotion の使い方を整理 |
 ```

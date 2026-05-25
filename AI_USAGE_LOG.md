@@ -1027,7 +1027,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘のうち現在も有効な不具合を、表示・投稿・再生・データ同期の各境界で最小差分に分けて解消できたため。
 
-### #032 PR #73 main conflict 解消
+### #044 PR #73 main conflict 解消
 
 - **時刻**：21:10
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1046,7 +1046,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：PR #73 の主目的である6軸 HowChat 深掘りを失わず、main 側で入った AirPods / Metal / 3状態波形制御ともコンパイル可能な形で統合できたため。
 
-### #033 PR #73 再レビュー対応
+### #044 現行実装に合わせたドキュメント同期
+
+- **時刻**：21:45
+- **ツール**：Codex / GitHub CLI
+- **目的**：実装とドキュメントの食い違いを解消し、HealthKit 連携削除・Functions 本番 API・HowCard コメント仕様に合わせて更新する
+- **プロンプト**：
+  ```text
+  では、ブランチを切ってこのドキュメントを更新するPRを立ててください 全部その通りなので。 healthkit連携は完璧に削除されました。
+  ```
+- **出力サマリ**：
+  - README / setup / architecture / backend / data-model / frontend-spec / PRD / functional-design を現行 Functions + Firestore + AirPods 頭部モーション仕様へ更新
+  - HealthKit / 心拍連携を MVP から削除済みとして明記し、ADR-0006 を追加
+  - legacy `backend/` と `/sessions` 系 HowChat API は本番未接続であることを整理
+  - Musixmatch は同期歌詞を試して静的歌詞へ fallback する実装に合わせて更新
+- **評価**：採用
+- **採用 / 不採用の理由**：実装の正しい contract をドキュメント側に反映し、デモ・開発時の参照先を `functions/` と現行 iOS 実装へ揃えたため。
+### #045 PR #73 再レビュー対応
 
 - **時刻**：21:23
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1064,7 +1080,7 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：CodeRabbit の未解決指摘を現在のコードに照合し、実装・ドキュメント・lint の差分を最小範囲で解消できたため。
 
-### #044 PR #80レビュー対応と main merge
+### #046 PR #80レビュー対応と main merge
 
 - **時刻**：22:05
 - **ツール**：Codex / GitHub CLI / xcodebuild
@@ -1080,6 +1096,60 @@
   - main 側の `PlaybackViewModel` / `CircularArtworkView` を保持しつつ、Home dashboard からの highlighted comment 遷移を維持
 - **評価**：採用
 - **採用 / 不採用の理由**：レビュー指摘を解消し、最新 main の再生・波形・Functions 接続と Home dashboard 差分を同居させたため。
+
+### #047 PR #89レビュー対応とmainマージ
+
+- **時刻**：22:10
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #89 `issue-40-chat-session-id` の CodeRabbit review comments を修正し、最新 `main` を取り込んで conflict を解消する
+- **プロンプト**：
+  ```text
+  pr #89のレビューを直して、main mergeしてコンフリクトを直して
+  ```
+- **出力サマリ**：
+  - PR #89 の review comments 3件を確認し、`origin/main` を merge
+  - `ChatAPIClient` は `chat` のみ Firebase ID token なし、`how-card` は引き続き Authorization 必須になるよう `authRequired` を追加
+  - HowChat は `ReactionEvent.id.uuidString` を sessionID として保持しつつ、main 側の2ターン対話制御を維持
+  - backend の `POST /sessions/:id/chat` は匿名利用を許可し、session upsert では `lyric` 未送信時に既存値を上書きしないよう修正
+  - 匿名作成された session から認証済み Howカード作成へ進めるよう、未所有 session は post 時に userId を紐付ける形に調整
+  - Node 構文チェック、`git diff --check`、`xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：CodeRabbit 指摘の認証契約・データ保持問題を解消しつつ、main 側の HowChat 深掘りと 6軸スコア文脈を落とさず統合できたため。
+
+### #048 PR #77 main merge とレビュー対応
+
+- **時刻**：22:06
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #77 に最新 `main` を merge し、CodeRabbit のタップ衝突・1ファイル1型レビューを修正して push する
+- **プロンプト**：
+  ```text
+  pr #77をmain mergeしてレビュー修正してpushして
+  ```
+- **出力サマリ**：
+  - PR #77 の head `feat/feed-play-to-nowplaying` を確認し、最新 `origin/main` を merge
+  - `ContentView` / `GlobalMiniPlayerView` / `MusicFeedView` の conflict を main の playback / MusicKit / Functions 連携を優先して解消
+  - `FeedPostCard` と `MiniSongCard` を `Views/MusicFeed/` 配下の別ファイルへ分割
+  - `MiniSongCard` のネスト Button を廃止し、カード全体は `onTapGesture`、再生アイコンは `highPriorityGesture` で扱う構成に変更
+  - `GlobalMiniPlayerView` は非 Button コンテナ + 内側再生 Button の構成を維持し、forward の無効ボタンを削除
+- **評価**：採用
+- **採用 / 不採用の理由**：最新 main の実装を壊さず、PR #77 のレビュー指摘を UI 構造とファイル分割の両面で解消できたため。
+
+### #049 PR #80 conflict 解消
+
+- **時刻**：22:18
+- **ツール**：Codex / GitHub CLI / xcodebuild
+- **目的**：PR #80 `update/home` に最新 `main` を merge し、残っている conflict を解消して push する
+- **プロンプト**：
+  ```text
+  pr #80のconflictをなおしてpush
+  ```
+- **出力サマリ**：
+  - PR #80 の head branch が `update/home` で `DIRTY` 状態であることを確認
+  - 最新 `origin/main` を merge し、`AI_USAGE_LOG.md` と `MiniSongCard.swift` の conflict を解消
+  - `MiniSongCard` は main 側の非 Button + `highPriorityGesture` 実装を採用し、PR #80 の highlighted comment / Home dashboard 経路は維持
+  - `AI_USAGE_LOG.md` は PR #80 / PR #89 / PR #77 の作業ログをすべて残して追記
+- **評価**：採用
+- **採用 / 不採用の理由**：PR #80 の Home dashboard 差分を残しながら、最新 main の review fix 済み UI コンポーネントとログを統合できたため。
 
 ---
 

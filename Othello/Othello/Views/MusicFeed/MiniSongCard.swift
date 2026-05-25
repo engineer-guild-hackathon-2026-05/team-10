@@ -18,18 +18,28 @@ struct MiniSongCard: View {
                     .foregroundStyle(.gray)
             }
             Spacer()
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isPlaying.toggle()
-                }
-                onTap()
-            } label: {
-                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-            }
+            playbackGlyph
         }
         .padding(12)
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .onTapGesture {
+            onTap()
+        }
+    }
+
+    private var playbackGlyph: some View {
+        Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+            .font(.system(size: 36))
+            .foregroundStyle(LinearGradient(colors: song.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+            .contentShape(Circle())
+            .highPriorityGesture(
+                TapGesture().onEnded {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isPlaying.toggle()
+                    }
+                    onTap()
+                }
+            )
     }
 }
