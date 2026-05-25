@@ -1555,6 +1555,25 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：表示 metadata と Firestore lookup key を分離することで、MusicKit の英語タイトル解決後も既存 Howカードの曲別取得を壊さず、不要になった seed write も削除できたため。
 
+### #005 歌詞タップからの Howカード投稿
+
+- **時刻**：01:55
+- **ツール**：Codex / xcodebuild
+- **目的**：NowPlaying の歌詞行をタップした時に、選択歌詞に対応する範囲で感想を Howカード投稿できるようにする
+- **プロンプト**：
+  ```text
+  歌詞をタップした時に感想を投稿できる機能をつけて欲しい。以前はあったと思うんだけど、消えてしまった。歌詞の対応範囲がsong_start, song_endに対応するといいな、と思っているんだけど、時間対応していない場合は文字数とかからいい感じにカウントして、対応箇所として表示したい。トンマナを守っていい感じのUIとして実装して欲しいです
+  ```
+- **出力サマリ**：
+  - 最新 `origin/main` から `feat/lyrics-how-card-comments` ブランチを作成
+  - NowPlaying の歌詞行を tappable にし、選択歌詞・対応範囲・推定フラグを持つ `LyricHowCardDraft` を作成
+  - 同期歌詞では `TimedLyricLine.startTime/endTime`、静的歌詞では行ごとの非空白文字数比から `song_start/song_end` を推定
+  - 選択歌詞、範囲、コメント入力、投稿状態を表示する sheet UI を追加し、`FirebaseAPI.createHowCard` で投稿するよう実装
+  - functional design と steering docs を更新
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：既存 NowPlaying の暗いミニマルなトンマナを保ちつつ、歌詞を起点に曲中区間へ直接コメントを紐づけられるため。
+
 ---
 
 ## 全体振り返り
