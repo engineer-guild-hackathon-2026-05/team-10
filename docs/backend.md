@@ -148,6 +148,7 @@ service cloud.firestore {
 | `POST /how-cards` | ✅ 必須 |
 | `PATCH /how-cards/:id` | ✅ 必須 |
 | `POST /how-cards/:id/like` | ✅ 必須 |
+| `GET /recommended-comments` | ✅ 必須 |
 | `GET /users/me` | ✅ 必須 |
 | `PUT /users/me` | ✅ 必須 |
 | `GET /health` | ❌ 不要 |
@@ -314,6 +315,29 @@ iOS は Firestore に直接アクセスせず、Firebase ID トークン付き�
 ```
 
 `POST /how-cards/:id/like` は同じユーザーの二重いいねを防ぎ、`{ "likes": 4 }` を返す。
+
+### GET /recommended-comments
+
+Home dashboard 向けのおすすめコメント一覧。`how-cards` から新しいコメントといいね数の多いコメントを候補として取得し、Functions 側でスコアリングして返す。`limit` は 1〜50、未指定時は 12。
+
+```json
+{
+  "comments": [
+    {
+      "id": "card789",
+      "comment": "このベースラインの入りが好き",
+      "song_start": 78.4,
+      "song_end": 84.2,
+      "song_id": "1704093812",
+      "itunes_id": "1704093812",
+      "artist_id": "ado",
+      "user_id": "uid123",
+      "likes": 12,
+      "created_at": "2026-05-25T12:00:00.000Z"
+    }
+  ]
+}
+```
 
 ---
 

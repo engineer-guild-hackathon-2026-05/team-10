@@ -49,6 +49,7 @@ functions/
 │   └── firestore.js          # Firestore 読み書き（how-cards / users）
 ├── routes/
 │   ├── how-cards.js          # /how-cards 配下
+│   ├── recommended-comments.js # /recommended-comments
 │   └── users.js              # /users/me
 ├── package.json
 └── .gitignore
@@ -124,6 +125,7 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
 | PATCH | `/how-cards/:id` | ✅ | 自分のHowカードコメント更新 |
 | POST | `/how-cards/:id/like` | ✅ | いいね（冪等、二重防止） |
+| GET | `/recommended-comments` | ✅ | Home dashboard 向けおすすめコメント一覧 |
 | GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
 | PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
 
@@ -194,6 +196,34 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "artist_id": "ado",
       "user_id": "uid123",
       "likes": 3
+    }
+  ]
+}
+```
+
+### `GET /recommended-comments`
+
+Home dashboard 向けのおすすめ Howカードコメント一覧を返す。`created_at` が新しいコメントと `likes` が多いコメントから候補を取り、Functions 側でスコアリングして混ぜる。
+
+`limit` は 1〜50。未指定時は 12 件。
+
+**レスポンス**
+
+```json
+{
+  "comments": [
+    {
+      "id": "card456",
+      "comment": "...",
+      "song_start": 78.4,
+      "song_end": 84.2,
+      "song_id": "1704093812",
+      "itunes_id": "1704093812",
+      "song_slug": "ado-show",
+      "artist_id": "ado",
+      "user_id": "uid123",
+      "likes": 12,
+      "created_at": "2026-05-25T12:00:00.000Z"
     }
   ]
 }

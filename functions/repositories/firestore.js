@@ -44,6 +44,28 @@ async function getHowCard(cardId) {
   return serializeHowCard(doc.id, doc.data());
 }
 
+async function getRecommendedHowCards({ limit = 12 } = {}) {
+  const safeLimit = clampLimit(limit, 1, 50);
+  const sampleLimit = Math.min(100, Math.max(safeLimit * 4, 24));
+  const collection = db().collection('how-cards');
+  const [recentSnapshot, likedSnapshot] = await Promise.all([
+    collection.orderBy('created_at', 'desc').limit(sampleLimit).get(),
+    collection.orderBy('likes', 'desc').limit(sampleLimit).get(),
+  ]);
+
+  const candidates = new Map();
+  for (const doc of [...recentSnapshot.docs, ...likedSnapshot.docs]) {
+    if (!candidates.has(doc.id)) {
+      candidates.set(doc.id, serializeHowCard(doc.id, doc.data()));
+    }
+  }
+
+  return [...candidates.values()]
+    .filter(Boolean)
+    .sort(compareRecommendedHowCards)
+    .slice(0, safeLimit);
+}
+
 async function updateHowCard({ uid, cardId, comment, songStart, songEnd, songId, artistId, itunesId, songSlug }) {
   const ref = db().collection('how-cards').doc(cardId);
 
@@ -220,6 +242,39 @@ function isFirestoreTimestamp(value) {
   return Boolean(value && typeof value.toDate === 'function');
 }
 
+function compareRecommendedHowCards(left, right) {
+  const scoreDiff = recommendationScore(right) - recommendationScore(left);
+  if (scoreDiff !== 0) return scoreDiff;
+  return timestampMillis(right.created_at) - timestampMillis(left.created_at);
+}
+
+function recommendationScore(card) {
+  const likes = Math.max(0, Number.isInteger(card.likes) ? card.likes : 0);
+  const ageHours = ageHoursFromNow(card.created_at);
+  const recency = ageHours == null ? 0 : Math.exp(-ageHours / 72);
+  const freshBoost = ageHours != null && ageHours <= 24 ? 1.2 : 0;
+
+  return Math.log2(likes + 1) * 2.4 + recency * 3 + freshBoost;
+}
+
+function ageHoursFromNow(value) {
+  const millis = timestampMillis(value);
+  if (!millis) return null;
+  return Math.max(0, (Date.now() - millis) / 36e5);
+}
+
+function timestampMillis(value) {
+  if (!value) return 0;
+  const millis = Date.parse(value);
+  return Number.isFinite(millis) ? millis : 0;
+}
+
+function clampLimit(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.min(max, Math.max(min, Math.floor(number)));
+}
+
 function throwFirestoreError(message, code) {
   const error = new Error(message);
   error.code = code;
@@ -230,6 +285,7 @@ module.exports = {
   createHowCard,
   getHowCards,
   getHowCard,
+  getRecommendedHowCards,
   updateHowCard,
   likeHowCard,
   upsertUserProfile,

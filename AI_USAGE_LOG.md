@@ -673,6 +673,23 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：既存APIとの重複を避け、おすすめ表示専用Functionとして責務・返却形式・初期おすすめロジック・受け入れ条件を明確化できたため。
 
+### #035 おすすめコメント取得Function実装
+
+- **時刻**：21:10
+- **ツール**：Codex / Firebase CLI / node
+- **目的**：Home dashboard 向けにおすすめコメント一覧を返す Firebase Function を追加してデプロイする
+- **プロンプト**：
+  ```text
+  firebase cliが繋がったので、おすすめコメントを取得 というfunctionを追加してデプロイしてしまっていい。いい感じに新しかったり、いいね数が多かったりする物をピックアップすると良い。
+  ```
+- **出力サマリ**：
+  - `GET /recommended-comments` を追加し、Firebase ID token 認証付きで `{ comments: [...] }` を返すようにした
+  - Firestore の `created_at desc` と `likes desc` の候補を merge し、recency と likes を合わせたスコアで並び替える実装にした
+  - 既存 `serializeHowCard` を使い、`song_id` contract 修正を維持したままおすすめ一覧に反映
+  - Functions docs と steering docs を更新
+- **評価**：採用
+- **採用 / 不採用の理由**：追加 index に依存せず、最新コメントと人気コメントを混ぜた dashboard 用 API を小さな Functions 差分で追加できたため。
+
 ---
 
 ## Day 3（2026-05-26）
