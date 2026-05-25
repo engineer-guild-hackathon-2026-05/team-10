@@ -49,8 +49,6 @@ struct NowPlayingView: View {
         }
     }
 
-    // MARK: - Main Content
-
     private var mainContent: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
@@ -513,8 +511,6 @@ struct NowPlayingView: View {
         guard playback.isPlaying else { return .neutral }
         return airPods.recentInteractionIntensity > 0.28 ? .groove : .neutral
     }
-
-    // MARK: - フッター
 
     private var nowPlayingFooter: some View {
         HStack(spacing: 0) {
