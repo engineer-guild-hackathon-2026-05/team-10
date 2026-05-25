@@ -13,16 +13,17 @@ final class ClipCreationViewModel: ObservableObject {
     @Published var isPlaying: Bool = false
     @Published var currentTime: Double = 0.0
     @Published var clipStart: Double = 5.0
-    @Published var clipEnd: Double = 46.0
+    @Published var clipEnd: Double = 35.0
     @Published var selectedTab: ClipTab = .clip
 
-    let totalDuration: Double = 105.0  // 1:45 = 105秒
+    let totalDuration: Double
     let waveformData: [CGFloat]
 
     private var timerCancellable: AnyCancellable?
 
     init(song: Song) {
         self.song = song
+        self.totalDuration = Double(song.durationSeconds)
         var seed: UInt64 = 42
         self.waveformData = (0..<80).map { _ in
             seed = seed &* 6364136223846793005 &+ 1442695040888963407
@@ -51,8 +52,10 @@ final class ClipCreationViewModel: ObservableObject {
     }
 
     func updateClipRange(startRatio: Double, endRatio: Double) {
-        clipStart = startRatio * totalDuration
-        clipEnd = endRatio * totalDuration
+        let s = min(max(startRatio, 0), 1)
+        let e = min(max(endRatio, 0), 1)
+        clipStart = min(s, e) * totalDuration
+        clipEnd = max(s, e) * totalDuration
     }
 
     var clipDurationSeconds: Int {

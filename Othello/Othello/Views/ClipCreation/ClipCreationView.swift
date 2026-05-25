@@ -82,7 +82,6 @@ struct ClipCreationView: View {
 
     private var playerControls: some View {
         HStack(spacing: 14) {
-            // 30秒カウンター（枠線付き円）
             ZStack {
                 Circle()
                     .stroke(Color.white.opacity(0.4), lineWidth: 1.5)
@@ -93,40 +92,35 @@ struct ClipCreationView: View {
                     .foregroundStyle(.white)
             }
 
-            // シークバー
             GeometryReader { geo in
                 let w = geo.size.width
                 let progress = viewModel.currentTime / viewModel.totalDuration
+                let startX = CGFloat(viewModel.clipStart / viewModel.totalDuration) * w
+                let endX = CGFloat(viewModel.clipEnd / viewModel.totalDuration) * w
                 ZStack(alignment: .leading) {
-                    // トラック背景
                     Capsule()
                         .fill(Color.white.opacity(0.2))
                         .frame(height: 3)
-                    // 進捗
                     Capsule()
                         .fill(Color.white)
                         .frame(width: w * progress, height: 3)
-                    // 現在位置つまみ
                     Circle()
                         .fill(Color.white)
                         .frame(width: 16, height: 16)
                         .offset(x: w * progress - 8)
-                    // クリップ開始マーカー
                     Circle()
                         .fill(Color(red: 1.0, green: 0.25, blue: 0.5))
                         .frame(width: 11, height: 11)
-                        .offset(x: w * 0.33 - 5.5)
-                    // クリップ終了マーカー
+                        .offset(x: startX - 5.5)
                     Circle()
                         .fill(Color(red: 1.0, green: 0.25, blue: 0.5))
                         .frame(width: 11, height: 11)
-                        .offset(x: w * 0.60 - 5.5)
+                        .offset(x: endX - 5.5)
                 }
                 .frame(maxHeight: .infinity)
             }
             .frame(height: 20)
 
-            // 再生/一時停止ボタン（白塗り大円）
             Button { viewModel.togglePlayback() } label: {
                 ZStack {
                     Circle()

@@ -62,16 +62,22 @@ struct ForYouView: View {
             ForEach(Array(stride(from: 0, to: artists.count, by: 3)), id: \.self) { base in
                 VStack(spacing: 12) {
                     if base < artists.count {
-                        ArtistLargeCard(artist: artists[base])
-                            .onTapGesture { selectedArtist = artists[base] }
+                        Button { selectedArtist = artists[base] } label: {
+                            ArtistLargeCard(artist: artists[base])
+                        }
+                        .buttonStyle(.plain)
                     }
                     if base + 1 < artists.count {
                         HStack(spacing: 12) {
-                            ArtistMediumCard(artist: artists[base + 1])
-                                .onTapGesture { selectedArtist = artists[base + 1] }
+                            Button { selectedArtist = artists[base + 1] } label: {
+                                ArtistMediumCard(artist: artists[base + 1])
+                            }
+                            .buttonStyle(.plain)
                             if base + 2 < artists.count {
-                                ArtistMediumCard(artist: artists[base + 2])
-                                    .onTapGesture { selectedArtist = artists[base + 2] }
+                                Button { selectedArtist = artists[base + 2] } label: {
+                                    ArtistMediumCard(artist: artists[base + 2])
+                                }
+                                .buttonStyle(.plain)
                             } else {
                                 Color.clear
                             }

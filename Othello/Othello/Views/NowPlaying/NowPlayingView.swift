@@ -304,6 +304,8 @@ private struct ClipCreationInlineView: View {
             GeometryReader { geo in
                 let w = geo.size.width
                 let progress = viewModel.currentTime / viewModel.totalDuration
+                let startX = CGFloat(viewModel.clipStart / viewModel.totalDuration) * w
+                let endX = CGFloat(viewModel.clipEnd / viewModel.totalDuration) * w
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color.white.opacity(0.2))
@@ -318,11 +320,11 @@ private struct ClipCreationInlineView: View {
                     Circle()
                         .fill(Color(red: 1.0, green: 0.25, blue: 0.5))
                         .frame(width: 10, height: 10)
-                        .offset(x: w * 0.33 - 5)
+                        .offset(x: startX - 5)
                     Circle()
                         .fill(Color(red: 1.0, green: 0.25, blue: 0.5))
                         .frame(width: 10, height: 10)
-                        .offset(x: w * 0.60 - 5)
+                        .offset(x: endX - 5)
                 }
                 .frame(maxHeight: .infinity)
             }

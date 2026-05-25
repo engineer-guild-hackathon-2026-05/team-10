@@ -7,7 +7,7 @@ enum ArtistCardSize {
 
 @MainActor
 final class ForYouViewModel: ObservableObject {
-    @Published var artists: [Artist] = Artist.mockArtists()
+    @Published var artists: [Artist] = Artist.mock
     @Published var searchQuery: String = ""
 
     var filteredArtists: [Artist] {
