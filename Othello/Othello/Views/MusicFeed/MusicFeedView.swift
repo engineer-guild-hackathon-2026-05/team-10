@@ -7,6 +7,8 @@ struct MusicFeedView: View {
     @ObservedObject private var playback: PlaybackViewModel
     @StateObject private var viewModel: MusicFeedViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var replyTarget: FeedPost?
+    @State private var replyCountsByCardID: [String: Int] = [:]
 
     init(
         artist: Artist,
@@ -98,9 +100,11 @@ struct MusicFeedView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if let highlightedComment {
-                    HighlightedHowCardCommentCard(item: highlightedComment) {
+                    HighlightedHowCardCommentCard(item: highlightedComment, replyCount: currentReplyCount(for: highlightedComment.howCard), onSongTap: {
                         play(comment: highlightedComment)
-                    }
+                    }, onReply: {
+                        replyTarget = FeedPost(howCard: highlightedComment.howCard, song: highlightedComment.song)
+                    })
                 }
 
                 if viewModel.isLoading {
@@ -118,11 +122,22 @@ struct MusicFeedView: View {
                         play(post: post)
                     }, onLike: {
                         like(post: post)
+                    }, onReply: {
+                        replyTarget = post
                     })
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+        }
+        .sheet(item: $replyTarget) { post in
+            HowCardRepliesView(post: post) { replyCount in
+                if let cardID = post.cardID {
+                    updateReplyCount(cardID: cardID, replyCount: replyCount)
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -162,6 +177,18 @@ struct MusicFeedView: View {
         Task {
             try? await FirebaseAPI.shared.incrementGoods(cardID: cardID)
         }
+    }
+
+    private func currentReplyCount(for howCard: HowCardComment) -> Int {
+        guard let cardID = howCard.documentID else {
+            return howCard.replyCount
+        }
+        return replyCountsByCardID[cardID] ?? howCard.replyCount
+    }
+
+    private func updateReplyCount(cardID: String, replyCount: Int) {
+        viewModel.updateReplyCount(cardID: cardID, replyCount: replyCount)
+        replyCountsByCardID[cardID] = replyCount
     }
 }
 

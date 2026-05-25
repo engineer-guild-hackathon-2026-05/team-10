@@ -8,6 +8,7 @@
 |---|---|---|
 | ユーザー情報 | Firestore | Firebase Auth uid と表示名を保存。Functions の `onUserSignup` と `PUT /users/me` で同期 |
 | Howカードコメント | Firestore | 曲中区間に紐づくコメント、いいね、投稿者表示名を扱う |
+| Howカード返信 | Firestore | Howカードへの会話をサブコレクションとして保存する |
 | 認証状態 | Firebase Auth / iOS Keychain | Firebase SDK がセッションを保持 |
 | 歌詞取得設定 | `ENV.plist` | Musixmatch API key など、git 管理しない値を端末側で注入 |
 
@@ -34,15 +35,22 @@ how-cards/{cardId}
   artist_id:    string       // アーティスト ID
   user_id:      string       // Firebase Auth uid
   likes:        integer      // いいね数
+  reply_count:  integer      // 返信数
   created_at:   Timestamp
   updated_at:   Timestamp | absent
 
 how-cards/{cardId}/liked-by/{uid}
   user_id:      string       // Firebase Auth uid
   liked_at:     Timestamp
+
+how-cards/{cardId}/replies/{replyId}
+  body:         string       // 返信本文
+  user_id:      string       // Firebase Auth uid
+  created_at:   Timestamp
+  updated_at:   Timestamp | absent
 ```
 
-`updated_at` は作成時には存在しない場合がある。`PATCH /how-cards/:id` または `POST /how-cards/:id/like` で更新される。
+`updated_at` は作成時には存在しない場合がある。`PATCH /how-cards/:id`、`POST /how-cards/:id/like`、`POST /how-cards/:id/replies` で親 Howカードが更新される。
 
 ### `users`
 
@@ -95,10 +103,29 @@ users/{uid}
   "user_id": "uid123",
   "user_name": "Atsushi",
   "likes": 3,
+  "reply_count": 2,
   "created_at": "2026-05-25T12:00:00.000Z",
   "updated_at": "2026-05-25T12:05:00.000Z"
 }
 ```
+
+## Howカード返信 API データ構造
+
+返信は `how-cards/{cardId}/replies/{replyId}` に保存する。iOS は Firestore に直接書き込まず、`GET /how-cards/:id/replies` と `POST /how-cards/:id/replies` を使う。
+
+```json
+{
+  "id": "reply123",
+  "how_card_id": "card456",
+  "body": "その聴き方わかる",
+  "user_id": "uid123",
+  "user_name": "Atsushi",
+  "created_at": "2026-05-26T12:00:00.000Z",
+  "updated_at": null
+}
+```
+
+親 Howカードには一覧表示用の `reply_count` を非正規化して持つ。返信作成時は Functions の transaction で reply document 作成と `reply_count` 更新を同時に行う。
 
 ---
 

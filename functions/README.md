@@ -122,9 +122,11 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
 | GET | `/how-cards` | ✅ | Howカードコメント一覧（デフォルト最新50件、最大250件） |
 | GET | `/how-cards?song_id=...` | ✅ | 曲ごとのHowカードコメント一覧 |
 | GET | `/how-cards/:id` | ✅ | Howカードコメント取得 |
+| GET | `/how-cards/:id/replies` | ✅ | Howカードへの返信一覧 |
 | POST | `/how-cards` | ✅ | Howカードコメント作成 |
 | PATCH | `/how-cards/:id` | ✅ | 自分のHowカードコメント更新 |
 | POST | `/how-cards/:id/like` | ✅ | いいね（冪等、二重防止） |
+| POST | `/how-cards/:id/replies` | ✅ | Howカードへ返信 |
 | GET | `/recommended-comments` | ✅ | Home dashboard 向けおすすめコメント一覧 |
 | GET | `/users/me` | ✅ | 自分のユーザー情報取得 |
 | PUT | `/users/me` | ✅ | 自分のユーザー情報作成・更新 |
@@ -200,13 +202,57 @@ iOS でテストユーザーを新規サインアップ → Firebase Console の
       "artist_id": "ado",
       "user_id": "uid123",
       "user_name": "Atsushi",
-      "likes": 3
+      "likes": 3,
+      "reply_count": 2
     }
   ]
 }
 ```
 
 `user_name` は `users/{user_id}.display_name` から Admin SDK で参照した表示用フィールド。メールアドレスなどの user 詳細は返さない。
+
+### `GET /how-cards/:id/replies`
+
+Howカードに付いた返信を `created_at` 昇順で返す。`limit` は 1〜100。未指定時は 50 件。
+
+```json
+{
+  "replies": [
+    {
+      "id": "reply123",
+      "how_card_id": "card456",
+      "body": "その聴き方わかる",
+      "user_id": "uid123",
+      "user_name": "Atsushi",
+      "created_at": "2026-05-26T12:00:00.000Z",
+      "updated_at": null
+    }
+  ]
+}
+```
+
+### `POST /how-cards/:id/replies`
+
+Howカードに返信を作成する。本文は 1〜180 文字。親 Howカードの `reply_count` を transaction で更新する。
+
+```json
+{ "body": "ここの声の掠れ方、同じところで止まりました" }
+```
+
+```json
+{
+  "reply": {
+    "id": "reply123",
+    "how_card_id": "card456",
+    "body": "ここの声の掠れ方、同じところで止まりました",
+    "user_id": "uid123",
+    "user_name": "Atsushi",
+    "created_at": null,
+    "updated_at": null
+  },
+  "reply_count": 3
+}
+```
 
 ### `GET /recommended-comments`
 
@@ -292,12 +338,19 @@ how-cards/{cardId}
   artist_id: string
   user_id: string
   likes: number
+  reply_count: number
   created_at: timestamp
   updated_at: timestamp | absent
 
 how-cards/{cardId}/liked-by/{uid}
   user_id: string
   liked_at: timestamp
+
+how-cards/{cardId}/replies/{replyId}
+  body: string
+  user_id: string
+  created_at: timestamp
+  updated_at: timestamp | absent
 ```
 
 ### `song_id` 契約と migration

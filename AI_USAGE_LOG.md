@@ -1555,6 +1555,24 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：表示 metadata と Firestore lookup key を分離することで、MusicKit の英語タイトル解決後も既存 Howカードの曲別取得を壊さず、不要になった seed write も削除できたため。
 
+### #005 Howカード返信機能の実装
+
+- **時刻**：06:31
+- **ツール**：Codex / node / xcodebuild
+- **目的**：Howカード投稿に返信する画面・Functions API・Firestore 設計を追加し、投稿から会話できるようにする
+- **プロンプト**：
+  ```text
+  投稿でhow cardに返信する画面・機能が全くないと思う。firebase ,functionsの設計から始めて、ここを完成させて。
+  ```
+- **出力サマリ**：
+  - `how-cards/{cardId}/replies/{replyId}` と親 `reply_count` の Firestore 設計を作成
+  - Functions に `GET /how-cards/:id/replies` と `POST /how-cards/:id/replies` を追加
+  - 返信作成を transaction 化し、親 Howカードの存在確認・返信保存・`reply_count` 更新を一体化
+  - iOS に `HowCardReply` / reply API / 返信 sheet を追加し、MusicFeed の吹き出しから返信一覧・投稿を開けるようにした
+  - backend / data-model / architecture / functions README と steering docs を更新
+- **評価**：採用
+- **採用 / 不採用の理由**：Howカード本体の投稿・いいね導線を崩さず、返信をサブコレクションに分離して会話機能を追加できたため。
+
 ---
 
 ## 全体振り返り

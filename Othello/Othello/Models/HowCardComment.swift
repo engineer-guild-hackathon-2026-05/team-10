@@ -10,6 +10,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
     var userID: String
     var userName: String?
     var goods: Int
+    var replyCount: Int
 
     var id: String {
         documentID ?? "\(songID)-\(songStart)-\(songEnd)-\(artistID)-\(userID)"
@@ -24,7 +25,8 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         artistID: String,
         userID: String = UUID().uuidString,
         userName: String? = nil,
-        goods: Int = 0
+        goods: Int = 0,
+        replyCount: Int = 0
     ) {
         self.documentID = documentID
         self.comment = comment
@@ -35,6 +37,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         self.userID = userID
         self.userName = userName
         self.goods = goods
+        self.replyCount = replyCount
     }
 
     enum CodingKeys: String, CodingKey {
@@ -49,6 +52,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         case displayName = "display_name"
         case goods
         case likes
+        case replyCount = "reply_count"
     }
 
     init(from decoder: Decoder) throws {
@@ -65,6 +69,7 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         self.goods = try container.decodeIfPresent(Int.self, forKey: .goods)
             ?? container.decodeIfPresent(Int.self, forKey: .likes)
             ?? 0
+        self.replyCount = try container.decodeIfPresent(Int.self, forKey: .replyCount) ?? 0
     }
 
     func encode(to encoder: Encoder) throws {
@@ -78,5 +83,6 @@ struct HowCardComment: Codable, Equatable, Identifiable {
         try container.encode(userID, forKey: .userID)
         try container.encodeIfPresent(userName, forKey: .userName)
         try container.encode(goods, forKey: .goods)
+        try container.encode(replyCount, forKey: .replyCount)
     }
 }

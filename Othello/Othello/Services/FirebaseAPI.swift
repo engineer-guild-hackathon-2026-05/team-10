@@ -69,6 +69,23 @@ final class FirebaseAPI {
         )
     }
 
+    func fetchHowCardReplies(cardID: String, limit: Int = 50) async throws -> [HowCardReply] {
+        let response: HowCardRepliesResponseEnvelope = try await send(
+            path: "how-cards/\(cardID)/replies",
+            method: "GET",
+            queryItems: [URLQueryItem(name: "limit", value: String(limit))]
+        )
+        return response.replies
+    }
+
+    func createHowCardReply(cardID: String, body: String) async throws -> HowCardReplyResponseEnvelope {
+        try await send(
+            path: "how-cards/\(cardID)/replies",
+            method: "POST",
+            body: HowCardReplyPayload(body: body)
+        )
+    }
+
     @discardableResult
     func upsertUser(_ user: UserProfile) async throws -> UserProfile {
         let response: UserResponseEnvelope = try await send(

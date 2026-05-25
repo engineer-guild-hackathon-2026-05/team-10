@@ -102,6 +102,7 @@ HealthKit / 心拍連携は現行実装から削除済み。
 
 - Firebase ID token を検証する。
 - Howカードコメントの作成・取得・更新・いいねを処理する。
+- Howカードへの返信一覧取得・作成を処理する。
 - ユーザー情報の取得・更新を処理する。
 - Firestore への直接 client access を避け、Admin SDK 経由に集約する。
 
@@ -130,6 +131,7 @@ team-10/
 - `users/{uid}`
 - `how-cards/{cardId}`
 - `how-cards/{cardId}/liked-by/{uid}`
+- `how-cards/{cardId}/replies/{replyId}`
 
 `sessions` は現行 Functions では作成しない。
 

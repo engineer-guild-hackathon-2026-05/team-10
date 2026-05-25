@@ -89,6 +89,56 @@ async function getRecommendedHowCards({ limit = 12 } = {}) {
   return attachUserNames(howCards);
 }
 
+async function getHowCardReplies({ cardId, limit = 50 } = {}) {
+  const cardRef = db().collection('how-cards').doc(cardId);
+  const cardDoc = await cardRef.get();
+  if (!cardDoc.exists || !isHowCardComment(cardDoc.data())) return null;
+
+  const snapshot = await cardRef
+    .collection('replies')
+    .orderBy('created_at', 'asc')
+    .limit(clampLimit(limit, 1, 100))
+    .get();
+
+  const replies = snapshot.docs
+    .map(doc => serializeHowCardReply(doc.id, cardId, doc.data()))
+    .filter(Boolean);
+
+  return attachReplyUserNames(replies);
+}
+
+async function createHowCardReply({ cardId, uid, body }) {
+  const cardRef = db().collection('how-cards').doc(cardId);
+  const replyRef = cardRef.collection('replies').doc();
+  let replyCount = 0;
+  let replyData = null;
+
+  await db().runTransaction(async transaction => {
+    const cardDoc = await transaction.get(cardRef);
+    if (!cardDoc.exists || !isHowCardComment(cardDoc.data())) {
+      throwFirestoreError('Howカードが見つかりません', 'not-found');
+    }
+
+    replyCount = currentReplyCount(cardDoc.data()) + 1;
+    replyData = {
+      body,
+      user_id: uid,
+      created_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp(),
+    };
+
+    transaction.set(replyRef, replyData);
+    transaction.update(cardRef, {
+      reply_count: replyCount,
+      updated_at: FieldValue.serverTimestamp(),
+    });
+  });
+
+  const reply = serializeHowCardReply(replyRef.id, cardId, { ...replyData, created_at: null });
+  const [withUserName] = await attachReplyUserNames([reply]);
+  return { reply: withUserName, replyCount };
+}
+
 async function updateHowCard({ uid, cardId, comment, songStart, songEnd, songId, artistId, itunesId, songSlug }) {
   const ref = db().collection('how-cards').doc(cardId);
 
@@ -207,6 +257,7 @@ function serializeHowCard(id, data) {
     artist_id: data.artist_id,
     user_id: data.user_id,
     likes: currentLikeCount(data),
+    reply_count: currentReplyCount(data),
     user_name: data.user_name ?? data.display_name ?? data.displayName ?? null,
     created_at: timestampToISOString(data.created_at),
     updated_at: timestampToISOString(data.updated_at),
@@ -232,15 +283,7 @@ async function attachUserNames(howCards) {
   const userIds = [...new Set(howCards.map(card => card.user_id).filter(Boolean))];
   if (userIds.length === 0) return howCards;
 
-  const snapshots = await Promise.all(
-    userIds.map(userId => db().collection('users').doc(userId).get())
-  );
-  const userNames = new Map();
-  snapshots.forEach((snapshot, index) => {
-    if (!snapshot.exists) return;
-    const displayName = displayNameFromUserData(snapshot.data());
-    if (displayName) userNames.set(userIds[index], displayName);
-  });
+  const userNames = await userNamesById(userIds);
 
   return howCards.map(card => ({
     ...card,
@@ -254,6 +297,30 @@ async function attachUserName(howCard) {
   return withUserName;
 }
 
+async function attachReplyUserNames(replies) {
+  const userIds = [...new Set(replies.map(reply => reply.user_id).filter(Boolean))];
+  if (userIds.length === 0) return replies;
+
+  const userNames = await userNamesById(userIds);
+  return replies.map(reply => ({
+    ...reply,
+    user_name: userNames.get(reply.user_id) ?? reply.user_name ?? null,
+  }));
+}
+
+async function userNamesById(userIds) {
+  const snapshots = await Promise.all(
+    userIds.map(userId => db().collection('users').doc(userId).get())
+  );
+  const userNames = new Map();
+  snapshots.forEach((snapshot, index) => {
+    if (!snapshot.exists) return;
+    const displayName = displayNameFromUserData(snapshot.data());
+    if (displayName) userNames.set(userIds[index], displayName);
+  });
+  return userNames;
+}
+
 function currentLikeCount(data) {
   const likes = Number.isInteger(data.likes) ? data.likes : null;
   const goods = Number.isInteger(data.goods) ? data.goods : null;
@@ -261,6 +328,32 @@ function currentLikeCount(data) {
   if (likes !== null) return likes;
   if (goods !== null) return goods;
   return 0;
+}
+
+function currentReplyCount(data) {
+  return Number.isInteger(data.reply_count) ? Math.max(0, data.reply_count) : 0;
+}
+
+function serializeHowCardReply(id, cardId, data) {
+  if (!isHowCardReply(data)) return null;
+  return {
+    id,
+    how_card_id: cardId,
+    body: data.body,
+    user_id: data.user_id,
+    user_name: data.user_name ?? data.display_name ?? data.displayName ?? null,
+    created_at: timestampToISOString(data.created_at),
+    updated_at: timestampToISOString(data.updated_at),
+  };
+}
+
+function isHowCardReply(data) {
+  return Boolean(
+    data &&
+      typeof data.body === 'string' &&
+      data.body.trim().length > 0 &&
+      typeof data.user_id === 'string'
+  );
 }
 
 function serializeUser(id, data = {}) {
@@ -359,6 +452,8 @@ module.exports = {
   getHowCards,
   getHowCard,
   getRecommendedHowCards,
+  getHowCardReplies,
+  createHowCardReply,
   updateHowCard,
   likeHowCard,
   upsertUserProfile,
