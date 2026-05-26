@@ -12,8 +12,6 @@ struct OnboardingView: View {
                     .tag(0)
                 OnboardingMotionPage(viewModel: viewModel)
                     .tag(1)
-                OnboardingHealthPage(viewModel: viewModel)
-                    .tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .ignoresSafeArea()

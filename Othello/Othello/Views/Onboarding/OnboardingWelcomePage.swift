@@ -43,9 +43,9 @@ struct OnboardingWelcomePage: View {
                     )
                     Divider().overlay(HowTuneDesign.divider)
                     featureRow(
-                        icon: "heart.fill",
-                        title: "心拍で感動を測る",
-                        description: "心拍の変化で、音楽体験の深さを可視化"
+                        icon: "text.bubble.fill",
+                        title: "聴きどころを共有",
+                        description: "好きな瞬間を How カードにして、音楽体験を残す"
                     )
                     Divider().overlay(HowTuneDesign.divider)
                     featureRow(

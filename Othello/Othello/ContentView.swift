@@ -22,7 +22,6 @@ struct ContentView: View {
         TabView(selection: $onboardingVM.currentPage) {
             OnboardingWelcomePage(currentPage: $onboardingVM.currentPage).tag(0)
             OnboardingMotionPage(viewModel: onboardingVM).tag(1)
-            OnboardingHealthPage(viewModel: onboardingVM).tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .ignoresSafeArea()
