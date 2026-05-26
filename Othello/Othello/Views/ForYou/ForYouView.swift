@@ -185,7 +185,7 @@ private struct ArtistDashboardCard: View {
                 endPoint: .bottom
             )
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading) {
                 HStack {
                     Spacer()
                     Image(systemName: "play.fill")
@@ -215,7 +215,7 @@ private struct ArtistDashboardCard: View {
             }
             .padding(16)
         }
-        .frame(width: 236, height: 188)
+        .frame(width: 238, height: 238)
         .compositingGroup()
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
