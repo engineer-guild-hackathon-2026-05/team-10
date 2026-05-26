@@ -6,6 +6,9 @@ struct MusicFeedView: View {
     @StateObject private var viewModel: MusicFeedViewModel
     @State private var clipSong: Song?
     @State private var nowPlayingSong: Song?
+    @State private var isSearching: Bool = false
+    @State private var searchText: String = ""
+    @FocusState private var searchFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
     init(artist: Artist, onSongTap: @escaping (Song) -> Void) {
@@ -19,6 +22,10 @@ struct MusicFeedView: View {
             Color.black.ignoresSafeArea()
             VStack(spacing: 0) {
                 navigationBar
+                if isSearching {
+                    searchBar
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
                 songTabBar
                 feedList
             }
@@ -27,10 +34,13 @@ struct MusicFeedView: View {
         .sheet(item: $clipSong) { song in
             ClipCreationView(song: song)
         }
-        .fullScreenCover(item: $nowPlayingSong) { song in
+        .fullScreenCover(item: $nowPlayingSong, onDismiss: {
+            nowPlayingSong = nil
+        }) { song in
             NowPlayingView(song: song)
         }
         .preferredColorScheme(.dark)
+        .animation(.easeInOut(duration: 0.25), value: isSearching)
     }
 
     private var navigationBar: some View {
@@ -46,23 +56,91 @@ struct MusicFeedView: View {
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
             Spacer()
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.white)
-                .font(.title3)
+            Button {
+                isSearching.toggle()
+                if isSearching {
+                    searchFocused = true
+                } else {
+                    searchText = ""
+                    searchFocused = false
+                }
+            } label: {
+                Image(systemName: isSearching ? "xmark" : "magnifyingglass")
+                    .foregroundStyle(.white)
+                    .font(.title3)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
     }
 
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.gray)
+            TextField("ポストを検索", text: $searchText)
+                .foregroundStyle(.white)
+                .focused($searchFocused)
+                .submitLabel(.search)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.gray)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+
     private var songTabBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
+                artistTabButton
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+                    .frame(width: 1, height: 20)
+                    .padding(.horizontal, 4)
                 ForEach(Array(artist.songs.enumerated()), id: \.element.id) { index, song in
                     songTabButton(index: index, song: song)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+        }
+    }
+
+    private var artistTabButton: some View {
+        let isSelected = viewModel.selectedSongIndex == -1
+        let gradient = LinearGradient(colors: artist.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+        let bgColor: Color = isSelected ? Color.white.opacity(0.12) : Color.clear
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.selectedSongIndex = -1
+            }
+        } label: {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(gradient)
+                        .frame(width: 24, height: 24)
+                    Image(systemName: "music.mic")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                Text(artist.name)
+                    .font(.subheadline)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? .white : Color.gray)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(bgColor, in: Capsule())
         }
     }
 
@@ -165,13 +243,6 @@ private struct FeedPostCard: View {
                             .font(.subheadline)
                             .foregroundStyle(.white)
                     }
-                }
-                HStack(spacing: 6) {
-                    Image(systemName: "bubble.left")
-                        .foregroundStyle(.white)
-                    Text("\(post.commentCount)")
-                        .font(.subheadline)
-                        .foregroundStyle(.white)
                 }
                 Spacer()
                 Image(systemName: "paperplane")

@@ -20,13 +20,20 @@ struct ClipCreationView: View {
                         songInfo
                         playerControls
                         waveformSection
-                        shareButton
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
-                    .padding(.bottom, 110)
+                    .padding(.bottom, 24)
                 }
-                tabSelector
+                .safeAreaInset(edge: .bottom) {
+                    VStack(spacing: 12) {
+                        shareButton
+                            .padding(.horizontal, 24)
+                        tabSelector
+                    }
+                    .padding(.top, 16)
+                    .background(Color.black)
+                }
             }
             .navigationTitle("切り抜きを作成")
             .navigationBarTitleDisplayMode(.inline)
