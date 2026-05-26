@@ -1,16 +1,12 @@
 # HowTune — Engineer Guild Hackathon 2026/05
 
-> **1行ピッチ**：何を聴くかではなく、どう聴いているかでつながる。
-
-AirPods の頭部モーションから「曲中のどこで身体が反応したか」を捉え、歌詞や曲中区間への How コメントで音楽の楽しみ方を言語化。同じ聴き方の人とつながる iOS アプリ。
+> **1行ピッチ**：何を聴くかではなく、どう聴いているかでつながる。音楽が好きで、曲の自分なりの聴き方を持つ人が、同じ聴き方の人とつながる iOS アプリ。
 
 ## スクリーンショット
 
 <!-- README先頭の見栄え兼SNS素材。Day2 終了までに最低1枚は貼る -->
 
-| メイン画面 | 主要機能 |
-|---|---|
-| `docs/screenshot-main.png` を貼る | `docs/screenshot-feature.png` を貼る |
+<img width="750" height="424" alt="image" src="https://github.com/user-attachments/assets/c47cee68-2fb9-47ce-8dd6-3e7ad4c3db8d" />
 
 ## チーム情報
 
@@ -18,45 +14,35 @@ AirPods の頭部モーションから「曲中のどこで身体が反応した
 |---|---|
 | チーム名 | Othello |
 | プロダクト名 | HowTune |
-| 担当メンター | （記入） |
+| 担当メンター | yaginuun |
 
 ### メンバー
 
 | GitHub | 氏名 | 大学 / 学部 | 担当役割 |
 |---|---|---|---|
-| @username | 氏名 | XX大学 XX学部 | PM |
-| @username | 氏名 | XX大学 XX学部 | iOS |
-| @username | 氏名 | XX大学 XX学部 | Backend |
-| @username | 氏名 | XX大学 XX学部 | ML / Design |
-
-担当役割の凡例：**PM** / **iOS** / **Backend** / **ML** / **Design** / その他
+| @AtsushiHosaka | 保坂篤志 | 早稲田大学 基幹理工学部 | iOS |
+| @ozko00 | 小澤洸介 | 東京理科大学 工学部 | iOS/Design |
+| @NicholasEric | Nicholas Eric | 名古屋大学 工学部 | Backend / DB |
+| @au-aii | 田中陽輝 | 東洋大学　総合情報学研究科 | ML / PM |
 
 ## プロダクト概要
 
-既存の音楽サービスは「何を聴くか（What）」でつながる。しかし熱狂が本当に伝わるのは「どう聴いているか（How）」が共有されたときだ。HowTune は AirPods の頭部モーションから曲中の身体反応を検出し、歌詞や区間に対するコメントを「Howカード」として可視化。曲やジャンルではなく、**同じ聴き方をしている人**との出会いを生み出す。
+既存の音楽サービスは「何を聴くか（What）」でつながる。しかし熱狂が本当に伝わるのは「どう聴いているか（How）」が共有されたときだ。HowTune は 歌詞や区間に対するコメントを「Howカード」として可視化。曲やジャンルではなく、**同じ聴き方をしている人**との出会いを生み出す。
 
 ### 解決したい課題
 
-音楽の楽しみ方（How）をうまく言語化できないため、同じ聴き方をしている人と出会えない。
+同じような音楽の聴き方をしている人となかなか出会えない。
 
 ### ターゲットユーザー
 
-- 音楽は好きだが「どこが好きか」を言語化できない一般リスナー
+- 音楽が好きなリスナー
 - 自分の聴き方を発信し、近い価値観の人とつながりたい人
-
-### コア機能
-
-- AirPods 頭部モーションの取得（曲中時刻に同期）
-- 3状態スコア（groove / chill / neutral）の推定
-- 反応地点や歌詞行に紐づく How コメント作成
-- Howカードコメントの保存・編集・いいね
-- 同じ How を持つ人・曲・リスナーの表示
 
 ## 提出ステータス（運営チェック用 — 各 Day 終了時に記入）
 
-- [ ] **Day1 終了時**：テーマ確定（プロダクト名・解決課題・ターゲットを記入済み）
-- [ ] **Day2 終了時**：MVP 動作（実機で動くデモ）
-- [ ] **Day3 終了時**：提出完了（プレゼン資料 URL / デモ動画 URL / AI 活用ログ完成）
+- [x] **Day1 終了時**：テーマ確定（プロダクト名・解決課題・ターゲットを記入済み）
+- [x] **Day2 終了時**：MVP 動作（実機で動くデモ）
+- [x] **Day3 終了時**：提出完了（プレゼン資料 URL / デモ動画 URL / AI 活用ログ完成）
 
 ## 提出物チェックリスト（Day3 12:00 提出〆切）
 
@@ -70,10 +56,10 @@ AirPods の頭部モーションから「曲中のどこで身体が反応した
 
 | 種別 | URL |
 |---|---|
-| デモ（実機 / TestFlight） | （記入） |
-| プレゼン資料 | （Google Slides / Notion / Speakerdeck） |
-| デモ動画 | （YouTube / Loom） |
-| 仕様書（source of truth） | [`docs/frontend-spec.md`](./docs/frontend-spec.md)（Notion ミラー） |
+| デモ（実機 / TestFlight） | https://testflight.apple.com/join/mK7WXTJT |
+| プレゼン資料 | [https://canva.link/g7eobtoh0v7zu0z](https://canva.link/g7eobtoh0v7zu0z) |
+| デモ動画 | [https://youtube.com/shorts/YGX9DLsSwg4](https://youtube.com/shorts/YGX9DLsSwg4), [https://youtube.com/shorts/t9B-z5PbwYY](https://youtube.com/shorts/t9B-z5PbwYY) |
+| 仕様書（source of truth） | [`docs`](./docs) |
 
 ## 技術スタック
 
@@ -90,7 +76,7 @@ AirPods の頭部モーションから「曲中のどこで身体が反応した
 
 | サービス名 | 用途 | プラン | 備考 |
 |---|---|---|---|
-| Apple MusicKit | 楽曲情報・再生位置取得 | — | MVP は MusicKit 前提。Spotify は使用しない |
+| Apple MusicKit | 楽曲情報・再生位置取得 | サブスクリプション | AppleMusicのサブスクリプションが必要 |
 | Musixmatch | 時間同期歌詞または静的歌詞取得 | 要 API key | `ENV.plist` の `MUSIXMATCH_API_KEY` に設定 |
 
 → API キー・秘匿情報は `.env` / `ENV.plist`（`.gitignore` 対象）で管理し、git に含めない。
