@@ -79,7 +79,7 @@ Othello/Othello/
 └── Views/                        # 横断 View
     ├── Auth/                     # LoginView / SignUpView
     ├── Home/                     # HomeView / AirPodsReactiveWaveformView / MetalWaveformRenderer
-    ├── Onboarding/               # OnboardingView / WelcomePage / MotionPage / HealthPage / Components
+    ├── Onboarding/               # OnboardingView / WelcomePage / MusicPage / MotionPage / Components
     ├── ReactionDisplay/          # ReactionDisplayView / RealtimeReactionDisplayView / ReactionAxisBar
     ├── Timeline/                 # ReactionTimelineView / ReactionEventRow / TimelineBar
     └── Community/                # CommunityView

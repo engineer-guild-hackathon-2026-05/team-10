@@ -43,9 +43,9 @@ struct OnboardingWelcomePage: View {
                     )
                     Divider().overlay(HowTuneDesign.divider)
                     featureRow(
-                        icon: "heart.fill",
-                        title: "心拍で感動を測る",
-                        description: "心拍の変化で、音楽体験の深さを可視化"
+                        icon: "music.note",
+                        title: "Apple Music と同期",
+                        description: "曲の再生位置に合わせて、聴きどころを記録"
                     )
                     Divider().overlay(HowTuneDesign.divider)
                     featureRow(

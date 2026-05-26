@@ -10,6 +10,7 @@ final class PlaybackViewModel: ObservableObject {
     @Published private(set) var playbackTime: TimeInterval = 0
     @Published private(set) var isPositionAvailable: Bool = false
     @Published private(set) var authorizationStatus: MusicAuthorization.Status = .notDetermined
+    @Published private(set) var appleMusicAccessStatus: AppleMusicAccessStatus = .notDetermined
     @Published var searchResults: [PlaybackTrack] = []
     @Published var searchQuery: String = ""
     @Published var positionUnavailableAlertShown: Bool = false
@@ -36,11 +37,24 @@ final class PlaybackViewModel: ObservableObject {
             searchResults = []
             return
         }
+
+        guard canUseAppleMusicCatalog else {
+            searchResults = []
+            positionUnavailableMessage = appleMusicAccessStatus.message
+            return
+        }
+
         searchResults = (try? await service.search(query: searchQuery)) ?? []
     }
 
     @discardableResult
     func select(track: PlaybackTrack, initialPlaybackTime: TimeInterval = 0) async -> PlaybackTrack? {
+        guard canUseAppleMusicCatalog else {
+            positionUnavailableMessage = appleMusicAccessStatus.message
+            positionUnavailableAlertShown = true
+            return nil
+        }
+
         try? await service.play(track: track, startingAt: initialPlaybackTime)
         if !service.isPositionAvailable {
             positionUnavailableAlertShown = true
@@ -51,6 +65,12 @@ final class PlaybackViewModel: ObservableObject {
 
     @discardableResult
     func select(song: Song, initialPlaybackTime: TimeInterval = 0) async -> PlaybackTrack? {
+        guard canUseAppleMusicCatalog else {
+            positionUnavailableMessage = appleMusicAccessStatus.message
+            positionUnavailableAlertShown = true
+            return nil
+        }
+
         if let musicKitID = song.musicKitID {
             let track = PlaybackTrack(
                 id: MusicItemID(rawValue: musicKitID),
@@ -98,6 +118,14 @@ final class PlaybackViewModel: ObservableObject {
         service
     }
 
+    var canUseAppleMusicCatalog: Bool {
+        appleMusicAccessStatus.canUseCatalogPlayback
+    }
+
+    var shouldShowAppleMusicAccessNotice: Bool {
+        appleMusicAccessStatus.shouldShowNotice
+    }
+
     // MARK: - Private
 
     private func bindService() {
@@ -124,6 +152,11 @@ final class PlaybackViewModel: ObservableObject {
         service.$authorizationStatus
             .receive(on: RunLoop.main)
             .assign(to: \.authorizationStatus, on: self)
+            .store(in: &cancellables)
+
+        service.$appleMusicAccessStatus
+            .receive(on: RunLoop.main)
+            .assign(to: \.appleMusicAccessStatus, on: self)
             .store(in: &cancellables)
 
         service.$unavailableReason

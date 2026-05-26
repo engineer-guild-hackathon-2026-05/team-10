@@ -21,8 +21,8 @@ struct ContentView: View {
     private var onboardingFlow: some View {
         TabView(selection: $onboardingVM.currentPage) {
             OnboardingWelcomePage(currentPage: $onboardingVM.currentPage).tag(0)
-            OnboardingMotionPage(viewModel: onboardingVM).tag(1)
-            OnboardingHealthPage(viewModel: onboardingVM).tag(2)
+            OnboardingMusicPage(viewModel: onboardingVM).tag(1)
+            OnboardingMotionPage(viewModel: onboardingVM).tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .ignoresSafeArea()
@@ -36,13 +36,7 @@ struct ContentView: View {
             ForYouView(nowPlayingContext: $nowPlayingContext, playback: playback)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if nowPlayingContext != nil {
-                GlobalMiniPlayerView(song: nowPlayingContext?.song, onTap: {
-                    showNowPlaying = true
-                }, playback: playback)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-            }
+            bottomOverlay
         }
         .preferredColorScheme(.dark)
         .task {
@@ -68,6 +62,21 @@ struct ContentView: View {
         }
     }
 
+    private var bottomOverlay: some View {
+        VStack(spacing: 8) {
+            if playback.shouldShowAppleMusicAccessNotice {
+                AppleMusicAccessBanner(status: playback.appleMusicAccessStatus)
+            }
+
+            if nowPlayingContext != nil {
+                GlobalMiniPlayerView(song: nowPlayingContext?.song, onTap: {
+                    showNowPlaying = true
+                }, playback: playback)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+    }
 }
 
 #Preview {

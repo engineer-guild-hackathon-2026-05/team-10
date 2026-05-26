@@ -17,19 +17,12 @@ class HomeViewModel: ObservableObject {
         if sensorStatus.headMotion == .disconnected {
             sensorStatus.headMotion = .disconnected
         }
-        if sensorStatus.heartRate == .stopped {
-            sensorStatus.heartRate = .acquiring
-        }
     }
 
     func endSession() {
         isSessionActive = false
         sensorStatus = SensorStatusBundle(
-            headMotion: sensorStatus.headMotion == .unsupported ? .unsupported : .disconnected,
-            bodyMotion: sensorStatus.bodyMotion == .unauthorized || sensorStatus.bodyMotion == .unsupported
-                ? sensorStatus.bodyMotion : .stopped,
-            heartRate: sensorStatus.heartRate == .unauthorized || sensorStatus.heartRate == .unsupported
-                ? sensorStatus.heartRate : .stopped
+            headMotion: sensorStatus.headMotion == .unsupported ? .unsupported : .disconnected
         )
     }
 }

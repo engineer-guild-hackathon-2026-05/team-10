@@ -36,6 +36,8 @@ HealthKit / 心拍連携は現行実装から削除済み。
 
 ### オンボーディング
 
+- Apple Music 認証と契約状態を確認する。
+- Apple Music のカタログ再生ができない場合は、契約が必要であることを表示する。
 - AirPods 頭部モーションが利用可能か確認する。
 - 利用できない場合は手動モードへ進める。
 - HealthKit 権限は要求しない。
@@ -193,6 +195,7 @@ stateDiagram-v2
 |---|---|
 | Firebase 未ログイン | LoginView へ |
 | MusicKit 未許可 | 再生位置不可の alert または検索空状態 |
+| Apple Music 未契約 | 契約が必要であることをオンボーディング・メイン画面・検索空状態に表示 |
 | AirPods 未接続 / 非対応 | 手動モードまたは取得停止表示 |
 | Musixmatch 同期歌詞なし | 静的歌詞へ fallback |
 | Musixmatch 歌詞なし | 歌詞なし表示 |

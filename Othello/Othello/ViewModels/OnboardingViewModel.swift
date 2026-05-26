@@ -1,7 +1,7 @@
 import Combine
 import CoreMotion
 import Foundation
-import HealthKit
+import MusicKit
 
 @MainActor
 class OnboardingViewModel: ObservableObject {
@@ -9,9 +9,11 @@ class OnboardingViewModel: ObservableObject {
     @Published var currentPage: Int = 0
     @Published var isOnboardingComplete: Bool = false
     @Published var useManualMode: Bool = false
+    @Published var appleMusicAccessStatus: AppleMusicAccessStatus = .init(
+        authorizationStatus: MusicAuthorization.currentStatus
+    )
 
     private let headphoneMotionManager = CMHeadphoneMotionManager()
-    private let healthStore = HKHealthStore()
 
     init() {
         #if DEBUG
@@ -21,6 +23,9 @@ class OnboardingViewModel: ObservableObject {
         }
         #endif
         checkAirPodsAvailability()
+        if MusicAuthorization.currentStatus == .authorized {
+            Task { await refreshAppleMusicSubscriptionStatus() }
+        }
     }
 
     func checkAirPodsAvailability() {
@@ -36,18 +41,30 @@ class OnboardingViewModel: ObservableObject {
         #endif
     }
 
-    func requestHealthPermission() async {
-        guard HKHealthStore.isHealthDataAvailable() else {
-            permissionState.health = .denied
+    func requestAppleMusicPermission() async {
+        appleMusicAccessStatus = .checking
+        let status = await MusicAuthorization.request()
+        guard status == .authorized else {
+            appleMusicAccessStatus = AppleMusicAccessStatus(authorizationStatus: status)
             return
         }
-        let heartRateType = HKQuantityType(.heartRate)
+
+        await refreshAppleMusicSubscriptionStatus()
+    }
+
+    func refreshAppleMusicSubscriptionStatus() async {
+        guard MusicAuthorization.currentStatus == .authorized else {
+            appleMusicAccessStatus = AppleMusicAccessStatus(authorizationStatus: MusicAuthorization.currentStatus)
+            return
+        }
+
+        appleMusicAccessStatus = .checking
+
         do {
-            try await healthStore.requestAuthorization(toShare: [], read: [heartRateType])
-            let status = healthStore.authorizationStatus(for: heartRateType)
-            permissionState.health = status == .sharingAuthorized ? .authorized : .denied
+            let subscription = try await MusicSubscription.current
+            appleMusicAccessStatus = subscription.canPlayCatalogContent ? .authorized : .subscriptionRequired
         } catch {
-            permissionState.health = .denied
+            appleMusicAccessStatus = .unavailable
         }
     }
 

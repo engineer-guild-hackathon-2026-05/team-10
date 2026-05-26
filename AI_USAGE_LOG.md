@@ -1824,6 +1824,29 @@
 - **評価**：採用
 - **採用 / 不採用の理由**：投稿後の表示更新を維持しつつ、main の最新UI機能とレビュー指摘の競合リスクをまとめて解消できるため。
 
+### #015 Apple Music契約UIとオンボーディング権限整理
+
+- **時刻**：08:30
+- **ツール**：Codex / Apple Developer Documentation / xcodebuild
+- **目的**：Apple Music未契約時に契約が必要であることを表示し、オンボーディングからHealthKit/心拍許可を削除する
+- **プロンプト**：
+  ```text
+  applemusic契約していなかったらmusickitつかえないよね？applemusic契約が必要です という旨を表示するUIって今あるんですか？なければ追加して欲しいです
+
+  また、オンボーディング画面ってAirPodsの動きを取得する、とか意外に心拍数とか最初あった印象なんだけど、それももう消されていますか？Apple MusicとかAirPods motionの許可取得画面だと思ってるので、関係ない許可は出さないようにしてください
+
+  pull mainしてブランチ切ってから実装を始めてください
+  ```
+- **出力サマリ**：
+  - `main` を最新化し、`fix/apple-music-subscription-onboarding` ブランチを作成
+  - `MusicSubscription.current.canPlayCatalogContent` を `AppleMusicAccessStatus` として公開し、認証拒否と未契約を別表示にした
+  - 未契約時に「Apple Music の契約が必要です」をオンボーディング、メイン画面下部、曲検索の空状態へ表示
+  - オンボーディングを Welcome → Apple Music → AirPods motion の構成に変更
+  - HealthKit / 心拍オンボーディング、HealthKit import、Info.plist の HealthKit usage description を削除
+  - `git diff --check` と iOS Simulator 向け `xcodebuild` で検証
+- **評価**：採用
+- **採用 / 不採用の理由**：再生に必要な Apple Music 条件をUIで明示しつつ、現行MVPに不要なヘルス権限要求を完全に外せたため。
+
 ---
 
 ## 全体振り返り

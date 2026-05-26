@@ -8,6 +8,5 @@ enum PermissionStatus {
 
 struct PermissionState {
     var motion: PermissionStatus = .notDetermined
-    var health: PermissionStatus = .notDetermined
     var airPodsAvailable: Bool = false
 }
