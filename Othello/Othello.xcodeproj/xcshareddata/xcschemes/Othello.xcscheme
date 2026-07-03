@@ -54,7 +54,7 @@
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "API_BASE_URL"
-            value = "https://asia-northeast1-egh-howtune.cloudfunctions.net/api"
+            value = "https://asia-northeast1-howtune-74252.cloudfunctions.net/api"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>
