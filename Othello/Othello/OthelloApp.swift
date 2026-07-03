@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct OthelloApp: App {
+    @AppStorage("prefersDarkTheme") var prefersDarkTheme = true
+
     init() {
         FirebaseApp.configure()
         UITabBar.appearance().isHidden = true
@@ -11,6 +13,7 @@ struct OthelloApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(prefersDarkTheme ? .dark : .light)
         }
     }
 }

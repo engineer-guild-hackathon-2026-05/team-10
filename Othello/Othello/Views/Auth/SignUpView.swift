@@ -83,7 +83,6 @@ struct SignUpView: View {
                     Spacer()
                 }
             }
-            .preferredColorScheme(.dark)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

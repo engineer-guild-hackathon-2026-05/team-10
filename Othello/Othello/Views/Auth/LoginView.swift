@@ -74,7 +74,6 @@ struct LoginView: View {
                 .padding(.bottom, 48)
             }
         }
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $showSignUp) {
             SignUpView(authVM: authVM)
         }
