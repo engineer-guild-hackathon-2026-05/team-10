@@ -8,6 +8,7 @@ struct OthelloApp: App {
     init() {
         FirebaseApp.configure()
         UITabBar.appearance().isHidden = true
+        UITextField.appearance().textColor = .white
     }
 
     var body: some Scene {
