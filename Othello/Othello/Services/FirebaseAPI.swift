@@ -122,19 +122,13 @@ final class FirebaseAPI {
         try await upsertUser(profile)
     }
 
-    private var baseURL: URL? {
-        guard
-            let rawValue = EnvironmentValueProvider.value(forKey: "API_BASE_URL")?.trimmingCharacters(in: .whitespacesAndNewlines),
-            !rawValue.isEmpty
-        else {
-            #if DEBUG
-            preconditionFailure("API_BASE_URL is not configured in ENV.plist or process environment.")
-            #else
-            return nil
-            #endif
-        }
+    private static let productionAPIBase = "https://asia-northeast1-howtune-74252.cloudfunctions.net/api"
 
-        return URL(string: rawValue)
+    private var baseURL: URL? {
+        let configured = EnvironmentValueProvider.value(forKey: "API_BASE_URL")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let urlString = configured.isEmpty ? Self.productionAPIBase : configured
+        return URL(string: urlString)
     }
 
     private func send<Response: Decodable>(
