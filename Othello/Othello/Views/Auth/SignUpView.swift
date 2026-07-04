@@ -50,7 +50,6 @@ struct SignUpView: View {
                         fieldRow(icon: "lock") {
                             SecureField("パスワード（6文字以上）", text: $password)
                                 .foregroundStyle(.white)
-                                .textContentType(.newPassword)
                                 .focused($focus, equals: .password)
                                 .submitLabel(.next)
                                 .onSubmit { focus = .confirmPassword }
@@ -59,7 +58,6 @@ struct SignUpView: View {
                         fieldRow(icon: "lock.fill") {
                             SecureField("パスワード確認", text: $passwordConfirm)
                                 .foregroundStyle(.white)
-                                .textContentType(.newPassword)
                                 .focused($focus, equals: .confirmPassword)
                                 .submitLabel(.done)
                                 .onSubmit { if canSubmit { Task { await authVM.signUp(email: email, password: password) } } }
