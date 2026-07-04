@@ -38,6 +38,20 @@ struct ContentView: View {
 
             bottomOverlay
         }
+        // TODO: 検証用の一時ログアウトボタン。認証画面の確認が済んだら削除する
+        .overlay(alignment: .topLeading) {
+            Button {
+                authVM.signOut()
+            } label: {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(10)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .padding(.leading, 16)
+            .padding(.top, 8)
+        }
         .task {
             await playback.onAppear()
         }
