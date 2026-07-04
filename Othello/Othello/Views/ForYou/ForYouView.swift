@@ -4,7 +4,6 @@ struct ForYouView: View {
     @Binding var nowPlayingContext: NowPlayingContext?
     @ObservedObject var playback: PlaybackViewModel
     @StateObject private var dashboard = HomeDashboardViewModel()
-    @AppStorage("themePreference") var themePreference: ThemePreference = .system
     @State private var searchQuery = ""
     @State private var selectedArtist: Artist?
     @State private var selectedComment: HomeDashboardComment?
@@ -28,20 +27,6 @@ struct ForYouView: View {
                 .refreshable {
                     await dashboard.load(force: true)
                 }
-            }
-            .overlay(alignment: .topTrailing) {
-                Button {
-                    withAnimation { themePreference = themePreference.next }
-                } label: {
-                    Image(systemName: themePreference.iconName)
-                        .font(.subheadline)
-                        .foregroundStyle(Color(.label))
-                        .frame(width: 36, height: 36)
-                        .background(Color(.secondarySystemBackground), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 8)
-                .padding(.trailing, 16)
             }
             .navigationBarHidden(true)
             .navigationDestination(item: $selectedArtist) { artist in
