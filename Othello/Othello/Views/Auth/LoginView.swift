@@ -28,7 +28,7 @@ struct LoginView: View {
                     }
                     Text("HowTune")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color(.label))
                 }
 
                 Spacer()
