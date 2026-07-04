@@ -28,7 +28,7 @@ struct FeedPostCard: View {
                             .foregroundStyle(.white)
                         Image(systemName: "checkmark.seal.fill")
                             .font(.caption2)
-                            .foregroundStyle(Color(red: 1.0, green: 0.3, blue: 0.3))
+                            .foregroundStyle(HowTuneDesign.accent)
                     }
                     Text("\(post.userHandle) · \(post.timeAgo)")
                         .font(.caption)
@@ -66,7 +66,7 @@ struct FeedPostCard: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: isLiked ? "heart.fill" : "heart")
-                            .foregroundStyle(isLiked ? Color(red: 1.0, green: 0.3, blue: 0.3) : .white)
+                            .foregroundStyle(isLiked ? HowTuneDesign.accent : .white)
                         Text("\(post.likeCount + (isLiked ? 1 : 0))")
                             .font(.subheadline)
                             .foregroundStyle(.white)
@@ -91,7 +91,7 @@ struct FeedPostCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(
-                    Color(red: 1.0, green: 0.3, blue: 0.3).opacity(isSelected ? 0.24 : 0),
+                    HowTuneDesign.accent.opacity(isSelected ? 0.24 : 0),
                     lineWidth: 1
                 )
         )
