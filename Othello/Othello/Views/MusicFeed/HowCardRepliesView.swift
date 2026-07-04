@@ -66,12 +66,12 @@ struct HowCardRepliesView: View {
                 Spacer()
                 Label("\(viewModel.replyCount)", systemImage: "bubble.left.fill")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(Color(.secondaryLabel))
             }
 
             Text(post.comment)
                 .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.9))
+                .foregroundStyle(Color(.label))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)

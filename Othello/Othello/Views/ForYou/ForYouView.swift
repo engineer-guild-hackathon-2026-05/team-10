@@ -247,7 +247,7 @@ private struct RecommendedCommentCard: View {
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.heavy))
-                    .foregroundStyle(.white.opacity(0.28))
+                    .foregroundStyle(Color(.tertiaryLabel))
             }
 
             Text(item.howCard.comment)
